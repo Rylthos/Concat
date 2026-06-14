@@ -3,22 +3,25 @@ use std::collections::HashMap;
 
 use tokens::{Token, TokenType, Types};
 
-fn scan_tokens(input: &str) -> Result<Vec<tokens::Token>, String> {
+fn scan_tokens(input: &str) -> Result<Vec<Token>, String> {
     let mut chars = input.chars().peekable();
 
-    let mut tokens: Vec<tokens::Token> = Vec::new();
+    let mut tokens: Vec<Token> = Vec::new();
 
     let mut passing_comments: bool = false;
 
     let mut line_number: usize = 1;
 
     let keywords = HashMap::from([
-        ("true".to_string(), TokenType::True),
-        ("false".to_string(), TokenType::False),
-        ("cast".to_string(), TokenType::Cast),
-        ("print".to_string(), TokenType::Print),
+        ("true".to_string(), TokenType::BoolValue(true)),
+        ("false".to_string(), TokenType::BoolValue(false)),
+        //
         ("string".to_string(), TokenType::Type(Types::String)),
+        ("bool".to_string(), TokenType::Type(Types::Bool)),
         ("int".to_string(), TokenType::Type(Types::Int)),
+        //
+        ("print".to_string(), TokenType::Print),
+        ("cast".to_string(), TokenType::Cast),
     ]);
 
     while let Some(&c) = chars.peek() {
@@ -140,13 +143,11 @@ fn scan_tokens(input: &str) -> Result<Vec<tokens::Token>, String> {
     Ok(tokens)
 }
 
-pub fn lexer(input: &str) {
-    println!("Lexer: {input}");
-
+pub fn lex_string(input: &str) -> Vec<Token> {
     let result = scan_tokens(input);
 
     if let Ok(tokens) = result {
-        println!("{:?}", tokens)
+        return tokens;
     } else {
         panic!("Lexer failed")
     }
@@ -155,8 +156,6 @@ pub fn lexer(input: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use tokens::{Token, TokenType, Types};
 
     #[test]
     fn parse_single_characters() {
@@ -199,8 +198,8 @@ mod tests {
                             Token::new(TokenType::Type(Types::Int), 1),
                             Token::new(TokenType::Cast, 1),
                             Token::new(TokenType::Print, 1),
-                            Token::new(TokenType::True, 1),
-                            Token::new(TokenType::False, 1),
+                            Token::new(TokenType::BoolValue(true), 1),
+                            Token::new(TokenType::BoolValue(false), 1),
                             Token::new(TokenType::StringValue("Hello, World!".to_string()), 1)
                         ]
                     ),

@@ -2,6 +2,7 @@
 pub enum Types {
     String,
     Int,
+    Bool,
     Ptr(Box<Types>),
 }
 
@@ -10,6 +11,7 @@ pub enum TokenType {
     LeftBrace,
     RightBrace,
 
+    // Arithmetic Operations
     Add,
     Subtract,
     Multiply,
@@ -22,10 +24,9 @@ pub enum TokenType {
 
     Type(Types),
 
-    True,
-    False,
     StringValue(String),
     NumberValue(f64),
+    BoolValue(bool),
 }
 
 #[derive(Debug)]
