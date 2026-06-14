@@ -1,0 +1,14 @@
+int: iterations 100 =
+
+0
+while dup iterations ! < {
+  if dup 3 % 0 == {
+    "Fizz\n" print
+  } else if dup 5 % 0 == {
+    "Buzz\n" print
+  } else {
+    dup string cast print "\n" print
+  }
+
+  1 +
+}

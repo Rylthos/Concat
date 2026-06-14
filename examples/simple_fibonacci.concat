@@ -1,0 +1,43 @@
+0
+1
+
+0 string cast print "\n" print
+1 string cast print "\n" print
+
+// 0 1 2
+// 3 1 rot
+// 2 0 1
+
+0
+while dup 5 < {
+  // n1 n2 i
+
+  3 1 rot
+
+  // i n1 n2
+
+  over
+  over
+
+  // i n1 n2 n1 n2
+  //
+  add
+
+  // i n1 n2 n3
+
+  3 2 rot
+
+  // i n2 n3 n1
+
+  drop
+
+  // i n2 n3
+
+  dup
+
+  string cast print "\n" print
+
+  3 2 rot
+
+  1 +
+}

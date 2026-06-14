@@ -1,0 +1,27 @@
+int: iterations
+int: n1
+int: n2
+
+iterations 10 =
+n1 0 =
+n2 0 =
+
+fun printInt(int): void {
+  string cast print "\n" print
+}
+
+n1 ! printInt
+n2 ! printInt
+
+0
+while dup iterations ! < {
+  n1 ! n2 ! +
+  dup
+
+  n1 n2 ! =
+
+  n2 swap =
+  printInt
+
+  1 +
+}
