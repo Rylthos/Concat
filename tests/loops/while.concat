@@ -1,0 +1,5 @@
+0
+while dup 10 < {
+  dup string cast print "\n" print
+  1 +
+}

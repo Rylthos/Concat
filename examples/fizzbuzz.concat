@@ -1,11 +1,19 @@
-int: iterations 100 =
-
-0
-while dup iterations ! < {
+1
+while dup 20 < {
   if dup 3 % 0 == {
-    "Fizz\n" print
-  } else if dup 5 % 0 == {
-    "Buzz\n" print
+    "Fizz" print true
+  } else {
+    false
+  }
+
+  if over 5 % 0 == {
+    "Buzz" print true
+  } else {
+    false
+  }
+
+  if || {
+    "\n" print
   } else {
     dup string cast print "\n" print
   }

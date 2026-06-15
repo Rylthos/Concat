@@ -1,3 +1,4 @@
 mod basics;
 mod conditionals;
-mod fibonacci;
+mod examples;
+mod loops;

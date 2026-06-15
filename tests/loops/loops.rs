@@ -1,11 +1,23 @@
 use assert_cmd::Command;
 
 #[test]
-fn basic_arithmetic() {
+fn loop_while() {
     let mut cmd = Command::cargo_bin("concat")
         .unwrap()
-        .arg("tests/basics/arithmetic.concat")
+        .arg("tests/loops/while.concat")
         .assert()
         .success()
-        .stdout("Value: 21\n");
+        .stdout(
+            r#"0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+"#,
+        );
 }

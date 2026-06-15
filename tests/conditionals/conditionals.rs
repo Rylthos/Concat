@@ -1,8 +1,8 @@
 use assert_cmd::Command;
 
 #[test]
-fn if_test() {
-    let mut cmd = Command::cargo_bin("concat")
+fn conditional_if() {
+    Command::cargo_bin("concat")
         .unwrap()
         .arg("tests/conditionals/if.concat")
         .assert()
@@ -11,8 +11,8 @@ fn if_test() {
 }
 
 #[test]
-fn if_else_test() {
-    let mut cmd = Command::cargo_bin("concat")
+fn conditional_if_else() {
+    Command::cargo_bin("concat")
         .unwrap()
         .arg("tests/conditionals/if_else.concat")
         .assert()
@@ -21,8 +21,8 @@ fn if_else_test() {
 }
 
 #[test]
-fn if_elseif_elsetest() {
-    let mut cmd = Command::cargo_bin("concat")
+fn conditional_if_elseif() {
+    Command::cargo_bin("concat")
         .unwrap()
         .arg("tests/conditionals/if_elseif_else.concat")
         .assert()
@@ -31,8 +31,8 @@ fn if_elseif_elsetest() {
 }
 
 #[test]
-fn nested_if() {
-    let mut cmd = Command::cargo_bin("concat")
+fn conditional_nested_if() {
+    Command::cargo_bin("concat")
         .unwrap()
         .arg("tests/conditionals/nested_if.concat")
         .assert()
