@@ -1,0 +1,11 @@
+0
+if dup 10 < {
+  "Less 10: " print string cast print "\n" print
+} else if dup 20 < {
+  "Less 20: " print string cast print "\n" print
+} else if dup 30 < {
+  "Less 30: " print string cast print "\n" print
+} else {
+  "Greater 30: " print string cast print "\n" print
+}
+"Done\n" print

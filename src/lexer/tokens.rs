@@ -17,8 +17,23 @@ pub enum TokenType {
     Multiply,
     Divide,
 
+    // Stack Operations
+    Duplicate,
+    Drop,
     Cast,
     Print,
+
+    // Boolean Operations
+    Less,
+    Greater,
+    LessEqual,
+    GreaterEqual,
+    Equal,
+    NotEqual,
+
+    // Loop
+    If,
+    Else,
 
     Identifier(String),
 
@@ -29,7 +44,7 @@ pub enum TokenType {
     BoolValue(bool),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Token {
     pub token_type: TokenType,
     pub line: usize,

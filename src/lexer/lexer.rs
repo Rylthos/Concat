@@ -20,8 +20,13 @@ fn scan_tokens(input: &str) -> Result<Vec<Token>, String> {
         ("bool".to_string(), TokenType::Type(Types::Bool)),
         ("int".to_string(), TokenType::Type(Types::Int)),
         //
+        ("dup".to_string(), TokenType::Duplicate),
+        ("drop".to_string(), TokenType::Drop),
         ("print".to_string(), TokenType::Print),
         ("cast".to_string(), TokenType::Cast),
+        //
+        ("if".to_string(), TokenType::If),
+        ("else".to_string(), TokenType::Else),
     ]);
 
     while let Some(&c) = chars.peek() {
@@ -52,6 +57,30 @@ fn scan_tokens(input: &str) -> Result<Vec<Token>, String> {
                 }
 
                 tokens.push(Token::new(TokenType::Divide, line_number))
+            }
+            '<' | '>' | '=' | '!' => {
+                chars.next();
+                let token_type = if let Some(&c2) = chars.peek()
+                    && c2 == '='
+                {
+                    chars.next();
+                    match c {
+                        '<' => TokenType::LessEqual,
+                        '>' => TokenType::GreaterEqual,
+                        '=' => TokenType::Equal,
+                        '!' => TokenType::NotEqual,
+                        _ => panic!("Unhandled character"),
+                    }
+                } else {
+                    match c {
+                        '<' => TokenType::Less,
+                        '>' => TokenType::Greater,
+                        '=' => todo!("Assignment"),
+                        '!' => todo!("Read"),
+                        _ => panic!("Unhandled character"),
+                    }
+                };
+                tokens.push(Token::new(token_type, line_number));
             }
             '+' | '-' | '*' | '{' | '}' => {
                 let token = match c {
@@ -311,6 +340,66 @@ mod tests {
                             Token::new(TokenType::Type(Types::String), 5),
                             Token::new(TokenType::Cast, 5),
                             Token::new(TokenType::Print, 5),
+                        ]
+                    ),
+                    output
+                )
+            }
+
+            Err(_) => println!("Error"),
+        }
+    }
+
+    #[test]
+    fn parse_boolean() {
+        let input = String::from(r#"> < == != <= >="#);
+        let result = scan_tokens(&input);
+        match result {
+            Ok(r) => {
+                let output = format!("{:?}", r);
+                assert_eq!(
+                    format!(
+                        "{:?}",
+                        vec![
+                            Token::new(TokenType::Greater, 1),
+                            Token::new(TokenType::Less, 1),
+                            Token::new(TokenType::Equal, 1),
+                            Token::new(TokenType::NotEqual, 1),
+                            Token::new(TokenType::LessEqual, 1),
+                            Token::new(TokenType::GreaterEqual, 1),
+                        ]
+                    ),
+                    output
+                )
+            }
+
+            Err(_) => println!("Error"),
+        }
+    }
+    #[test]
+    fn parse_if() {
+        let input = String::from(r#"0 if 1 > { "Less\n" print } else { "Greater\n" print }"#);
+        let result = scan_tokens(&input);
+        match result {
+            Ok(r) => {
+                let output = format!("{:?}", r);
+                assert_eq!(
+                    format!(
+                        "{:?}",
+                        vec![
+                            Token::new(TokenType::NumberValue(0.0), 1),
+                            Token::new(TokenType::If, 1),
+                            Token::new(TokenType::NumberValue(1.0), 1),
+                            Token::new(TokenType::Greater, 1),
+                            Token::new(TokenType::LeftBrace, 1),
+                            Token::new(TokenType::StringValue("Less\n".to_string()), 1),
+                            Token::new(TokenType::Print, 1),
+                            Token::new(TokenType::RightBrace, 1),
+                            Token::new(TokenType::Else, 1),
+                            Token::new(TokenType::LeftBrace, 1),
+                            Token::new(TokenType::StringValue("Greater\n".to_string()), 1),
+                            Token::new(TokenType::Print, 1),
+                            Token::new(TokenType::RightBrace, 1),
                         ]
                     ),
                     output

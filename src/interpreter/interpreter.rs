@@ -20,12 +20,24 @@ fn cast_type(value: StackValue, target_type: Types) -> StackValue {
 pub fn interpret(instructions: &Vec<Instruction>) {
     let mut stack: Vec<StackValue> = Vec::new();
 
-    for instruction in instructions {
+    let mut iter = instructions.iter();
+
+    while let Some(instruction) = iter.next() {
         match instruction {
             Instruction::Push(value) => {
                 stack.push(value.clone());
             }
             Instruction::Pop => {
+                stack.pop();
+            }
+            //
+            Instruction::Duplicate => {
+                assert!(stack.len() >= 1, "Invalid stack length");
+                let stack_value = stack.last().unwrap();
+                stack.push(stack_value.clone());
+            }
+            Instruction::Drop => {
+                assert!(stack.len() >= 1, "Invalid stack length");
                 stack.pop();
             }
             Instruction::Cast => {
@@ -51,6 +63,56 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                     panic!("Stack Empty");
                 }
             }
+            //
+            Instruction::Less
+            | Instruction::Greater
+            | Instruction::LessEqual
+            | Instruction::GreaterEqual
+            | Instruction::Equal
+            | Instruction::NotEqual => {
+                assert!(stack.len() >= 2, "Invalid stack length");
+                let v2 = stack.pop().unwrap();
+                let v1 = stack.pop().unwrap();
+
+                if let StackValue::Number(v1) = v1
+                    && let StackValue::Number(v2) = v2
+                {
+                    let output = match instruction {
+                        Instruction::Less => StackValue::Bool(v1 < v2),
+                        Instruction::Greater => StackValue::Bool(v1 > v2),
+                        Instruction::LessEqual => StackValue::Bool(v1 <= v2),
+                        Instruction::GreaterEqual => StackValue::Bool(v1 >= v2),
+                        Instruction::Equal => StackValue::Bool(v1 == v2),
+                        Instruction::NotEqual => StackValue::Bool(v1 != v2),
+                        _ => panic!("Unhandled"),
+                    };
+                    stack.push(output);
+                } else {
+                    panic!("Unhandled type");
+                }
+            }
+            //
+            Instruction::Jump(offset) => {
+                for _ in 0..*offset {
+                    iter.next();
+                }
+            }
+            Instruction::CondJump(offset_true, offset_false) => {
+                assert!(stack.len() >= 1, "Invalid stack length");
+                let value = stack.pop().unwrap();
+                if let StackValue::Bool(b) = value {
+                    let offset = match b {
+                        true => offset_true,
+                        false => offset_false,
+                    };
+                    for _ in 0..*offset {
+                        iter.next();
+                    }
+                } else {
+                    panic!("Expected bool type");
+                }
+            }
+            //
             Instruction::Add
             | Instruction::Subtract
             | Instruction::Multiply

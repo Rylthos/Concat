@@ -14,8 +14,20 @@ pub enum Instruction {
     Push(StackValue),
     Pop,
 
+    Duplicate,
+    Drop,
     Cast,
     Print,
+
+    Less,
+    Greater,
+    LessEqual,
+    GreaterEqual,
+    Equal,
+    NotEqual,
+
+    Jump(usize),
+    CondJump(usize, usize),
 
     Add,
     Subtract,
