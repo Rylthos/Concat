@@ -1,4 +1,4 @@
-0
+20
 if dup 10 < {
   "Less 10: " print string cast print "\n" print
 } else if dup 20 < {
