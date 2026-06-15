@@ -11,6 +11,14 @@ enum ParseTree {
 
 fn parse_element(token: Token) -> Option<Instruction> {
     let instr = match token.token_type {
+        TokenType::LeftBrace
+        | TokenType::RightBrace
+        | TokenType::If
+        | TokenType::Else
+        | TokenType::While
+        | TokenType::Identifier(_) => {
+            panic!("Unreachable: {:?}", token);
+        }
         TokenType::StringValue(s) => Instruction::Push(StackValue::String(s.to_string())),
         TokenType::NumberValue(n) => Instruction::Push(StackValue::Number(n)),
         TokenType::BoolValue(b) => Instruction::Push(StackValue::Bool(b)),
@@ -36,7 +44,6 @@ fn parse_element(token: Token) -> Option<Instruction> {
         TokenType::Equal => Instruction::Equal,
         TokenType::NotEqual => Instruction::NotEqual,
         //
-        _ => todo!("Unhandled: {:?}", token),
     };
 
     return Some(instr);
