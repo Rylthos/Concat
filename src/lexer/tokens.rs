@@ -16,6 +16,7 @@ pub enum TokenType {
     Subtract,
     Multiply,
     Divide,
+    Modulo,
 
     // Stack Operations
     Rotate3,

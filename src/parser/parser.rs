@@ -28,6 +28,7 @@ fn parse_element(token: Token) -> Option<Instruction> {
         TokenType::Subtract => Instruction::Subtract,
         TokenType::Divide => Instruction::Divide,
         TokenType::Multiply => Instruction::Multiply,
+        TokenType::Modulo => Instruction::Modulo,
         //
         TokenType::Rotate3 => Instruction::Rotate3,
         TokenType::Duplicate => Instruction::Duplicate,

@@ -142,7 +142,8 @@ pub fn interpret(instructions: &Vec<Instruction>) {
             Instruction::Add
             | Instruction::Subtract
             | Instruction::Multiply
-            | Instruction::Divide => {
+            | Instruction::Divide
+            | Instruction::Modulo => {
                 assert!(stack.len() >= 2, "Invalid stack length");
                 let v2 = stack.pop().unwrap();
                 let v1 = stack.pop().unwrap();
@@ -155,6 +156,7 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                         Instruction::Subtract => StackValue::Number(v1 - v2),
                         Instruction::Multiply => StackValue::Number(v1 * v2),
                         Instruction::Divide => StackValue::Number(v1 / v2),
+                        Instruction::Modulo => StackValue::Number(v1 % v2),
                         _ => panic!("Unhandled value"),
                     };
                     stack.push(new_value);
@@ -162,7 +164,6 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                     panic!("Expected number types");
                 }
             }
-            _ => todo!("Unhandled Instruction: {:?}", instruction),
         }
         index += 1;
     }
