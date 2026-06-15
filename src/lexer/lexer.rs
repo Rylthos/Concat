@@ -62,6 +62,28 @@ fn scan_tokens(input: &str) -> Result<Vec<Token>, String> {
 
                 tokens.push(Token::new(TokenType::Divide, line_number))
             }
+            '&' => {
+                chars.next();
+                if let Some(&c2) = chars.peek()
+                    && c2 == '&'
+                {
+                    tokens.push(Token::new(TokenType::And, line_number));
+                    chars.next();
+                } else {
+                    panic!("Unknown character");
+                }
+            }
+            '|' => {
+                chars.next();
+                if let Some(&c2) = chars.peek()
+                    && c2 == '|'
+                {
+                    tokens.push(Token::new(TokenType::Or, line_number));
+                    chars.next();
+                } else {
+                    panic!("Unknown character");
+                }
+            }
             '<' | '>' | '=' | '!' => {
                 chars.next();
                 let token_type = if let Some(&c2) = chars.peek()
@@ -80,7 +102,7 @@ fn scan_tokens(input: &str) -> Result<Vec<Token>, String> {
                         '<' => TokenType::Less,
                         '>' => TokenType::Greater,
                         '=' => todo!("Assignment"),
-                        '!' => todo!("Read"),
+                        '!' => TokenType::Not,
                         _ => panic!("Unhandled character"),
                     }
                 };

@@ -38,4 +38,7 @@ pub enum Instruction {
     Multiply,
     Divide,
     Modulo,
+    And,
+    Or,
+    Not,
 }

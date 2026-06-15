@@ -44,6 +44,9 @@ fn parse_element(token: Token) -> Option<Instruction> {
         TokenType::GreaterEqual => Instruction::GreaterEqual,
         TokenType::Equal => Instruction::Equal,
         TokenType::NotEqual => Instruction::NotEqual,
+        TokenType::And => Instruction::And,
+        TokenType::Or => Instruction::Or,
+        TokenType::Not => Instruction::Not,
         //
     };
 

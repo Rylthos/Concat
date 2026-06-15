@@ -96,7 +96,9 @@ pub fn interpret(instructions: &Vec<Instruction>) {
             | Instruction::LessEqual
             | Instruction::GreaterEqual
             | Instruction::Equal
-            | Instruction::NotEqual => {
+            | Instruction::NotEqual
+            | Instruction::And
+            | Instruction::Or => {
                 assert!(stack.len() >= 2, "Invalid stack length");
                 let v2 = stack.pop().unwrap();
                 let v1 = stack.pop().unwrap();
@@ -114,6 +116,24 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                         _ => panic!("Unhandled"),
                     };
                     stack.push(output);
+                } else if let StackValue::Bool(b1) = v1
+                    && let StackValue::Bool(b2) = v2
+                {
+                    let output = match instruction {
+                        Instruction::And => StackValue::Bool(b1 && b2),
+                        Instruction::Or => StackValue::Bool(b1 || b2),
+                        _ => panic!("Unhandled"),
+                    };
+                    stack.push(output);
+                } else {
+                    panic!("Unhandled type");
+                }
+            }
+            Instruction::Not => {
+                assert!(stack.len() >= 1, "Invalid stack length");
+                let v1 = stack.pop().unwrap();
+                if let StackValue::Bool(b) = v1 {
+                    stack.push(StackValue::Bool(!b));
                 } else {
                     panic!("Unhandled type");
                 }
@@ -161,7 +181,10 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                     };
                     stack.push(new_value);
                 } else {
-                    panic!("Expected number types");
+                    panic!(
+                        "Expected number types: {:?} got {:?} {:?}",
+                        instruction, v1, v2
+                    );
                 }
             }
         }

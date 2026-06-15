@@ -34,6 +34,9 @@ pub enum TokenType {
     GreaterEqual,
     Equal,
     NotEqual,
+    And,
+    Or,
+    Not,
 
     // Loop
     If,
