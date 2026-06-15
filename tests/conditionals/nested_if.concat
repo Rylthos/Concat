@@ -1,0 +1,10 @@
+16
+if dup 2 % 0 == {
+  if dup 4 % 0 == {
+    "Divisible by 4: " print string cast print "\n" print
+  } else {
+    "Divisible by 2: " print string cast print "\n" print
+  }
+} else {
+  "Not divisible by 2: " print string cast print "\n" print
+}

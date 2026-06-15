@@ -29,3 +29,13 @@ fn if_elseif_elsetest() {
         .success()
         .stdout("Less 30: 20\nDone\n");
 }
+
+#[test]
+fn nested_if() {
+    let mut cmd = Command::cargo_bin("concat")
+        .unwrap()
+        .arg("tests/conditionals/nested_if.concat")
+        .assert()
+        .success()
+        .stdout("Divisible by 4: 16\n");
+}
