@@ -20,7 +20,6 @@ fn cast_type(value: StackValue, target_type: Types) -> StackValue {
 pub fn interpret(instructions: &Vec<Instruction>) {
     let mut stack: Vec<StackValue> = Vec::new();
 
-    let mut iter = instructions.iter();
     let mut index = 0;
 
     while index < instructions.len() {
