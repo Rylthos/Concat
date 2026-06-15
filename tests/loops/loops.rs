@@ -2,7 +2,7 @@ use assert_cmd::Command;
 
 #[test]
 fn loop_while() {
-    let mut cmd = Command::cargo_bin("concat")
+    Command::cargo_bin("concat")
         .unwrap()
         .arg("tests/loops/while.concat")
         .assert()

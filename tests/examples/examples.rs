@@ -2,7 +2,7 @@ use assert_cmd::Command;
 
 #[test]
 fn example_simplified_fibonacci() {
-    let mut cmd = Command::cargo_bin("concat")
+    Command::cargo_bin("concat")
         .unwrap()
         .arg("examples/simple_fibonacci.concat")
         .assert()
@@ -35,7 +35,7 @@ fn example_simplified_fibonacci() {
 
 #[test]
 fn example_fizzbuzz() {
-    let mut cmd = Command::cargo_bin("concat")
+    Command::cargo_bin("concat")
         .unwrap()
         .arg("examples/fizzbuzz.concat")
         .assert()

@@ -2,7 +2,7 @@ use assert_cmd::Command;
 
 #[test]
 fn basic_over() {
-    let mut cmd = Command::cargo_bin("concat")
+    Command::cargo_bin("concat")
         .unwrap()
         .arg("tests/basics/over.concat")
         .assert()
@@ -12,7 +12,7 @@ fn basic_over() {
 
 #[test]
 fn basic_rotate() {
-    let mut cmd = Command::cargo_bin("concat")
+    Command::cargo_bin("concat")
         .unwrap()
         .arg("tests/basics/rotate.concat")
         .assert()
