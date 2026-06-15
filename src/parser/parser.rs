@@ -137,18 +137,19 @@ fn parse_tree<'a>(tree: ParseTree) -> Result<Vec<Instruction>, String> {
     return Ok(parsed_expression);
 }
 
-fn get_condition<'a>(tokens: impl Iterator<Item = &'a Token>) -> Result<Vec<Token>, String> {
+fn get_condition<'a, I>(tokens: &mut std::iter::Peekable<I>) -> Result<Vec<Token>, String>
+where
+    I: Iterator<Item = &'a Token>,
+{
     let mut values: Vec<Token> = Vec::new();
 
-    let mut peekable = tokens.peekable();
-
-    while let Some(&t) = peekable.peek() {
+    while let Some(&t) = tokens.peek() {
         match t.token_type {
             TokenType::LeftBrace => {
                 break;
             }
             _ => {
-                peekable.next();
+                tokens.next();
                 values.push(t.clone());
             }
         }
@@ -157,41 +158,40 @@ fn get_condition<'a>(tokens: impl Iterator<Item = &'a Token>) -> Result<Vec<Toke
     return Ok(values);
 }
 
-fn get_region<'a>(tokens: impl Iterator<Item = &'a Token>) -> Result<Vec<Token>, String> {
+fn get_region<'a, I>(tokens: &mut std::iter::Peekable<I>) -> Result<Vec<Token>, String>
+where
+    I: Iterator<Item = &'a Token>,
+{
     let mut values: Vec<Token> = Vec::new();
-
-    let mut peekable = tokens.peekable();
 
     let mut count = 0;
 
-    while let Some(&t) = peekable.peek() {
+    while let Some(&t) = tokens.peek() {
         match t.token_type {
             TokenType::LeftBrace => {
-                if count == 0 {
-                    peekable.next();
+                count += 1;
+                if count == 1 {
+                    tokens.next();
                     continue;
                 }
-                count += 1;
-                peekable.next();
             }
             TokenType::RightBrace => {
+                count -= 1;
                 if count == 0 {
+                    tokens.next();
                     break;
                 }
-                count -= 1;
             }
             _ => {}
         }
         values.push(t.clone());
-        peekable.next();
+        tokens.next();
     }
 
     return Ok(values);
 }
 
-fn generate_parse_tree<'a>(
-    mut tokens: impl Iterator<Item = &'a Token>,
-) -> Result<ParseTree, String> {
+fn generate_parse_tree<'a>(tokens: impl Iterator<Item = &'a Token>) -> Result<ParseTree, String> {
     let mut region: Vec<ParseTree> = Vec::new();
     let mut peekable = tokens.peekable();
 
@@ -225,6 +225,7 @@ fn generate_parse_tree<'a>(
 
                                 else_region =
                                     generate_parse_tree(get_region(&mut peekable)?.iter())?;
+
                                 break;
                             }
                             _ => break,
@@ -265,8 +266,6 @@ fn parse(tokens: &Vec<Token>) -> Result<Vec<Instruction>, String> {
     };
 
     let expression = parse_tree(tree);
-
-    // println!("Expression: {:?}", expression);
 
     return expression;
 }
