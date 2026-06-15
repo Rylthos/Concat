@@ -33,30 +33,15 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                 stack.pop();
             }
             //
-            Instruction::Rotate => {
-                assert!(stack.len() >= 2, "Invalid stack length");
-                let rotations = stack.pop().unwrap();
-                let length = stack.pop().unwrap();
+            Instruction::Rotate3 => {
+                assert!(stack.len() >= 3, "Invalid stack length");
+                let v3 = stack.pop().unwrap();
+                let v2 = stack.pop().unwrap();
+                let v1 = stack.pop().unwrap();
 
-                if let StackValue::Number(r) = rotations
-                    && let StackValue::Number(l) = length
-                {
-                    let rot_int: usize = r as usize;
-                    let len_int: usize = l as usize;
-
-                    let mut values = Vec::new();
-                    assert!(stack.len() >= len_int, "Invalid stack length");
-                    for _ in 0..len_int {
-                        values.push(stack.pop().unwrap());
-                    }
-
-                    values.rotate_left(rot_int);
-                    for v in values.iter().rev() {
-                        stack.push(v.clone());
-                    }
-                } else {
-                    panic!("Expected Number");
-                }
+                stack.push(v3);
+                stack.push(v1);
+                stack.push(v2);
             }
             Instruction::Duplicate => {
                 assert!(stack.len() >= 1, "Invalid stack length");

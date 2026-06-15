@@ -14,7 +14,7 @@ pub enum Instruction {
     Push(StackValue),
     Pop,
 
-    Rotate,
+    Rotate3,
     Duplicate,
     Drop,
     Over,

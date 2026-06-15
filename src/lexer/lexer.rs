@@ -20,7 +20,7 @@ fn scan_tokens(input: &str) -> Result<Vec<Token>, String> {
         ("bool".to_string(), TokenType::Type(Types::Bool)),
         ("int".to_string(), TokenType::Type(Types::Int)),
         //
-        ("rot".to_string(), TokenType::Rotate),
+        ("rot3".to_string(), TokenType::Rotate3),
         ("dup".to_string(), TokenType::Duplicate),
         ("drop".to_string(), TokenType::Drop),
         ("over".to_string(), TokenType::Over),
@@ -86,11 +86,12 @@ fn scan_tokens(input: &str) -> Result<Vec<Token>, String> {
                 };
                 tokens.push(Token::new(token_type, line_number));
             }
-            '+' | '-' | '*' | '{' | '}' => {
+            '+' | '-' | '*' | '%' | '{' | '}' => {
                 let token = match c {
                     '+' => TokenType::Add,
                     '-' => TokenType::Subtract,
                     '*' => TokenType::Multiply,
+                    '%' => TokenType::Modulo,
                     '{' => TokenType::LeftBrace,
                     '}' => TokenType::RightBrace,
                     _ => panic!("Unaccounted symbol"),
@@ -383,7 +384,7 @@ mod tests {
 
     #[test]
     fn parse_stack_operations() {
-        let input = String::from(r#"rot dup drop over swap print cast"#);
+        let input = String::from(r#"rot3 dup drop over swap print cast"#);
         let result = scan_tokens(&input);
         match result {
             Ok(r) => {
@@ -392,7 +393,7 @@ mod tests {
                     format!(
                         "{:?}",
                         vec![
-                            Token::new(TokenType::Rotate, 1),
+                            Token::new(TokenType::Rotate3, 1),
                             Token::new(TokenType::Duplicate, 1),
                             Token::new(TokenType::Drop, 1),
                             Token::new(TokenType::Over, 1),

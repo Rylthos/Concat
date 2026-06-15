@@ -18,7 +18,7 @@ pub enum TokenType {
     Divide,
 
     // Stack Operations
-    Rotate,
+    Rotate3,
     Duplicate,
     Drop,
     Over,

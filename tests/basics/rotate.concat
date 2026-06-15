@@ -1,0 +1,29 @@
+1 2 3
+"Rotate 0: " print
+string cast print " " print
+string cast print " " print
+string cast print "\n" print
+
+1 2 3
+rot3
+"Rotate 1: " print
+string cast print " " print
+string cast print " " print
+string cast print "\n" print
+
+1 2 3
+rot3
+rot3
+"Rotate 2: " print
+string cast print " " print
+string cast print " " print
+string cast print "\n" print
+
+1 2 3
+rot3
+rot3
+rot3
+"Rotate 3: " print
+string cast print " " print
+string cast print " " print
+string cast print "\n" print

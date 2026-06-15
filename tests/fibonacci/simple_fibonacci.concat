@@ -8,7 +8,7 @@
 while dup 19 < {
   // n1 n2 i
 
-  3 1 rot
+  rot3
 
   // i n1 n2
 
@@ -20,22 +20,22 @@ while dup 19 < {
 
   // i n1 n2 n3
 
-  3 2 rot
+  rot3 rot3
 
   // i n2 n3 n1
 
   drop
 
   // i n2 n3
-  3 2 rot
+  rot3 rot3
   dup 2 + string cast print ": " print
-  3 1 rot
+  rot3
 
   dup
 
   string cast print "\n" print
 
-  3 2 rot
+  rot3 rot3
 
   1 +
 }
