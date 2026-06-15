@@ -6,6 +6,7 @@ enum ParseTree {
     Element(Token),
     Region(Vec<ParseTree>),
     If(Vec<(Box<ParseTree>, Box<ParseTree>)>, Box<ParseTree>),
+    While(Box<ParseTree>, Box<ParseTree>),
 }
 
 fn parse_element(token: Token) -> Option<Instruction> {
@@ -35,7 +36,7 @@ fn parse_element(token: Token) -> Option<Instruction> {
         TokenType::Equal => Instruction::Equal,
         TokenType::NotEqual => Instruction::NotEqual,
         //
-        _ => todo!("Unhandled"),
+        _ => todo!("Unhandled: {:?}", token),
     };
 
     return Some(instr);
@@ -64,10 +65,7 @@ fn parse_tree<'a>(tree: ParseTree) -> Result<Vec<Instruction>, String> {
                 .collect::<Vec<Instruction>>(),
         ),
         ParseTree::If(if_branches, else_branch) => {
-            // let mut condition = parse_tree(*conditional)?;
-            // let mut region = parse_tree(*region)?;
-
-            let mut if_branches = if_branches
+            let if_branches = if_branches
                 .iter()
                 .map(|(c, m)| {
                     let c1 = match parse_tree(*c.clone()) {
@@ -91,8 +89,6 @@ fn parse_tree<'a>(tree: ParseTree) -> Result<Vec<Instruction>, String> {
                 + else_branch.len();
 
             let total_conditional_branches = if_branches.len();
-
-            println!("Total Branches: {}", total_conditional_branches);
 
             let mut length_seen = 0;
             let mut branches_seen = 0;
@@ -118,6 +114,16 @@ fn parse_tree<'a>(tree: ParseTree) -> Result<Vec<Instruction>, String> {
             }
 
             parsed_expression.append(&mut else_branch);
+        }
+        ParseTree::While(c, r) => {
+            let mut condition_tree = parse_tree(*c)?;
+            let mut region_tree = parse_tree(*r)?;
+
+            let total_length = condition_tree.len() + region_tree.len();
+            parsed_expression.append(&mut condition_tree);
+            parsed_expression.push(Instruction::CondJump(0, region_tree.len() + 1));
+            parsed_expression.append(&mut region_tree);
+            parsed_expression.push(Instruction::BackJump(total_length + 1));
         }
     }
 
@@ -223,6 +229,16 @@ fn generate_parse_tree<'a>(
 
                 region.push(ParseTree::If(regions, Box::new(else_region)));
             }
+            TokenType::While => {
+                peekable.next();
+                let conditional_tree = generate_parse_tree(get_condition(&mut peekable)?.iter())?;
+                let region_tree = generate_parse_tree(get_region(&mut peekable)?.iter())?;
+
+                region.push(ParseTree::While(
+                    Box::new(conditional_tree),
+                    Box::new(region_tree),
+                ))
+            }
             _ => {
                 peekable.next();
                 region.push(ParseTree::Element(t.clone().clone()))
@@ -243,7 +259,7 @@ fn parse(tokens: &Vec<Token>) -> Result<Vec<Instruction>, String> {
 
     let expression = parse_tree(tree);
 
-    println!("Expression: {:?}", expression);
+    // println!("Expression: {:?}", expression);
 
     return expression;
 }
@@ -452,6 +468,49 @@ mod tests {
                                     ParseTree::Element(Token::new(TokenType::NumberValue(4.0), 1))
                                 ]))
                             ),
+                        ])
+                    ),
+                    output
+                )
+            }
+            Err(_) => assert!(false, "Error"),
+        }
+    }
+
+    #[test]
+    fn parse_tree_while() {
+        let input = vec![
+            Token::new(TokenType::NumberValue(0.0), 1),
+            Token::new(TokenType::While, 1),
+            Token::new(TokenType::Duplicate, 1),
+            Token::new(TokenType::NumberValue(10.0), 1),
+            Token::new(TokenType::Less, 1),
+            Token::new(TokenType::LeftBrace, 1),
+            Token::new(TokenType::NumberValue(1.0), 1),
+            Token::new(TokenType::Add, 1),
+            Token::new(TokenType::RightBrace, 1),
+        ];
+        let tree = generate_parse_tree(input.iter());
+
+        match tree {
+            Ok(t) => {
+                let output = format!("{:?}", t);
+                assert_eq!(
+                    format!(
+                        "{:?}",
+                        ParseTree::Region(vec![
+                            ParseTree::Element(Token::new(TokenType::NumberValue(0.0), 1)),
+                            ParseTree::While(
+                                Box::new(ParseTree::Region(vec![
+                                    ParseTree::Element(Token::new(TokenType::Duplicate, 1)),
+                                    ParseTree::Element(Token::new(TokenType::NumberValue(10.0), 1)),
+                                    ParseTree::Element(Token::new(TokenType::Less, 1))
+                                ])),
+                                Box::new(ParseTree::Region(vec![
+                                    ParseTree::Element(Token::new(TokenType::NumberValue(1.0), 1)),
+                                    ParseTree::Element(Token::new(TokenType::Add, 1)),
+                                ]))
+                            )
                         ])
                     ),
                     output

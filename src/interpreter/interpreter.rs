@@ -21,8 +21,10 @@ pub fn interpret(instructions: &Vec<Instruction>) {
     let mut stack: Vec<StackValue> = Vec::new();
 
     let mut iter = instructions.iter();
+    let mut index = 0;
 
-    while let Some(instruction) = iter.next() {
+    while index < instructions.len() {
+        let instruction = instructions.get(index).unwrap();
         match instruction {
             Instruction::Push(value) => {
                 stack.push(value.clone());
@@ -31,6 +33,31 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                 stack.pop();
             }
             //
+            Instruction::Rotate => {
+                assert!(stack.len() >= 2, "Invalid stack length");
+                let rotations = stack.pop().unwrap();
+                let length = stack.pop().unwrap();
+
+                if let StackValue::Number(r) = rotations
+                    && let StackValue::Number(l) = length
+                {
+                    let rot_int: usize = r as usize;
+                    let len_int: usize = l as usize;
+
+                    let mut values = Vec::new();
+                    assert!(stack.len() >= len_int, "Invalid stack length");
+                    for _ in 0..len_int {
+                        values.push(stack.pop().unwrap());
+                    }
+
+                    values.rotate_left(rot_int);
+                    for v in values.iter().rev() {
+                        stack.push(v.clone());
+                    }
+                } else {
+                    panic!("Expected Number");
+                }
+            }
             Instruction::Duplicate => {
                 assert!(stack.len() >= 1, "Invalid stack length");
                 let stack_value = stack.last().unwrap();
@@ -39,6 +66,21 @@ pub fn interpret(instructions: &Vec<Instruction>) {
             Instruction::Drop => {
                 assert!(stack.len() >= 1, "Invalid stack length");
                 stack.pop();
+            }
+            Instruction::Over => {
+                assert!(stack.len() >= 2, "Invalid stack length");
+                let v2 = stack.pop().unwrap();
+                let v1 = stack.pop().unwrap();
+                stack.push(v1.clone());
+                stack.push(v2.clone());
+                stack.push(v1.clone());
+            }
+            Instruction::Swap => {
+                assert!(stack.len() >= 2, "Invalid stack length");
+                let v2 = stack.pop().unwrap();
+                let v1 = stack.pop().unwrap();
+                stack.push(v2.clone());
+                stack.push(v1.clone());
             }
             Instruction::Cast => {
                 assert!(stack.len() >= 2, "Invalid stack length");
@@ -93,9 +135,7 @@ pub fn interpret(instructions: &Vec<Instruction>) {
             }
             //
             Instruction::Jump(offset) => {
-                for _ in 0..*offset {
-                    iter.next();
-                }
+                index += offset;
             }
             Instruction::CondJump(offset_true, offset_false) => {
                 assert!(stack.len() >= 1, "Invalid stack length");
@@ -105,12 +145,13 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                         true => offset_true,
                         false => offset_false,
                     };
-                    for _ in 0..*offset {
-                        iter.next();
-                    }
+                    index += offset;
                 } else {
                     panic!("Expected bool type");
                 }
+            }
+            Instruction::BackJump(value) => {
+                index -= value + 1;
             }
             //
             Instruction::Add
@@ -138,5 +179,6 @@ pub fn interpret(instructions: &Vec<Instruction>) {
             }
             _ => todo!("Unhandled Instruction: {:?}", instruction),
         }
+        index += 1;
     }
 }

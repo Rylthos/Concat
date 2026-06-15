@@ -14,8 +14,11 @@ pub enum Instruction {
     Push(StackValue),
     Pop,
 
+    Rotate,
     Duplicate,
     Drop,
+    Over,
+    Swap,
     Cast,
     Print,
 
@@ -28,6 +31,7 @@ pub enum Instruction {
 
     Jump(usize),
     CondJump(usize, usize),
+    BackJump(usize),
 
     Add,
     Subtract,

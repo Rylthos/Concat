@@ -20,13 +20,17 @@ fn scan_tokens(input: &str) -> Result<Vec<Token>, String> {
         ("bool".to_string(), TokenType::Type(Types::Bool)),
         ("int".to_string(), TokenType::Type(Types::Int)),
         //
+        ("rot".to_string(), TokenType::Rotate),
         ("dup".to_string(), TokenType::Duplicate),
         ("drop".to_string(), TokenType::Drop),
+        ("over".to_string(), TokenType::Over),
+        ("swap".to_string(), TokenType::Swap),
         ("print".to_string(), TokenType::Print),
         ("cast".to_string(), TokenType::Cast),
         //
         ("if".to_string(), TokenType::If),
         ("else".to_string(), TokenType::Else),
+        ("while".to_string(), TokenType::While),
     ]);
 
     while let Some(&c) = chars.peek() {
@@ -376,6 +380,65 @@ mod tests {
             Err(_) => println!("Error"),
         }
     }
+
+    #[test]
+    fn parse_stack_operations() {
+        let input = String::from(r#"rot dup drop over swap print cast"#);
+        let result = scan_tokens(&input);
+        match result {
+            Ok(r) => {
+                let output = format!("{:?}", r);
+                assert_eq!(
+                    format!(
+                        "{:?}",
+                        vec![
+                            Token::new(TokenType::Rotate, 1),
+                            Token::new(TokenType::Duplicate, 1),
+                            Token::new(TokenType::Drop, 1),
+                            Token::new(TokenType::Over, 1),
+                            Token::new(TokenType::Swap, 1),
+                            Token::new(TokenType::Print, 1),
+                            Token::new(TokenType::Cast, 1),
+                        ]
+                    ),
+                    output
+                )
+            }
+
+            Err(_) => println!("Error"),
+        }
+    }
+
+    #[test]
+    fn parse_while_loop() {
+        let input = String::from(r#"0 while dup 1 > {1 +}"#);
+        let result = scan_tokens(&input);
+        match result {
+            Ok(r) => {
+                let output = format!("{:?}", r);
+                assert_eq!(
+                    format!(
+                        "{:?}",
+                        vec![
+                            Token::new(TokenType::NumberValue(0.0), 1),
+                            Token::new(TokenType::While, 1),
+                            Token::new(TokenType::Duplicate, 1),
+                            Token::new(TokenType::NumberValue(1.0), 1),
+                            Token::new(TokenType::Greater, 1),
+                            Token::new(TokenType::LeftBrace, 1),
+                            Token::new(TokenType::NumberValue(1.0), 1),
+                            Token::new(TokenType::Add, 1),
+                            Token::new(TokenType::RightBrace, 1),
+                        ]
+                    ),
+                    output
+                )
+            }
+
+            Err(_) => println!("Error"),
+        }
+    }
+
     #[test]
     fn parse_if() {
         let input = String::from(r#"0 if 1 > { "Less\n" print } else { "Greater\n" print }"#);

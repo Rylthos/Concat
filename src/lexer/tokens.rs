@@ -18,8 +18,11 @@ pub enum TokenType {
     Divide,
 
     // Stack Operations
+    Rotate,
     Duplicate,
     Drop,
+    Over,
+    Swap,
     Cast,
     Print,
 
@@ -34,6 +37,7 @@ pub enum TokenType {
     // Loop
     If,
     Else,
+    While,
 
     Identifier(String),
 
