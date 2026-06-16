@@ -3,7 +3,7 @@ pub enum Types {
     String,
     I32,
     Bool,
-    Ptr(Box<Types>),
+    Void,
 }
 
 #[derive(Debug, Clone)]
@@ -42,6 +42,11 @@ pub enum TokenType {
     Else,
     While,
 
+    // Func
+    Func,
+    Arrow,
+
+    //
     Identifier(String),
 
     Type(Types),

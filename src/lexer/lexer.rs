@@ -19,6 +19,7 @@ fn scan_tokens(input: &str) -> Result<Vec<Token>, String> {
         ("string".to_string(), TokenType::Type(Types::String)),
         ("bool".to_string(), TokenType::Type(Types::Bool)),
         ("i32".to_string(), TokenType::Type(Types::I32)),
+        ("void".to_string(), TokenType::Type(Types::Void)),
         //
         ("rot3".to_string(), TokenType::Rotate3),
         ("dup".to_string(), TokenType::Duplicate),
@@ -30,6 +31,8 @@ fn scan_tokens(input: &str) -> Result<Vec<Token>, String> {
         ("if".to_string(), TokenType::If),
         ("else".to_string(), TokenType::Else),
         ("while".to_string(), TokenType::While),
+        //
+        ("func".to_string(), TokenType::Func),
     ]);
 
     while let Some(&c) = chars.peek() {
@@ -107,10 +110,9 @@ fn scan_tokens(input: &str) -> Result<Vec<Token>, String> {
                 };
                 tokens.push(Token::new(token_type, line_number));
             }
-            '+' | '-' | '*' | '%' | '{' | '}' => {
+            '+' | '*' | '%' | '{' | '}' => {
                 let token = match c {
                     '+' => TokenType::Add,
-                    '-' => TokenType::Subtract,
                     '*' => TokenType::Multiply,
                     '%' => TokenType::Modulo,
                     '{' => TokenType::LeftBrace,
@@ -119,6 +121,17 @@ fn scan_tokens(input: &str) -> Result<Vec<Token>, String> {
                 };
                 tokens.push(Token::new(token, line_number));
                 chars.next();
+            }
+            '-' => {
+                chars.next();
+                if let Some(&c2) = chars.peek()
+                    && c2 == '>'
+                {
+                    tokens.push(Token::new(TokenType::Arrow, line_number));
+                    chars.next();
+                } else {
+                    tokens.push(Token::new(TokenType::Subtract, line_number));
+                }
             }
             '"' => {
                 let mut s = String::new();
@@ -240,7 +253,7 @@ mod tests {
 
     #[test]
     fn parse_keywords() {
-        let input = String::from("string i32 print true false \"Hello, World!\"");
+        let input = String::from("string i32 void bool print true false \"Hello, World!\"");
         let result = scan_tokens(&input);
         match result {
             Ok(r) => {
@@ -251,6 +264,8 @@ mod tests {
                         vec![
                             Token::new(TokenType::Type(Types::String), 1),
                             Token::new(TokenType::Type(Types::I32), 1),
+                            Token::new(TokenType::Type(Types::Void), 1),
+                            Token::new(TokenType::Type(Types::Bool), 1),
                             Token::new(TokenType::Print, 1),
                             Token::new(TokenType::BoolValue(true), 1),
                             Token::new(TokenType::BoolValue(false), 1),
@@ -478,6 +493,36 @@ mod tests {
                             Token::new(TokenType::LeftBrace, 1),
                             Token::new(TokenType::StringValue("Greater\n".to_string()), 1),
                             Token::new(TokenType::Print, 1),
+                            Token::new(TokenType::RightBrace, 1),
+                        ]
+                    ),
+                    output
+                )
+            }
+
+            Err(_) => println!("Error"),
+        }
+    }
+
+    #[test]
+    fn parse_func() {
+        let input = String::from(r#"func test i32 i32 -> i32 { + }"#);
+        let result = scan_tokens(&input);
+        match result {
+            Ok(r) => {
+                let output = format!("{:?}", r);
+                assert_eq!(
+                    format!(
+                        "{:?}",
+                        vec![
+                            Token::new(TokenType::Func, 1),
+                            Token::new(TokenType::Identifier("test".to_string()), 1),
+                            Token::new(TokenType::Type(Types::I32), 1),
+                            Token::new(TokenType::Type(Types::I32), 1),
+                            Token::new(TokenType::Arrow, 1),
+                            Token::new(TokenType::Type(Types::I32), 1),
+                            Token::new(TokenType::LeftBrace, 1),
+                            Token::new(TokenType::Add, 1),
                             Token::new(TokenType::RightBrace, 1),
                         ]
                     ),
