@@ -169,6 +169,31 @@ where
     return Ok(values);
 }
 
+fn get_types<'a, I>(tokens: &mut std::iter::Peekable<I>) -> Result<Vec<Types>, String>
+where
+    I: Iterator<Item = &'a Token>,
+{
+    let mut values: Vec<Types> = Vec::new();
+
+    while let Some(&t) = tokens.peek() {
+        match &t.token_type {
+            TokenType::Type(t2) => {
+                values.push(t2.clone());
+            }
+            TokenType::LeftBrace => {
+                break;
+            }
+            TokenType::Arrow => {
+                break;
+            }
+            _ => panic!("Invalid token, expected type got {:?}", t.token_type),
+        }
+        tokens.next();
+    }
+
+    return Ok(values);
+}
+
 fn get_region<'a, I>(tokens: &mut std::iter::Peekable<I>) -> Result<Vec<Token>, String>
 where
     I: Iterator<Item = &'a Token>,
@@ -268,7 +293,40 @@ fn generate_parse_tree<'a>(
             }
             TokenType::Func => {
                 peekable.next();
-                todo!("Parse func type");
+                let function_name = if let Some(t) = peekable.next() {
+                    match &t.token_type {
+                        TokenType::Identifier(s) => s.clone(),
+                        _ => panic!("Invalid function call"),
+                    }
+                } else {
+                    panic!("Invalid function");
+                };
+
+                let input_types = get_types(&mut peekable)?;
+
+                if let Some(t) = peekable.next() {
+                    match &t.token_type {
+                        TokenType::Arrow => (),
+                        _ => panic!("Expected arrow operator"),
+                    }
+                } else {
+                    panic!("Expected arrow");
+                };
+
+                let output_types = get_types(&mut peekable)?;
+
+                let region_tree =
+                    generate_parse_tree(get_region(&mut peekable)?.iter(), functions)?;
+
+                functions.insert(
+                    function_name.clone(),
+                    ParseTree::FuncDecl(
+                        function_name,
+                        input_types,
+                        output_types,
+                        Box::new(region_tree),
+                    ),
+                );
             }
             _ => {
                 peekable.next();
@@ -322,7 +380,11 @@ mod tests {
         }
     }
 
-    fn test_function(input: Vec<Token>, function_expected: ParseTree, expected: ParseTree) {
+    fn test_function(
+        input: Vec<Token>,
+        function_expected: HashMap<String, ParseTree>,
+        expected: ParseTree,
+    ) {
         let mut functions = HashMap::new();
         let tree = generate_parse_tree(input.iter(), &mut functions);
 
@@ -526,15 +588,18 @@ mod tests {
             Token::new(TokenType::Print, 1),
         ];
 
-        let function_output = ParseTree::FuncDecl(
+        let function_output = HashMap::from([(
             "test".to_string(),
-            vec![Types::I32, Types::I32],
-            vec![Types::I32],
-            Box::new(ParseTree::Region(vec![ParseTree::Element(Token::new(
-                TokenType::Add,
-                1,
-            ))])),
-        );
+            ParseTree::FuncDecl(
+                "test".to_string(),
+                vec![Types::I32, Types::I32],
+                vec![Types::I32],
+                Box::new(ParseTree::Region(vec![ParseTree::Element(Token::new(
+                    TokenType::Add,
+                    1,
+                ))])),
+            ),
+        )]);
 
         let output = ParseTree::Region(vec![
             ParseTree::Element(Token::new(TokenType::I32(0), 1)),
