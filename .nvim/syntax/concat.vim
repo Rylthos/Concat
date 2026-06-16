@@ -4,9 +4,9 @@ syn region concatString      start=/"/ skip=/\\"/ end=/"/
 
 syn keyword concatConditional if else
 syn keyword concatLoop while
-syn keyword concatType string bool int
+syn keyword concatType string bool i32 void
 syn keyword concatBoolean true false
-syn keyword concatKeyword rot3 dup drop over swap print cast
+syn keyword concatKeyword rot3 dup drop over swap print cast func
 
 hi def link concatLineComment Comment
 hi def link concatLoop        Repeat
