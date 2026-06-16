@@ -20,7 +20,7 @@ fn parse_element(token: Token) -> Option<Instruction> {
             panic!("Unreachable: {:?}", token);
         }
         TokenType::StringValue(s) => Instruction::Push(StackValue::String(s.to_string())),
-        TokenType::NumberValue(n) => Instruction::Push(StackValue::Number(n)),
+        TokenType::I32(n) => Instruction::Push(StackValue::I32(n)),
         TokenType::BoolValue(b) => Instruction::Push(StackValue::Bool(b)),
         TokenType::Type(t) => Instruction::Push(StackValue::Type(t.clone())),
         //
@@ -35,7 +35,6 @@ fn parse_element(token: Token) -> Option<Instruction> {
         TokenType::Drop => Instruction::Drop,
         TokenType::Over => Instruction::Over,
         TokenType::Swap => Instruction::Swap,
-        TokenType::Cast => Instruction::Cast,
         TokenType::Print => Instruction::Print,
         //
         TokenType::Less => Instruction::Less,
@@ -318,9 +317,9 @@ mod tests {
     #[test]
     fn parse_tree_if() {
         let input = vec![
-            Token::new(TokenType::NumberValue(0.0), 1),
+            Token::new(TokenType::I32(0), 1),
             Token::new(TokenType::If, 1),
-            Token::new(TokenType::NumberValue(10.0), 1),
+            Token::new(TokenType::I32(10), 1),
             Token::new(TokenType::Greater, 1),
             Token::new(TokenType::LeftBrace, 1),
             Token::new(TokenType::RightBrace, 1),
@@ -334,14 +333,11 @@ mod tests {
                     format!(
                         "{:?}",
                         ParseTree::Region(vec![
-                            ParseTree::Element(Token::new(TokenType::NumberValue(0.0), 1)),
+                            ParseTree::Element(Token::new(TokenType::I32(0), 1)),
                             ParseTree::If(
                                 vec![(
                                     Box::new(ParseTree::Region(vec![
-                                        ParseTree::Element(Token::new(
-                                            TokenType::NumberValue(10.0),
-                                            1
-                                        )),
+                                        ParseTree::Element(Token::new(TokenType::I32(10), 1)),
                                         ParseTree::Element(Token::new(TokenType::Greater, 1)),
                                     ])),
                                     Box::new(ParseTree::Region(vec![]))
@@ -360,16 +356,16 @@ mod tests {
     #[test]
     fn parse_tree_if_else() {
         let input = vec![
-            Token::new(TokenType::NumberValue(0.0), 1),
+            Token::new(TokenType::I32(0), 1),
             Token::new(TokenType::If, 1),
-            Token::new(TokenType::NumberValue(10.0), 1),
+            Token::new(TokenType::I32(10), 1),
             Token::new(TokenType::Greater, 1),
             Token::new(TokenType::LeftBrace, 1),
-            Token::new(TokenType::NumberValue(2.0), 1),
+            Token::new(TokenType::I32(2), 1),
             Token::new(TokenType::RightBrace, 1),
             Token::new(TokenType::Else, 1),
             Token::new(TokenType::LeftBrace, 1),
-            Token::new(TokenType::NumberValue(3.0), 1),
+            Token::new(TokenType::I32(3), 1),
             Token::new(TokenType::RightBrace, 1),
         ];
         let tree = generate_parse_tree(input.iter());
@@ -381,22 +377,19 @@ mod tests {
                     format!(
                         "{:?}",
                         ParseTree::Region(vec![
-                            ParseTree::Element(Token::new(TokenType::NumberValue(0.0), 1)),
+                            ParseTree::Element(Token::new(TokenType::I32(0), 1)),
                             ParseTree::If(
                                 vec![(
                                     Box::new(ParseTree::Region(vec![
-                                        ParseTree::Element(Token::new(
-                                            TokenType::NumberValue(10.0),
-                                            1
-                                        )),
+                                        ParseTree::Element(Token::new(TokenType::I32(10), 1)),
                                         ParseTree::Element(Token::new(TokenType::Greater, 1)),
                                     ])),
                                     Box::new(ParseTree::Region(vec![ParseTree::Element(
-                                        Token::new(TokenType::NumberValue(2.0), 1)
+                                        Token::new(TokenType::I32(2), 1)
                                     )]))
                                 ),],
                                 Box::new(ParseTree::Region(vec![ParseTree::Element(Token::new(
-                                    TokenType::NumberValue(3.0),
+                                    TokenType::I32(3),
                                     1
                                 ))]))
                             ),
@@ -412,26 +405,26 @@ mod tests {
     #[test]
     fn parse_tree_if_elseif_else() {
         let input = vec![
-            Token::new(TokenType::NumberValue(0.0), 1),
+            Token::new(TokenType::I32(0), 1),
             Token::new(TokenType::If, 1),
             Token::new(TokenType::Duplicate, 1),
-            Token::new(TokenType::NumberValue(10.0), 1),
+            Token::new(TokenType::I32(10), 1),
             Token::new(TokenType::Greater, 1),
             Token::new(TokenType::LeftBrace, 1),
-            Token::new(TokenType::NumberValue(2.0), 1),
+            Token::new(TokenType::I32(2), 1),
             Token::new(TokenType::RightBrace, 1),
             Token::new(TokenType::Else, 1),
             Token::new(TokenType::If, 1),
             Token::new(TokenType::Duplicate, 1),
-            Token::new(TokenType::NumberValue(20.0), 1),
+            Token::new(TokenType::I32(20), 1),
             Token::new(TokenType::Greater, 1),
             Token::new(TokenType::LeftBrace, 1),
-            Token::new(TokenType::NumberValue(3.0), 1),
+            Token::new(TokenType::I32(3), 1),
             Token::new(TokenType::RightBrace, 1),
             Token::new(TokenType::Else, 1),
             Token::new(TokenType::LeftBrace, 1),
             Token::new(TokenType::Drop, 1),
-            Token::new(TokenType::NumberValue(4.0), 1),
+            Token::new(TokenType::I32(4), 1),
             Token::new(TokenType::RightBrace, 1),
         ];
         let tree = generate_parse_tree(input.iter());
@@ -443,39 +436,33 @@ mod tests {
                     format!(
                         "{:?}",
                         ParseTree::Region(vec![
-                            ParseTree::Element(Token::new(TokenType::NumberValue(0.0), 1)),
+                            ParseTree::Element(Token::new(TokenType::I32(0), 1)),
                             ParseTree::If(
                                 vec![
                                     (
                                         Box::new(ParseTree::Region(vec![
                                             ParseTree::Element(Token::new(TokenType::Duplicate, 1)),
-                                            ParseTree::Element(Token::new(
-                                                TokenType::NumberValue(10.0),
-                                                1
-                                            )),
+                                            ParseTree::Element(Token::new(TokenType::I32(10), 1)),
                                             ParseTree::Element(Token::new(TokenType::Greater, 1)),
                                         ])),
                                         Box::new(ParseTree::Region(vec![ParseTree::Element(
-                                            Token::new(TokenType::NumberValue(2.0), 1)
+                                            Token::new(TokenType::I32(2), 1)
                                         )]))
                                     ),
                                     (
                                         Box::new(ParseTree::Region(vec![
                                             ParseTree::Element(Token::new(TokenType::Duplicate, 1)),
-                                            ParseTree::Element(Token::new(
-                                                TokenType::NumberValue(20.0),
-                                                1
-                                            )),
+                                            ParseTree::Element(Token::new(TokenType::I32(20), 1)),
                                             ParseTree::Element(Token::new(TokenType::Greater, 1)),
                                         ])),
                                         Box::new(ParseTree::Region(vec![ParseTree::Element(
-                                            Token::new(TokenType::NumberValue(3.0), 1)
+                                            Token::new(TokenType::I32(3), 1)
                                         )]))
                                     ),
                                 ],
                                 Box::new(ParseTree::Region(vec![
                                     ParseTree::Element(Token::new(TokenType::Drop, 1)),
-                                    ParseTree::Element(Token::new(TokenType::NumberValue(4.0), 1))
+                                    ParseTree::Element(Token::new(TokenType::I32(4), 1))
                                 ]))
                             ),
                         ])
@@ -490,13 +477,13 @@ mod tests {
     #[test]
     fn parse_tree_while() {
         let input = vec![
-            Token::new(TokenType::NumberValue(0.0), 1),
+            Token::new(TokenType::I32(0), 1),
             Token::new(TokenType::While, 1),
             Token::new(TokenType::Duplicate, 1),
-            Token::new(TokenType::NumberValue(10.0), 1),
+            Token::new(TokenType::I32(10), 1),
             Token::new(TokenType::Less, 1),
             Token::new(TokenType::LeftBrace, 1),
-            Token::new(TokenType::NumberValue(1.0), 1),
+            Token::new(TokenType::I32(1), 1),
             Token::new(TokenType::Add, 1),
             Token::new(TokenType::RightBrace, 1),
         ];
@@ -509,15 +496,15 @@ mod tests {
                     format!(
                         "{:?}",
                         ParseTree::Region(vec![
-                            ParseTree::Element(Token::new(TokenType::NumberValue(0.0), 1)),
+                            ParseTree::Element(Token::new(TokenType::I32(0), 1)),
                             ParseTree::While(
                                 Box::new(ParseTree::Region(vec![
                                     ParseTree::Element(Token::new(TokenType::Duplicate, 1)),
-                                    ParseTree::Element(Token::new(TokenType::NumberValue(10.0), 1)),
+                                    ParseTree::Element(Token::new(TokenType::I32(10), 1)),
                                     ParseTree::Element(Token::new(TokenType::Less, 1))
                                 ])),
                                 Box::new(ParseTree::Region(vec![
-                                    ParseTree::Element(Token::new(TokenType::NumberValue(1.0), 1)),
+                                    ParseTree::Element(Token::new(TokenType::I32(1), 1)),
                                     ParseTree::Element(Token::new(TokenType::Add, 1)),
                                 ]))
                             )

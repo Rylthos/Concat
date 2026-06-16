@@ -15,7 +15,7 @@ while dup 20 < {
   if || {
     "\n" print
   } else {
-    dup string cast print "\n" print
+    dup print "\n" print
   }
 
   1 +

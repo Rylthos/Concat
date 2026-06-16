@@ -3,7 +3,7 @@ use crate::lexer::tokens::Types;
 #[derive(Debug, Clone)]
 pub enum StackValue {
     String(String),
-    Number(f64),
+    I32(i32),
     Bool(bool),
     Type(Types),
     Ptr(usize),
@@ -19,7 +19,6 @@ pub enum Instruction {
     Drop,
     Over,
     Swap,
-    Cast,
     Print,
 
     Less,

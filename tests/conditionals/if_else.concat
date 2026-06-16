@@ -1,6 +1,6 @@
 10
 if dup 10 < {
-  "Less 10: " print string cast print "\n" print
+  "Less 10: " print print "\n" print
 } else {
-  "Greater 10: " print string cast print "\n" print
+  "Greater 10: " print print "\n" print
 }

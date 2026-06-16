@@ -1,4 +1,4 @@
 1 2 +
 3 4 +
 *
-"Value: " print string cast print "\n" print
+"Value: " print print "\n" print

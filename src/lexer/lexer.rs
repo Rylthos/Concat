@@ -18,7 +18,7 @@ fn scan_tokens(input: &str) -> Result<Vec<Token>, String> {
         //
         ("string".to_string(), TokenType::Type(Types::String)),
         ("bool".to_string(), TokenType::Type(Types::Bool)),
-        ("int".to_string(), TokenType::Type(Types::Int)),
+        ("i32".to_string(), TokenType::Type(Types::I32)),
         //
         ("rot3".to_string(), TokenType::Rotate3),
         ("dup".to_string(), TokenType::Duplicate),
@@ -26,7 +26,6 @@ fn scan_tokens(input: &str) -> Result<Vec<Token>, String> {
         ("over".to_string(), TokenType::Over),
         ("swap".to_string(), TokenType::Swap),
         ("print".to_string(), TokenType::Print),
-        ("cast".to_string(), TokenType::Cast),
         //
         ("if".to_string(), TokenType::If),
         ("else".to_string(), TokenType::Else),
@@ -156,7 +155,7 @@ fn scan_tokens(input: &str) -> Result<Vec<Token>, String> {
                 chars.next();
                 while let Some(&c2) = chars.peek() {
                     match c2 {
-                        '0'..='9' | '.' => {
+                        '0'..='9' => {
                             s.push(c2);
                             chars.next();
                         }
@@ -167,7 +166,7 @@ fn scan_tokens(input: &str) -> Result<Vec<Token>, String> {
                 }
 
                 tokens.push(Token::new(
-                    TokenType::NumberValue(s.parse::<f64>().unwrap()),
+                    TokenType::I32(s.parse::<i32>().unwrap()),
                     line_number,
                 ))
             }
@@ -241,7 +240,7 @@ mod tests {
 
     #[test]
     fn parse_keywords() {
-        let input = String::from("string int cast print true false \"Hello, World!\"");
+        let input = String::from("string i32 print true false \"Hello, World!\"");
         let result = scan_tokens(&input);
         match result {
             Ok(r) => {
@@ -251,8 +250,7 @@ mod tests {
                         "{:?}",
                         vec![
                             Token::new(TokenType::Type(Types::String), 1),
-                            Token::new(TokenType::Type(Types::Int), 1),
-                            Token::new(TokenType::Cast, 1),
+                            Token::new(TokenType::Type(Types::I32), 1),
                             Token::new(TokenType::Print, 1),
                             Token::new(TokenType::BoolValue(true), 1),
                             Token::new(TokenType::BoolValue(false), 1),
@@ -269,7 +267,7 @@ mod tests {
 
     #[test]
     fn parse_numbers() {
-        let input = String::from("0 10 1234 0.123 1000.09123");
+        let input = String::from("0 10 1234");
         let result = scan_tokens(&input);
         match result {
             Ok(r) => {
@@ -278,11 +276,9 @@ mod tests {
                     format!(
                         "{:?}",
                         vec![
-                            Token::new(TokenType::NumberValue(0.0), 1),
-                            Token::new(TokenType::NumberValue(10.0), 1),
-                            Token::new(TokenType::NumberValue(1234.0), 1),
-                            Token::new(TokenType::NumberValue(0.123), 1),
-                            Token::new(TokenType::NumberValue(1000.09123), 1),
+                            Token::new(TokenType::I32(0), 1),
+                            Token::new(TokenType::I32(10), 1),
+                            Token::new(TokenType::I32(1234), 1),
                         ]
                     ),
                     output
@@ -318,7 +314,7 @@ mod tests {
 
     #[test]
     fn parse_comments() {
-        let input = String::from("int // Hello World\n int");
+        let input = String::from("i32 // Hello World\n i32");
         let result = scan_tokens(&input);
         match result {
             Ok(r) => {
@@ -327,8 +323,8 @@ mod tests {
                     format!(
                         "{:?}",
                         vec![
-                            Token::new(TokenType::Type(Types::Int), 1),
-                            Token::new(TokenType::Type(Types::Int), 2)
+                            Token::new(TokenType::Type(Types::I32), 1),
+                            Token::new(TokenType::Type(Types::I32), 2)
                         ]
                     ),
                     output
@@ -346,7 +342,7 @@ mod tests {
             1 2 +
             3 4 +
             *
-            string cast print
+            print
             "#,
         );
         let result = scan_tokens(&input);
@@ -357,15 +353,13 @@ mod tests {
                     format!(
                         "{:?}",
                         vec![
-                            Token::new(TokenType::NumberValue(1.0), 2),
-                            Token::new(TokenType::NumberValue(2.0), 2),
+                            Token::new(TokenType::I32(1), 2),
+                            Token::new(TokenType::I32(2), 2),
                             Token::new(TokenType::Add, 2),
-                            Token::new(TokenType::NumberValue(3.0), 3),
-                            Token::new(TokenType::NumberValue(4.0), 3),
+                            Token::new(TokenType::I32(3), 3),
+                            Token::new(TokenType::I32(4), 3),
                             Token::new(TokenType::Add, 3),
                             Token::new(TokenType::Multiply, 4),
-                            Token::new(TokenType::Type(Types::String), 5),
-                            Token::new(TokenType::Cast, 5),
                             Token::new(TokenType::Print, 5),
                         ]
                     ),
@@ -406,7 +400,7 @@ mod tests {
 
     #[test]
     fn parse_stack_operations() {
-        let input = String::from(r#"rot3 dup drop over swap print cast"#);
+        let input = String::from(r#"rot3 dup drop over swap print"#);
         let result = scan_tokens(&input);
         match result {
             Ok(r) => {
@@ -421,7 +415,6 @@ mod tests {
                             Token::new(TokenType::Over, 1),
                             Token::new(TokenType::Swap, 1),
                             Token::new(TokenType::Print, 1),
-                            Token::new(TokenType::Cast, 1),
                         ]
                     ),
                     output
@@ -443,13 +436,13 @@ mod tests {
                     format!(
                         "{:?}",
                         vec![
-                            Token::new(TokenType::NumberValue(0.0), 1),
+                            Token::new(TokenType::I32(0), 1),
                             Token::new(TokenType::While, 1),
                             Token::new(TokenType::Duplicate, 1),
-                            Token::new(TokenType::NumberValue(1.0), 1),
+                            Token::new(TokenType::I32(1), 1),
                             Token::new(TokenType::Greater, 1),
                             Token::new(TokenType::LeftBrace, 1),
-                            Token::new(TokenType::NumberValue(1.0), 1),
+                            Token::new(TokenType::I32(1), 1),
                             Token::new(TokenType::Add, 1),
                             Token::new(TokenType::RightBrace, 1),
                         ]
@@ -473,9 +466,9 @@ mod tests {
                     format!(
                         "{:?}",
                         vec![
-                            Token::new(TokenType::NumberValue(0.0), 1),
+                            Token::new(TokenType::I32(0), 1),
                             Token::new(TokenType::If, 1),
-                            Token::new(TokenType::NumberValue(1.0), 1),
+                            Token::new(TokenType::I32(1), 1),
                             Token::new(TokenType::Greater, 1),
                             Token::new(TokenType::LeftBrace, 1),
                             Token::new(TokenType::StringValue("Less\n".to_string()), 1),

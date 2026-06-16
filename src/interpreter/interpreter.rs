@@ -1,22 +1,6 @@
 use crate::lexer::tokens::Types;
 use crate::parser::instructions::{Instruction, StackValue};
 
-fn cast_string(value: StackValue) -> StackValue {
-    match value {
-        StackValue::String(s) => StackValue::String(s),
-        StackValue::Number(n) => StackValue::String(n.to_string()),
-        StackValue::Bool(b) => StackValue::String(b.to_string()),
-        _ => panic!("Unhandled cast to string"),
-    }
-}
-
-fn cast_type(value: StackValue, target_type: Types) -> StackValue {
-    match target_type {
-        Types::String => cast_string(value),
-        _ => panic!("Unhandled casts"),
-    }
-}
-
 pub fn interpret(instructions: &Vec<Instruction>) {
     let mut stack: Vec<StackValue> = Vec::new();
 
@@ -66,22 +50,13 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                 stack.push(v2.clone());
                 stack.push(v1.clone());
             }
-            Instruction::Cast => {
-                assert!(stack.len() >= 2, "Invalid stack length");
-                let stack_type = stack.pop().unwrap();
-                let stack_value = stack.pop().unwrap();
-
-                if let StackValue::Type(t) = stack_type {
-                    stack.push(cast_type(stack_value, t))
-                } else {
-                    panic!("Expected type");
-                }
-            }
             Instruction::Print => {
                 let value = stack.pop();
                 if let Some(v) = value {
                     if let StackValue::String(s) = v {
                         print!("{}", s);
+                    } else if let StackValue::I32(i) = v {
+                        print!("{}", i);
                     } else {
                         panic!("Expected String Value");
                     }
@@ -102,8 +77,8 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                 let v2 = stack.pop().unwrap();
                 let v1 = stack.pop().unwrap();
 
-                if let StackValue::Number(v1) = v1
-                    && let StackValue::Number(v2) = v2
+                if let StackValue::I32(v1) = v1
+                    && let StackValue::I32(v2) = v2
                 {
                     let output = match instruction {
                         Instruction::Less => StackValue::Bool(v1 < v2),
@@ -167,15 +142,15 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                 let v2 = stack.pop().unwrap();
                 let v1 = stack.pop().unwrap();
 
-                if let StackValue::Number(v1) = v1
-                    && let StackValue::Number(v2) = v2
+                if let StackValue::I32(v1) = v1
+                    && let StackValue::I32(v2) = v2
                 {
                     let new_value = match instruction {
-                        Instruction::Add => StackValue::Number(v1 + v2),
-                        Instruction::Subtract => StackValue::Number(v1 - v2),
-                        Instruction::Multiply => StackValue::Number(v1 * v2),
-                        Instruction::Divide => StackValue::Number(v1 / v2),
-                        Instruction::Modulo => StackValue::Number(v1 % v2),
+                        Instruction::Add => StackValue::I32(v1 + v2),
+                        Instruction::Subtract => StackValue::I32(v1 - v2),
+                        Instruction::Multiply => StackValue::I32(v1 * v2),
+                        Instruction::Divide => StackValue::I32(v1 / v2),
+                        Instruction::Modulo => StackValue::I32(v1 % v2),
                         _ => panic!("Unhandled value"),
                     };
                     stack.push(new_value);

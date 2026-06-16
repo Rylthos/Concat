@@ -1,5 +1,5 @@
-"0: " print 0 string cast print "\n" print
-"1: " print 1 string cast print "\n" print
+"0: " print 0 print "\n" print
+"1: " print 1 print "\n" print
 
 0
 1
@@ -28,12 +28,12 @@ while dup 19 < {
 
   // i n2 n3
   rot3 rot3
-  dup 2 + string cast print ": " print
+  dup 2 + print ": " print
   rot3
 
   dup
 
-  string cast print "\n" print
+  print "\n" print
 
   rot3 rot3
 

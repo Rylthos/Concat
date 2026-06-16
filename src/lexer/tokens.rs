@@ -1,7 +1,7 @@
 #[derive(Debug, Clone)]
 pub enum Types {
     String,
-    Int,
+    I32,
     Bool,
     Ptr(Box<Types>),
 }
@@ -24,7 +24,6 @@ pub enum TokenType {
     Drop,
     Over,
     Swap,
-    Cast,
     Print,
 
     // Boolean Operations
@@ -48,7 +47,7 @@ pub enum TokenType {
     Type(Types),
 
     StringValue(String),
-    NumberValue(f64),
+    I32(i32),
     BoolValue(bool),
 }
 
