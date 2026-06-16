@@ -183,13 +183,13 @@ fn scan_tokens(input: &str) -> Result<Vec<Token>, String> {
                     line_number,
                 ))
             }
-            'A'..='Z' | 'a'..='z' => {
+            '_' | 'A'..='Z' | 'a'..='z' => {
                 let mut s = String::new();
                 s.push(c);
 
                 chars.next();
                 while let Some(&c2) = chars.peek() {
-                    if !c2.is_digit(10) && !c2.is_alphabetic() {
+                    if !c2.is_digit(10) && !c2.is_alphabetic() && !(c2 == '_') {
                         break;
                     } else {
                         s.push(c2);
