@@ -226,7 +226,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_single_characters() {
+    fn lex_single_characters() {
         let input = String::from("+ - {} *\t/");
         let result = scan_tokens(&input);
         match result {
@@ -252,7 +252,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_keywords() {
+    fn lex_keywords() {
         let input = String::from("string i32 void bool print true false \"Hello, World!\"");
         let result = scan_tokens(&input);
         match result {
@@ -281,7 +281,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_numbers() {
+    fn lex_numbers() {
         let input = String::from("0 10 1234");
         let result = scan_tokens(&input);
         match result {
@@ -305,7 +305,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_escape_lines() {
+    fn lex_escape_lines() {
         let input = String::from(r#" "\n \t \" " "#);
         let result = scan_tokens(&input);
         match result {
@@ -328,7 +328,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_comments() {
+    fn lex_comments() {
         let input = String::from("i32 // Hello World\n i32");
         let result = scan_tokens(&input);
         match result {
@@ -351,7 +351,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_arithmetic() {
+    fn lex_arithmetic() {
         let input = String::from(
             r#"
             1 2 +
@@ -387,7 +387,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_boolean() {
+    fn lex_boolean() {
         let input = String::from(r#"> < == != <= >="#);
         let result = scan_tokens(&input);
         match result {
@@ -414,7 +414,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_stack_operations() {
+    fn lex_stack_operations() {
         let input = String::from(r#"rot3 dup drop over swap print"#);
         let result = scan_tokens(&input);
         match result {
@@ -441,7 +441,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_while_loop() {
+    fn lex_while_loop() {
         let input = String::from(r#"0 while dup 1 > {1 +}"#);
         let result = scan_tokens(&input);
         match result {
@@ -471,7 +471,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_if() {
+    fn lex_if() {
         let input = String::from(r#"0 if 1 > { "Less\n" print } else { "Greater\n" print }"#);
         let result = scan_tokens(&input);
         match result {
@@ -505,7 +505,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_func() {
+    fn lex_func() {
         let input = String::from(r#"func test i32 i32 -> i32 { + }"#);
         let result = scan_tokens(&input);
         match result {
