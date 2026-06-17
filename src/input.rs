@@ -19,14 +19,3 @@ pub fn read_file_path(path: &Path) -> String {
 
     return s;
 }
-
-pub fn read_file() -> String {
-    let args: Vec<String> = env::args().collect();
-
-    if args.len() == 1 {
-        panic!("Invalid usage: expected file path");
-    }
-
-    let path = Path::new(&args[1]);
-    read_file_path(&path)
-}
