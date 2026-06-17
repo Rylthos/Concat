@@ -1,19 +1,10 @@
 use crate::lexer::tokens::{Token, TokenType, Types};
-use crate::parser::instructions::{self, Instruction, StackValue};
+use crate::parser::instructions::{Instruction, StackValue};
+use crate::parser::parse_tree::ParseTree;
 
 use crate::config::config::Config;
 
 use std::collections::HashMap;
-
-#[derive(Debug, Clone)]
-enum ParseTree {
-    None,
-    Element(Token),
-    Region(Vec<ParseTree>),
-    If(Vec<(Box<ParseTree>, Box<ParseTree>)>, Box<ParseTree>),
-    While(Box<ParseTree>, Box<ParseTree>),
-    FuncDecl(String, Vec<Types>, Vec<Types>, Box<ParseTree>),
-}
 
 pub struct Parser {
     config: Config,
@@ -43,6 +34,16 @@ impl Parser {
 
         self.parse_tree = tree;
 
+        if self.config.tree_print {
+            println!("==== TREE ====");
+            println!("{}", self.parse_tree);
+
+            for (_, func) in self.functions.iter() {
+                println!("{}", func);
+            }
+            println!("==== TREE ====");
+        }
+
         self.instructions = self.parse_tree(self.parse_tree.clone())?;
         self.instructions.push(Instruction::Halt);
 
@@ -52,7 +53,11 @@ impl Parser {
         self.evaluate_labels();
 
         if self.config.expr_print {
-            println!("{:?}", self.instructions);
+            println!("==== INSTR ====");
+            for instr in self.instructions.iter() {
+                println!("{:?}", instr);
+            }
+            println!("==== INSTR ====");
         }
 
         Ok(())

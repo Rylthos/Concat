@@ -8,7 +8,10 @@ pub struct Config {
     #[arg(short, long, default_value_t = false)]
     pub expr_print: bool,
 
-    #[arg(short, long, default_value_t = false)]
+    #[arg(long, default_value_t = false)]
+    pub tree_print: bool,
+
+    #[arg(long, default_value_t = false)]
     pub token_print: bool,
 }
 
@@ -17,6 +20,7 @@ impl Config {
         Config {
             path: "".into(),
             expr_print: false,
+            tree_print: false,
             token_print: false,
         }
     }
