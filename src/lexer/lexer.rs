@@ -252,7 +252,7 @@ mod tests {
         let mut lexer = Lexer::init(Config::blank(), String::from(input));
         let result = lexer.lex_input();
         match result {
-            Ok(r) => assert_eq!(
+            Ok(_) => assert_eq!(
                 format!("{:?}", expected_output),
                 format!("{:?}", lexer.tokens)
             ),

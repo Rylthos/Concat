@@ -189,8 +189,7 @@ impl Parser {
             | TokenType::While
             | TokenType::Arrow
             | TokenType::Func => {
-                panic!("Unreachable: {:?}", token);
-                return None;
+                unreachable!("Unreachable: {:?}", token);
             }
             TokenType::StringValue(s) => Instruction::Push(StackValue::String(s.to_string())),
             TokenType::I32(n) => Instruction::Push(StackValue::I32(n)),

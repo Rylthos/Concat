@@ -1,4 +1,3 @@
-use crate::lexer::tokens::Types;
 use crate::parser::instructions::{Instruction, StackValue};
 
 pub fn interpret(instructions: &Vec<Instruction>) {
@@ -172,8 +171,7 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                 let num_arguments = if let StackValue::I32(i) = stack.pop().unwrap() {
                     i
                 } else {
-                    panic!("Invalid call");
-                    0
+                    unreachable!("Invalid call")
                 };
 
                 let mut arguments = Vec::new();
@@ -200,8 +198,7 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                 let num_arguments = if let StackValue::I32(i) = stack.pop().unwrap() {
                     i
                 } else {
-                    panic!("Invalid call");
-                    0
+                    unreachable!("Invalid call")
                 };
 
                 let mut arguments = Vec::new();
@@ -213,8 +210,7 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                 let return_address = if let StackValue::I32(v) = stack.pop().unwrap() {
                     v
                 } else {
-                    panic!("Invalid Ret");
-                    0
+                    unreachable!("Invalid Ret")
                 };
 
                 index = return_address as usize;
