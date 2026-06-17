@@ -167,11 +167,62 @@ pub fn interpret(instructions: &Vec<Instruction>) {
             Instruction::Halt => {
                 break;
             }
-            Instruction::Call(index) => {
-                todo!();
+            Instruction::Call(call_index) => {
+                assert!(stack.len() >= 1, "Invalid stack length");
+                let num_arguments = if let StackValue::I32(i) = stack.pop().unwrap() {
+                    i
+                } else {
+                    panic!("Invalid call");
+                    0
+                };
+
+                let mut arguments = Vec::new();
+                assert!(
+                    stack.len() >= num_arguments as usize,
+                    "Expected length {} got {}",
+                    num_arguments,
+                    stack.len()
+                );
+                for _ in 0..num_arguments {
+                    arguments.push(stack.pop().unwrap());
+                }
+
+                stack.push(StackValue::I32((index + 1) as i32));
+                index = *call_index;
+
+                for v in arguments.iter().rev() {
+                    stack.push(v.clone());
+                }
+                continue;
             }
             Instruction::Ret => {
-                todo!();
+                assert!(stack.len() >= 1, "Invalid stack length");
+                let num_arguments = if let StackValue::I32(i) = stack.pop().unwrap() {
+                    i
+                } else {
+                    panic!("Invalid call");
+                    0
+                };
+
+                let mut arguments = Vec::new();
+                assert!(stack.len() >= num_arguments as usize);
+                for _ in 0..num_arguments {
+                    arguments.push(stack.pop().unwrap());
+                }
+
+                let return_address = if let StackValue::I32(v) = stack.pop().unwrap() {
+                    v
+                } else {
+                    panic!("Invalid Ret");
+                    0
+                };
+
+                index = return_address as usize;
+
+                for v in arguments.iter().rev() {
+                    stack.push(v.clone());
+                }
+                continue;
             }
             Instruction::Label(_, _) | Instruction::LabelRef(_, _) => {
                 panic!("Pseudo instructions: Should not be executed");

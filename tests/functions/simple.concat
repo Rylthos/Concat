@@ -1,0 +1,4 @@
+func add_one i32 -> i32 {
+  1 +
+}
+1 add_one print "\n" print

@@ -7,6 +7,7 @@ func add_one_pair i32 i32 -> i32 i32 {
 }
 
 func print_pair i32 i32 -> void {
+  swap
   "(" print print ", " print print ")\n" print
 }
 

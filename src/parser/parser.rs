@@ -51,6 +51,10 @@ impl Parser {
 
         self.evaluate_labels();
 
+        if self.config.expr_print {
+            println!("{:?}", self.instructions);
+        }
+
         Ok(())
     }
 
@@ -139,7 +143,14 @@ impl Parser {
                         panic!("Expected arrow");
                     };
 
-                    let output_types = Self::get_types(&mut peekable)?;
+                    let output_types = Self::get_types(&mut peekable)?
+                        .iter()
+                        .filter(|i| match i {
+                            Types::Void => false,
+                            _ => true,
+                        })
+                        .cloned()
+                        .collect();
 
                     let region_tree =
                         self.generate_parse_tree(Self::get_region(&mut peekable)?.iter())?;
