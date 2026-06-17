@@ -28,9 +28,8 @@ pub enum Instruction {
     Equal,
     NotEqual,
 
-    Jump(usize),
+    Jump(isize),
     CondJump(usize, usize),
-    BackJump(usize),
 
     Add,
     Subtract,

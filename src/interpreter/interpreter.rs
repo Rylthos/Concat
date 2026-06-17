@@ -114,7 +114,13 @@ pub fn interpret(instructions: &Vec<Instruction>) {
             }
             //
             Instruction::Jump(offset) => {
-                index += offset;
+                if *offset > 0isize {
+                    index += *offset as usize;
+                } else {
+                    index -= -(*offset) as usize;
+                }
+
+                continue;
             }
             Instruction::CondJump(offset_true, offset_false) => {
                 assert!(stack.len() >= 1, "Invalid stack length");
@@ -125,14 +131,11 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                         false => offset_false,
                     };
                     index += offset;
+                    continue;
                 } else {
                     panic!("Expected bool type");
                 }
             }
-            Instruction::BackJump(value) => {
-                index -= value + 1;
-            }
-            //
             Instruction::Add
             | Instruction::Subtract
             | Instruction::Multiply

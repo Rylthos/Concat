@@ -113,15 +113,15 @@ fn parse_tree<'a>(tree: ParseTree) -> Result<Vec<Instruction>, String> {
 
                 parsed_expression.append(&mut c);
                 parsed_expression.push(Instruction::CondJump(
-                    0,
-                    r.len() + if jump_length != 0 { 1 } else { 0 },
+                    1,
+                    r.len() + 1 + if jump_length != 0 { 1 } else { 0 },
                 ));
                 parsed_expression.append(&mut r);
 
                 if jump_length != 0 {
                     length_seen += 1;
                     parsed_expression.push(Instruction::Jump(
-                        jump_length + (total_conditional_branches - branches_seen - 1),
+                        (jump_length + (total_conditional_branches - branches_seen)) as isize,
                     ));
                 }
 
@@ -136,9 +136,9 @@ fn parse_tree<'a>(tree: ParseTree) -> Result<Vec<Instruction>, String> {
 
             let total_length = condition_tree.len() + region_tree.len();
             parsed_expression.append(&mut condition_tree);
-            parsed_expression.push(Instruction::CondJump(0, region_tree.len() + 1));
+            parsed_expression.push(Instruction::CondJump(1, region_tree.len() + 2));
             parsed_expression.append(&mut region_tree);
-            parsed_expression.push(Instruction::BackJump(total_length + 1));
+            parsed_expression.push(Instruction::Jump(-(total_length as isize) - 1));
         }
         ParseTree::FuncDecl(name, inputs, outputs, region) => {
             todo!("Implement func passing");
