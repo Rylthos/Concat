@@ -63,3 +63,45 @@ Fizz
 "#,
         );
 }
+
+#[test]
+fn example_fizzbuzzfuzz() {
+    Command::cargo_bin("concat")
+        .unwrap()
+        .arg("examples/fizzbuzzfuzz.concat")
+        .assert()
+        .success()
+        .stdout(
+            r#"1
+Fizz
+Buzz
+FizzFuzz
+5
+FizzBuzz
+7
+FizzFuzz
+Buzz
+Fizz
+11
+FizzBuzzFuzz
+13
+Fizz
+Buzz
+FizzFuzz
+17
+FizzBuzz
+19
+FizzFuzz
+Buzz
+Fizz
+23
+FizzBuzzFuzz
+25
+Fizz
+Buzz
+FizzFuzz
+29
+FizzBuzz
+"#,
+        );
+}

@@ -1,0 +1,33 @@
+func print_value bool i32 string i32 -> bool {
+  // b:print Index Text Modulo
+  rot3
+  rot3
+  // b:print Text Modulo Index
+
+  swap % 0 ==
+  if {
+    print true
+  } else {
+    drop false
+  }
+
+  ||
+}
+
+
+1
+while dup 30 <= {
+  // I
+
+  false over "Fizz" 2 print_value
+  over "Buzz" 3 print_value
+  over "Fuzz" 4 print_value
+
+  if {
+    "\n" print
+  } else {
+    dup print "\n" print
+  }
+
+  1 +
+}
