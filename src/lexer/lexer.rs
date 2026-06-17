@@ -24,6 +24,14 @@ impl Lexer {
     pub fn lex_input(&mut self) -> Result<(), String> {
         self.tokens = self.scan_tokens()?;
 
+        if self.config.token_print {
+            println!("=== TOKENS ===");
+            for token in self.tokens.iter() {
+                println!("{}", token);
+            }
+            println!("=== TOKENS ===");
+        }
+
         return Ok(());
     }
 
