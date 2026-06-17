@@ -1,5 +1,5 @@
 use crate::lexer::tokens::{Token, TokenType, Types};
-use crate::parser::instructions::{Instruction, StackValue};
+use crate::parser::instructions::{self, Instruction, StackValue};
 
 use crate::config::config::Config;
 
@@ -44,6 +44,12 @@ impl Parser {
         self.parse_tree = tree;
 
         self.instructions = self.parse_tree(self.parse_tree.clone())?;
+        self.instructions.push(Instruction::Halt);
+
+        let mut function_instructions = self.parse_functions()?;
+        self.instructions.append(&mut function_instructions);
+
+        self.evaluate_labels();
 
         Ok(())
     }
@@ -158,17 +164,17 @@ impl Parser {
         return Ok(ParseTree::Region(region));
     }
 
-    fn parse_element(token: Token) -> Option<Instruction> {
-        let instr = match token.token_type {
+    fn parse_element(&self, token: &Token) -> Option<Instruction> {
+        let instr = match token.token_type.clone() {
             TokenType::LeftBrace
             | TokenType::RightBrace
             | TokenType::If
             | TokenType::Else
             | TokenType::While
-            | TokenType::Identifier(_)
             | TokenType::Arrow
             | TokenType::Func => {
                 panic!("Unreachable: {:?}", token);
+                return None;
             }
             TokenType::StringValue(s) => Instruction::Push(StackValue::String(s.to_string())),
             TokenType::I32(n) => Instruction::Push(StackValue::I32(n)),
@@ -198,6 +204,7 @@ impl Parser {
             TokenType::Or => Instruction::Or,
             TokenType::Not => Instruction::Not,
             //
+            TokenType::Identifier(_) => return None,
         };
 
         return Some(instr);
@@ -209,11 +216,34 @@ impl Parser {
         match tree {
             ParseTree::None => return Err("Invalid Parse Tree".to_string()),
             ParseTree::Element(e) => {
-                let expr = Self::parse_element(e);
+                let expr = self.parse_element(&e);
                 if let Some(e) = expr {
                     parsed_expression.push(e)
                 } else {
-                    return Err("Invalid expression".to_string());
+                    match e.token_type {
+                        TokenType::Identifier(iden) => {
+                            if self.functions.contains_key(&iden) {
+                                if let ParseTree::FuncDecl(_, input_types, _, _) =
+                                    self.functions.get(&iden).unwrap()
+                                {
+                                    parsed_expression.push(Instruction::Push(StackValue::I32(
+                                        input_types.len() as i32,
+                                    )));
+                                    parsed_expression.push(Instruction::LabelRef(
+                                        iden,
+                                        Box::new(Instruction::Call(0)),
+                                    ));
+                                } else {
+                                    unreachable!();
+                                }
+                            } else {
+                                return Err("Unknown identifier".to_string());
+                            }
+                        }
+                        _ => {
+                            return Err("Invalid expression".to_string());
+                        }
+                    }
                 }
             }
             ParseTree::Region(r) => parsed_expression.append(
@@ -287,12 +317,68 @@ impl Parser {
                 parsed_expression.append(&mut region_tree);
                 parsed_expression.push(Instruction::Jump(-(total_length as isize) - 1));
             }
-            ParseTree::FuncDecl(_name, _inputs, _outputs, _region) => {
-                todo!("Implement func passing");
+            ParseTree::FuncDecl(name, _, output_types, region) => {
+                let mut region = self.parse_tree(*region)?;
+
+                region.push(Instruction::Push(
+                    StackValue::I32(output_types.len() as i32),
+                ));
+                region.push(Instruction::Ret);
+                let initial_token = region.get(0).unwrap();
+                *region.get_mut(0).unwrap() =
+                    Instruction::Label(name, Box::new(initial_token.clone()));
+
+                parsed_expression.append(&mut region);
             }
         }
 
         return Ok(parsed_expression);
+    }
+
+    fn evaluate_labels(&mut self) {
+        let labels: HashMap<String, usize> = self
+            .instructions
+            .iter()
+            .zip(0..)
+            .filter(|(instr, _)| match instr {
+                Instruction::Label(_, _) => true,
+                _ => false,
+            })
+            .map(|(instr, i)| match instr {
+                Instruction::Label(name, _) => (name.to_string(), i),
+                _ => unreachable!(),
+            })
+            .collect();
+
+        let evaluate_expr = |instr, index| match instr {
+            Instruction::Call(_) => Instruction::Call(index),
+            _ => panic!("Unexpected expr: {:?}", instr),
+        };
+
+        for instr in self.instructions.iter_mut() {
+            match instr {
+                Instruction::LabelRef(name, i) => {
+                    let index = labels.get(name).unwrap();
+
+                    *instr = evaluate_expr(*i.clone(), *index);
+                }
+                Instruction::Label(_, i) => {
+                    *instr = *i.clone();
+                }
+                _ => (),
+            }
+        }
+    }
+
+    fn parse_functions(&mut self) -> Result<Vec<Instruction>, String> {
+        let mut parsed_instructions = Vec::new();
+        for (_, tree) in self.functions.iter() {
+            let mut instructions = self.parse_tree(tree.clone())?;
+
+            parsed_instructions.append(&mut instructions);
+        }
+
+        Ok(parsed_instructions)
     }
 
     fn get_condition<'a, I>(tokens: &mut std::iter::Peekable<I>) -> Result<Vec<Token>, String>
@@ -447,6 +533,7 @@ mod tests {
             Instruction::Add,
             Instruction::Subtract,
             Instruction::Multiply,
+            Instruction::Halt,
         ];
         test_non_function(input, expected_tree, expected_instructions);
     }
@@ -479,6 +566,7 @@ mod tests {
             Instruction::Push(StackValue::I32(10)),
             Instruction::Greater,
             Instruction::CondJump(1, 1),
+            Instruction::Halt,
         ];
         test_non_function(input, expected_tree, expected_instructions);
     }
@@ -525,6 +613,7 @@ mod tests {
             Instruction::Push(StackValue::I32(2)),
             Instruction::Jump(2),
             Instruction::Push(StackValue::I32(3)),
+            Instruction::Halt,
         ];
         test_non_function(input, expected_tree, expected_instructions);
     }
@@ -603,6 +692,7 @@ mod tests {
             Instruction::Jump(3),
             Instruction::Drop,
             Instruction::Push(StackValue::I32(4)),
+            Instruction::Halt,
         ];
         test_non_function(input, expected_tree, expected_instructions);
     }
@@ -643,6 +733,7 @@ mod tests {
             Instruction::Push(StackValue::I32(1)),
             Instruction::Add,
             Instruction::Jump(-6),
+            Instruction::Halt,
         ];
         test_non_function(input, expected_tree, expected_instructions);
     }
@@ -685,7 +776,17 @@ mod tests {
             ParseTree::Element(Token::new(TokenType::Print, 1)),
         ]);
 
-        let expected_instructions = vec![];
+        let expected_instructions = vec![
+            Instruction::Push(StackValue::I32(0)),
+            Instruction::Push(StackValue::I32(1)),
+            Instruction::Push(StackValue::I32(2)),
+            Instruction::Call(6),
+            Instruction::Print,
+            Instruction::Halt,
+            Instruction::Add,
+            Instruction::Push(StackValue::I32(1)),
+            Instruction::Ret,
+        ];
 
         test_function(
             input,

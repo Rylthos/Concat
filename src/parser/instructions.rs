@@ -9,7 +9,7 @@ pub enum StackValue {
     Ptr(usize),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Instruction {
     Push(StackValue),
     Pop,
@@ -39,4 +39,12 @@ pub enum Instruction {
     And,
     Or,
     Not,
+
+    Halt,
+
+    Call(usize),
+    Ret,
+
+    Label(String, Box<Instruction>),
+    LabelRef(String, Box<Instruction>),
 }
