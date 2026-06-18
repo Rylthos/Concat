@@ -2,6 +2,7 @@ use crate::lexer::tokens;
 use std::collections::HashMap;
 
 use crate::config::config::Config;
+use crate::error::types::{ErrorType, LexerError};
 
 use tokens::{Token, TokenType, Types};
 
@@ -21,8 +22,11 @@ impl Lexer {
         }
     }
 
-    pub fn lex_input(&mut self) -> Result<(), String> {
-        self.tokens = self.scan_tokens()?;
+    pub fn lex_input(&mut self) -> Result<(), ErrorType> {
+        self.tokens = match self.scan_tokens() {
+            Ok(t) => t,
+            Err(err) => return Err(ErrorType::Lexer(err)),
+        };
 
         if self.config.token_print {
             println!("=== TOKENS ===");
@@ -35,7 +39,7 @@ impl Lexer {
         return Ok(());
     }
 
-    pub fn scan_tokens(&self) -> Result<Vec<Token>, String> {
+    pub fn scan_tokens(&self) -> Result<Vec<Token>, LexerError> {
         let mut chars = self.input.chars().peekable();
 
         let mut tokens: Vec<Token> = Vec::new();
@@ -98,24 +102,34 @@ impl Lexer {
                 }
                 '&' => {
                     chars.next();
-                    if let Some(&c2) = chars.peek()
-                        && c2 == '&'
-                    {
-                        tokens.push(Token::new(TokenType::And, line_number));
-                        chars.next();
+                    if let Some(&c2) = chars.peek() {
+                        if c2 == '&' {
+                            tokens.push(Token::new(TokenType::And, line_number));
+                            chars.next();
+                        } else {
+                            return Err(LexerError::InvalidToken(
+                                line_number,
+                                format!("&{:?}", c2),
+                            ));
+                        }
                     } else {
-                        panic!("Unknown character");
+                        return Err(LexerError::ExpectedCharacter(line_number));
                     }
                 }
                 '|' => {
                     chars.next();
-                    if let Some(&c2) = chars.peek()
-                        && c2 == '|'
-                    {
-                        tokens.push(Token::new(TokenType::Or, line_number));
-                        chars.next();
+                    if let Some(&c2) = chars.peek() {
+                        if c2 == '|' {
+                            tokens.push(Token::new(TokenType::Or, line_number));
+                            chars.next();
+                        } else {
+                            return Err(LexerError::InvalidToken(
+                                line_number,
+                                format!("|{:?}", c2),
+                            ));
+                        }
                     } else {
-                        panic!("Unknown character");
+                        return Err(LexerError::ExpectedCharacter(line_number));
                     }
                 }
                 '<' | '>' | '=' | '!' => {
@@ -129,7 +143,7 @@ impl Lexer {
                             '>' => TokenType::GreaterEqual,
                             '=' => TokenType::Equal,
                             '!' => TokenType::NotEqual,
-                            _ => panic!("Unhandled character"),
+                            _ => unreachable!("Unhandled case"),
                         }
                     } else {
                         match c {
@@ -137,7 +151,7 @@ impl Lexer {
                             '>' => TokenType::Greater,
                             '=' => todo!("Assignment"),
                             '!' => TokenType::Not,
-                            _ => panic!("Unhandled character"),
+                            _ => unreachable!("Unhandled case"),
                         }
                     };
                     tokens.push(Token::new(token_type, line_number));
@@ -149,7 +163,7 @@ impl Lexer {
                         '%' => TokenType::Modulo,
                         '{' => TokenType::LeftBrace,
                         '}' => TokenType::RightBrace,
-                        _ => panic!("Unaccounted symbol"),
+                        _ => unreachable!("Unhandled case"),
                     };
                     tokens.push(Token::new(token, line_number));
                     chars.next();
@@ -236,7 +250,7 @@ impl Lexer {
                         }
                     }
                 }
-                _ => panic!("Unhandled Character: {}", c),
+                _ => return Err(LexerError::InvalidCharacter(line_number, c)),
             }
         }
 

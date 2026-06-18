@@ -1,6 +1,7 @@
 use clap::Parser;
 use concat::config::config::Config;
 
+use concat::error::types::print_error;
 use concat::input::read_file_path;
 use concat::interpreter::interpreter::interpret;
 use concat::lexer::lexer::Lexer;
@@ -14,7 +15,10 @@ fn main() {
     let mut lexer = Lexer::init(config.clone(), input);
     match lexer.lex_input() {
         Ok(_) => (),
-        Err(e) => panic!("{}", e),
+        Err(e) => {
+            print_error(e);
+            return;
+        }
     }
 
     let mut parser = ConcatParser::init(config.clone(), lexer.tokens);
