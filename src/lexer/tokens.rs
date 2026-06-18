@@ -1,11 +1,12 @@
 use std::fmt;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Types {
     String,
     I32,
     Bool,
     Void,
+    Type,
 }
 
 #[derive(Debug, Clone)]
@@ -83,6 +84,7 @@ impl fmt::Display for Types {
             Types::I32 => write!(f, "I32"),
             Types::Bool => write!(f, "BOOL"),
             Types::Void => write!(f, "VOID"),
+            Types::Type => write!(f, "TYPE"),
         }
     }
 }

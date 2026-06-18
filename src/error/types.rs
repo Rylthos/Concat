@@ -1,4 +1,4 @@
-use crate::lexer::tokens::TokenType;
+use crate::lexer::tokens::{TokenType, Types};
 
 #[derive(Debug)]
 pub enum LexerError {
@@ -14,6 +14,8 @@ pub enum ParserError {
     ExpectedTokenGot(usize, TokenType, TokenType),
     InvalidParseTree(),
     UnknownIdentifier(usize, String),
+    InvalidNumberOfArguments(usize, usize, usize),
+    InvalidType(usize, Types, Types),
 }
 
 #[derive(Debug)]
@@ -58,6 +60,18 @@ fn handle_parser_error(error: ParserError) {
         }
         ParserError::UnknownIdentifier(line, name) => {
             eprintln!("[PARSER] Line {}: Unknown identifier {}", line, name);
+        }
+        ParserError::InvalidNumberOfArguments(line, expected, got) => {
+            eprintln!(
+                "[TYPE] Line {}: Expected {} arguments, got {}",
+                line, expected, got
+            );
+        }
+        ParserError::InvalidType(line, input, output) => {
+            eprintln!(
+                "[TYPE] Line {}: Expected {} arguments, got {}",
+                line, input, output
+            );
         }
     }
 }

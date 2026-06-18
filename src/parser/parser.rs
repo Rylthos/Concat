@@ -1,3 +1,5 @@
+use assert_cmd::assert;
+
 use crate::error::types::{ErrorType, ParserError};
 use crate::lexer::tokens::{Token, TokenType, Types};
 use crate::parser::instructions::{Instruction, StackValue};
@@ -53,6 +55,11 @@ impl Parser {
             Err(e) => return Err(ErrorType::Parser(e)),
         };
         self.instructions.append(&mut function_instructions);
+
+        match self.type_check() {
+            Ok(_) => (),
+            Err(e) => return Err(ErrorType::Parser(e)),
+        };
 
         self.evaluate_labels();
 
@@ -429,6 +436,124 @@ impl Parser {
                 _ => (),
             }
         }
+    }
+
+    fn type_check(&self) -> Result<(), ParserError> {
+        let mut stack: Vec<Types> = Vec::new();
+
+        let assert_length = |stack: &Vec<Types>, required| {
+            if stack.len() < required {
+                return Err(ParserError::InvalidNumberOfArguments(
+                    0,
+                    required,
+                    stack.len(),
+                ));
+            }
+            return Ok(());
+        };
+
+        let assert_types = |stack: &Vec<Types>, required: &Vec<Types>| {
+            for (i, t) in (0..).zip(required.iter()) {
+                let index = stack.len() - 1 - i;
+                if stack.get(index).unwrap() != t {
+                    return Err(ParserError::InvalidType(
+                        0,
+                        t.clone(),
+                        stack.get(index).unwrap().clone(),
+                    ));
+                }
+            }
+
+            return Ok(());
+        };
+
+        for instr in self.instructions.iter() {
+            match instr {
+                Instruction::Push(value) => match value {
+                    StackValue::String(_) => stack.push(Types::String),
+                    StackValue::I32(_) => stack.push(Types::I32),
+                    StackValue::Bool(_) => stack.push(Types::Bool),
+                    StackValue::Type(_) => stack.push(Types::Type),
+                    StackValue::Ptr(_) => todo!(),
+                },
+                Instruction::Rotate3 => {
+                    assert_length(&stack, 3)?;
+                }
+                Instruction::Duplicate => {
+                    assert_length(&stack, 1)?;
+                    stack.push(stack.last().unwrap().clone());
+                }
+                Instruction::Drop => {
+                    stack.pop();
+                }
+                Instruction::Over => {
+                    assert_length(&stack, 2)?;
+                    stack.push(stack.get(stack.len() - 1).unwrap().clone());
+                }
+                Instruction::Swap => {
+                    assert_length(&stack, 2)?;
+                    let v1 = stack.pop().unwrap();
+                    let v2 = stack.pop().unwrap();
+                    stack.push(v2);
+                    stack.push(v1);
+                }
+                Instruction::Print => {
+                    assert_length(&stack, 1)?;
+                    stack.pop();
+                }
+                Instruction::Less
+                | Instruction::Greater
+                | Instruction::LessEqual
+                | Instruction::GreaterEqual
+                | Instruction::Equal
+                | Instruction::NotEqual => {
+                    assert_length(&stack, 2)?;
+                    assert_types(&stack, &vec![Types::I32, Types::I32])?;
+                    stack.pop().unwrap();
+                    stack.pop().unwrap();
+                    stack.push(Types::Bool);
+                }
+                Instruction::Jump(_) => {}
+                Instruction::CondJump(_, _) => {
+                    assert_length(&stack, 1)?;
+                    assert_types(&stack, &vec![Types::Bool])?;
+                    stack.pop().unwrap();
+                }
+                Instruction::Add
+                | Instruction::Subtract
+                | Instruction::Multiply
+                | Instruction::Divide
+                | Instruction::Modulo => {
+                    assert_length(&stack, 2)?;
+                    assert_types(&stack, &vec![Types::I32, Types::I32])?;
+                    stack.pop().unwrap();
+                    stack.pop().unwrap();
+                    stack.push(Types::I32);
+                }
+                Instruction::And | Instruction::Or => {
+                    assert_length(&stack, 2)?;
+                    assert_types(&stack, &vec![Types::Bool, Types::Bool])?;
+                    stack.pop().unwrap();
+                    stack.pop().unwrap();
+                    stack.push(Types::Bool);
+                }
+                Instruction::Not => {
+                    assert_length(&stack, 1)?;
+                    assert_types(&stack, &vec![Types::Bool])?;
+                }
+                Instruction::Halt => {}
+                Instruction::Call(_) => {}
+                Instruction::Ret => {}
+                Instruction::Label(label, instr) => {
+                    todo!()
+                }
+                Instruction::LabelRef(label, instr) => {
+                    todo!()
+                }
+            }
+        }
+
+        Ok(())
     }
 
     fn parse_functions(&mut self) -> Result<Vec<Instruction>, ParserError> {
