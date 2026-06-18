@@ -1,3 +1,5 @@
+use crate::lexer::tokens::TokenType;
+
 #[derive(Debug)]
 pub enum LexerError {
     InvalidToken(usize, String),
@@ -6,8 +8,18 @@ pub enum LexerError {
 }
 
 #[derive(Debug)]
+pub enum ParserError {
+    InvalidFunctionDef(usize, TokenType),
+    ExpectedToken(usize, TokenType),
+    ExpectedTokenGot(usize, TokenType, TokenType),
+    InvalidParseTree(),
+    UnknownIdentifier(usize, String),
+}
+
+#[derive(Debug)]
 pub enum ErrorType {
     Lexer(LexerError),
+    Parser(ParserError),
 }
 
 fn handle_lexer_error(error: LexerError) {
@@ -24,8 +36,35 @@ fn handle_lexer_error(error: LexerError) {
     }
 }
 
+fn handle_parser_error(error: ParserError) {
+    match error {
+        ParserError::InvalidFunctionDef(line, token) => {
+            eprintln!(
+                "[PARSER] Line {}: Invalid function definition, expected identifier, got {:?}",
+                line, token
+            )
+        }
+        ParserError::ExpectedToken(line, token) => {
+            eprintln!("[PARSER] Line {}: Expected token {:?}", line, token);
+        }
+        ParserError::ExpectedTokenGot(line, expected, got) => {
+            eprintln!(
+                "[PARSER] Line {}: Expected token {:?}, got {:?}",
+                line, expected, got
+            );
+        }
+        ParserError::InvalidParseTree() => {
+            eprintln!("[PARSER]: Invalid parse tree");
+        }
+        ParserError::UnknownIdentifier(line, name) => {
+            eprintln!("[PARSER] Line {}: Unknown identifier {}", line, name);
+        }
+    }
+}
+
 pub fn print_error(error: ErrorType) {
     match error {
         ErrorType::Lexer(err) => handle_lexer_error(err),
+        ErrorType::Parser(err) => handle_parser_error(err),
     }
 }

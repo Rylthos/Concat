@@ -1,3 +1,4 @@
+use crate::error::types::{ErrorType, ParserError};
 use crate::lexer::tokens::{Token, TokenType, Types};
 use crate::parser::instructions::{Instruction, StackValue};
 use crate::parser::parse_tree::ParseTree;
@@ -28,45 +29,62 @@ impl Parser {
         }
     }
 
-    pub fn parse(&mut self) -> Result<(), String> {
+    pub fn parse(&mut self) -> Result<(), ErrorType> {
         let tokens = self.tokens.clone();
-        let tree = self.generate_parse_tree(tokens.iter().peekable())?;
+        let tree = match self.generate_parse_tree(tokens.iter().peekable()) {
+            Ok(t) => t,
+            Err(e) => return Err(ErrorType::Parser(e)),
+        };
 
         self.parse_tree = tree;
 
         if self.config.tree_print {
-            println!("==== TREE ====");
-            println!("{}", self.parse_tree);
-
-            for (_, func) in self.functions.iter() {
-                println!("{}", func);
-            }
-            println!("==== TREE ====");
+            self.print_tree();
         }
 
-        self.instructions = self.parse_tree(self.parse_tree.clone())?;
+        self.instructions = match self.parse_tree(self.parse_tree.clone()) {
+            Ok(i) => i,
+            Err(e) => return Err(ErrorType::Parser(e)),
+        };
         self.instructions.push(Instruction::Halt);
 
-        let mut function_instructions = self.parse_functions()?;
+        let mut function_instructions = match self.parse_functions() {
+            Ok(i) => i,
+            Err(e) => return Err(ErrorType::Parser(e)),
+        };
         self.instructions.append(&mut function_instructions);
 
         self.evaluate_labels();
 
         if self.config.expr_print {
-            println!("==== INSTR ====");
-            for instr in self.instructions.iter() {
-                println!("{:?}", instr);
-            }
-            println!("==== INSTR ====");
+            self.print_instr();
         }
 
         Ok(())
     }
 
+    fn print_tree(&self) {
+        println!("==== TREE ====");
+        println!("{}", self.parse_tree);
+
+        for (_, func) in self.functions.iter() {
+            println!("{}", func);
+        }
+        println!("==== TREE ====");
+    }
+
+    fn print_instr(&self) {
+        println!("==== INSTR ====");
+        for instr in self.instructions.iter() {
+            println!("{:?}", instr);
+        }
+        println!("==== INSTR ====");
+    }
+
     fn generate_parse_tree<'a>(
         &mut self,
         tokens: impl Iterator<Item = &'a Token>,
-    ) -> Result<ParseTree, String> {
+    ) -> Result<ParseTree, ParserError> {
         let mut region: Vec<ParseTree> = Vec::new();
         let mut peekable = tokens.peekable();
 
@@ -131,21 +149,36 @@ impl Parser {
                     let function_name = if let Some(t) = peekable.next() {
                         match &t.token_type {
                             TokenType::Identifier(s) => s.clone(),
-                            _ => panic!("Invalid function call"),
+                            _ => {
+                                return Err(ParserError::InvalidFunctionDef(
+                                    t.line,
+                                    t.token_type.clone(),
+                                ));
+                            }
                         }
                     } else {
-                        panic!("Invalid function");
+                        return Err(ParserError::ExpectedToken(
+                            t.line,
+                            TokenType::Identifier("".to_string()),
+                        ));
                     };
 
-                    let input_types = Self::get_types(&mut peekable)?;
+                    let input_types = Self::get_types(&mut peekable)?
+                        .iter()
+                        .filter(|i| match i {
+                            Types::Void => false,
+                            _ => true,
+                        })
+                        .cloned()
+                        .collect();
 
                     if let Some(t) = peekable.next() {
                         match &t.token_type {
                             TokenType::Arrow => (),
-                            _ => panic!("Expected arrow operator"),
+                            _ => return Err(ParserError::ExpectedToken(t.line, TokenType::Arrow)),
                         }
                     } else {
-                        panic!("Expected arrow");
+                        return Err(ParserError::ExpectedToken(t.line, TokenType::Arrow));
                     };
 
                     let output_types = Self::get_types(&mut peekable)?
@@ -225,11 +258,11 @@ impl Parser {
         return Some(instr);
     }
 
-    fn parse_tree<'a>(&self, tree: ParseTree) -> Result<Vec<Instruction>, String> {
+    fn parse_tree<'a>(&self, tree: ParseTree) -> Result<Vec<Instruction>, ParserError> {
         let mut parsed_expression: Vec<Instruction> = Vec::new();
 
         match tree {
-            ParseTree::None => return Err("Invalid Parse Tree".to_string()),
+            ParseTree::None => return Err(ParserError::InvalidParseTree()),
             ParseTree::Element(e) => {
                 let expr = self.parse_element(&e);
                 if let Some(e) = expr {
@@ -249,14 +282,23 @@ impl Parser {
                                         Box::new(Instruction::Call(0)),
                                     ));
                                 } else {
-                                    unreachable!();
+                                    unreachable!(
+                                        "Valid function name should be a FuncDecl in ParseTree"
+                                    );
                                 }
                             } else {
-                                return Err("Unknown identifier".to_string());
+                                return Err(ParserError::UnknownIdentifier(
+                                    e.line,
+                                    iden.to_string(),
+                                ));
                             }
                         }
                         _ => {
-                            return Err("Invalid expression".to_string());
+                            return Err(ParserError::ExpectedTokenGot(
+                                e.line,
+                                TokenType::Identifier("".to_string()),
+                                e.token_type.clone(),
+                            ));
                         }
                     }
                 }
@@ -272,20 +314,24 @@ impl Parser {
                     .collect::<Vec<Instruction>>(),
             ),
             ParseTree::If(if_branches, else_branch) => {
-                let if_branches = if_branches
+                let if_branches_result = if_branches
                     .iter()
                     .map(|(c, m)| {
-                        let c1 = match self.parse_tree(*c.clone()) {
-                            Ok(o) => o,
-                            Err(e) => panic!("{}", e),
-                        };
-                        let c2 = match self.parse_tree(*m.clone()) {
-                            Ok(o) => o,
-                            Err(e) => panic!("{}", e),
-                        };
+                        let c1 = self.parse_tree(*c.clone());
+                        let c2 = self.parse_tree(*m.clone());
                         (c1, c2)
                     })
-                    .collect::<Vec<(Vec<Instruction>, Vec<Instruction>)>>();
+                    .collect::<Vec<(
+                        Result<Vec<Instruction>, ParserError>,
+                        Result<Vec<Instruction>, ParserError>,
+                    )>>();
+
+                let mut if_branches = Vec::new();
+                for (c, r) in if_branches_result {
+                    let c = c?;
+                    let r = r?;
+                    if_branches.push((c, r));
+                }
 
                 let mut else_branch = self.parse_tree(*else_branch)?;
 
@@ -367,7 +413,7 @@ impl Parser {
 
         let evaluate_expr = |instr, index| match instr {
             Instruction::Call(_) => Instruction::Call(index),
-            _ => panic!("Unexpected expr: {:?}", instr),
+            _ => unreachable!("Unexpected expr: {:?}", instr),
         };
 
         for instr in self.instructions.iter_mut() {
@@ -385,7 +431,7 @@ impl Parser {
         }
     }
 
-    fn parse_functions(&mut self) -> Result<Vec<Instruction>, String> {
+    fn parse_functions(&mut self) -> Result<Vec<Instruction>, ParserError> {
         let mut parsed_instructions = Vec::new();
         for (_, tree) in self.functions.iter() {
             let mut instructions = self.parse_tree(tree.clone())?;
@@ -396,7 +442,7 @@ impl Parser {
         Ok(parsed_instructions)
     }
 
-    fn get_condition<'a, I>(tokens: &mut std::iter::Peekable<I>) -> Result<Vec<Token>, String>
+    fn get_condition<'a, I>(tokens: &mut std::iter::Peekable<I>) -> Result<Vec<Token>, ParserError>
     where
         I: Iterator<Item = &'a Token>,
     {
@@ -417,7 +463,7 @@ impl Parser {
         return Ok(values);
     }
 
-    fn get_types<'a, I>(tokens: &mut std::iter::Peekable<I>) -> Result<Vec<Types>, String>
+    fn get_types<'a, I>(tokens: &mut std::iter::Peekable<I>) -> Result<Vec<Types>, ParserError>
     where
         I: Iterator<Item = &'a Token>,
     {
@@ -434,7 +480,13 @@ impl Parser {
                 TokenType::Arrow => {
                     break;
                 }
-                _ => panic!("Invalid token, expected type got {:?}", t.token_type),
+                _ => {
+                    return Err(ParserError::ExpectedTokenGot(
+                        t.line,
+                        TokenType::Type(Types::Void),
+                        t.token_type.clone(),
+                    ));
+                }
             }
             tokens.next();
         }
@@ -442,7 +494,7 @@ impl Parser {
         return Ok(values);
     }
 
-    fn get_region<'a, I>(tokens: &mut std::iter::Peekable<I>) -> Result<Vec<Token>, String>
+    fn get_region<'a, I>(tokens: &mut std::iter::Peekable<I>) -> Result<Vec<Token>, ParserError>
     where
         I: Iterator<Item = &'a Token>,
     {
@@ -499,7 +551,7 @@ mod tests {
                 );
             }
             Err(e) => {
-                assert!(false, "{}", e);
+                assert!(false, "{:?}", e);
             }
         }
     }
@@ -527,7 +579,7 @@ mod tests {
                 );
             }
             Err(e) => {
-                assert!(false, "{}", e);
+                assert!(false, "{:?}", e);
             }
         }
     }

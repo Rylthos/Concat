@@ -24,7 +24,10 @@ fn main() {
     let mut parser = ConcatParser::init(config.clone(), lexer.tokens);
     match parser.parse() {
         Ok(_) => (),
-        Err(e) => panic!("{}", e),
+        Err(e) => {
+            print_error(e);
+            return;
+        }
     }
 
     interpret(&parser.instructions)
