@@ -11,9 +11,6 @@ pub fn interpret(instructions: &Vec<Instruction>) {
             Instruction::Push(value) => {
                 stack.push(value.clone());
             }
-            Instruction::Pop => {
-                stack.pop();
-            }
             //
             Instruction::Rotate3 => {
                 assert!(stack.len() >= 3, "Invalid stack length");

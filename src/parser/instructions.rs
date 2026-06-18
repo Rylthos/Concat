@@ -12,7 +12,6 @@ pub enum StackValue {
 #[derive(Debug, Clone)]
 pub enum Instruction {
     Push(StackValue),
-    Pop,
 
     Rotate3,
     Duplicate,
