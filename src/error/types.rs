@@ -1,21 +1,21 @@
-use crate::lexer::tokens::{TokenType, Types};
+use crate::lexer::tokens::{PositionInfo, TokenType, Types};
 
 #[derive(Debug)]
 pub enum LexerError {
-    InvalidToken(usize, String),
-    ExpectedCharacter(usize),
-    InvalidCharacter(usize, char),
+    InvalidToken(PositionInfo, String),
+    ExpectedCharacter(PositionInfo),
+    InvalidCharacter(PositionInfo, char),
 }
 
 #[derive(Debug)]
 pub enum ParserError {
-    InvalidFunctionDef(usize, TokenType),
-    ExpectedToken(usize, TokenType),
-    ExpectedTokenGot(usize, TokenType, TokenType),
+    InvalidFunctionDef(PositionInfo, TokenType),
+    ExpectedToken(PositionInfo, TokenType),
+    ExpectedTokenGot(PositionInfo, TokenType, TokenType),
     InvalidParseTree(),
-    UnknownIdentifier(usize, String),
-    InvalidNumberOfArguments(usize, usize, usize),
-    InvalidType(usize, Types, Types),
+    UnknownIdentifier(PositionInfo, String),
+    InvalidNumberOfArguments(PositionInfo, usize, usize),
+    InvalidType(PositionInfo, Types, Types),
 }
 
 #[derive(Debug)]
@@ -26,51 +26,63 @@ pub enum ErrorType {
 
 fn handle_lexer_error(error: LexerError) {
     match error {
-        LexerError::InvalidToken(line, token) => {
-            eprintln!("[LEXER] Line {}: Invalid token {}", line, token);
+        LexerError::InvalidToken(pos, token) => {
+            eprintln!(
+                "[LEXER] [{}:{}] Invalid token {}",
+                pos.line, pos.column, token
+            );
         }
-        LexerError::ExpectedCharacter(line) => {
-            eprintln!("[LEXER] Line {}: Expected character", line);
+        LexerError::ExpectedCharacter(pos) => {
+            eprintln!("[LEXER] [{}:{}] Expected character", pos.line, pos.column);
         }
-        LexerError::InvalidCharacter(line, c) => {
-            eprintln!("[LEXER] Line {}: Invalid character {}", line, c);
+        LexerError::InvalidCharacter(pos, c) => {
+            eprintln!(
+                "[LEXER] [{}:{}] Invalid character {}",
+                pos.line, pos.column, c
+            );
         }
     }
 }
 
 fn handle_parser_error(error: ParserError) {
     match error {
-        ParserError::InvalidFunctionDef(line, token) => {
+        ParserError::InvalidFunctionDef(pos, token) => {
             eprintln!(
-                "[PARSER] Line {}: Invalid function definition, expected identifier, got {:?}",
-                line, token
+                "[PARSER] [{}:{}] Invalid function definition, expected identifier, got {:?}",
+                pos.line, pos.column, token
             )
         }
-        ParserError::ExpectedToken(line, token) => {
-            eprintln!("[PARSER] Line {}: Expected token {:?}", line, token);
-        }
-        ParserError::ExpectedTokenGot(line, expected, got) => {
+        ParserError::ExpectedToken(pos, token) => {
             eprintln!(
-                "[PARSER] Line {}: Expected token {:?}, got {:?}",
-                line, expected, got
+                "[PARSER] [{}:{}] Expected token {:?}",
+                pos.line, pos.column, token
+            );
+        }
+        ParserError::ExpectedTokenGot(pos, expected, got) => {
+            eprintln!(
+                "[PARSER] [{}:{}] Expected token {:?}, got {:?}",
+                pos.line, pos.column, expected, got
             );
         }
         ParserError::InvalidParseTree() => {
             eprintln!("[PARSER]: Invalid parse tree");
         }
-        ParserError::UnknownIdentifier(line, name) => {
-            eprintln!("[PARSER] Line {}: Unknown identifier {}", line, name);
-        }
-        ParserError::InvalidNumberOfArguments(line, expected, got) => {
+        ParserError::UnknownIdentifier(pos, name) => {
             eprintln!(
-                "[TYPE] Line {}: Expected {} arguments, got {}",
-                line, expected, got
+                "[PARSER] [{}:{}] Unknown identifier {}",
+                pos.line, pos.column, name
             );
         }
-        ParserError::InvalidType(line, input, output) => {
+        ParserError::InvalidNumberOfArguments(pos, expected, got) => {
             eprintln!(
-                "[TYPE] Line {}: Expected {} arguments, got {}",
-                line, input, output
+                "[TYPE] [{}:{}] Expected {} arguments, got {}",
+                pos.line, pos.column, expected, got
+            );
+        }
+        ParserError::InvalidType(pos, input, output) => {
+            eprintln!(
+                "[TYPE] [{}:{}] Expected {} arguments, got {}",
+                pos.line, pos.column, input, output
             );
         }
     }

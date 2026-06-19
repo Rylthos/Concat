@@ -60,20 +60,38 @@ pub enum TokenType {
 }
 
 #[derive(Debug, Clone)]
+pub struct PositionInfo {
+    pub line: usize,
+    pub column: usize,
+    pub string: String,
+}
+
+#[derive(Debug, Clone)]
 pub struct Token {
     pub token_type: TokenType,
-    pub line: usize,
+    pub position_info: PositionInfo,
 }
 
 impl Token {
-    pub fn new(token_type: TokenType, line: usize) -> Token {
-        Token { token_type, line }
+    pub fn new(token_type: TokenType, line: usize, column: usize, string: &str) -> Token {
+        Token {
+            token_type,
+            position_info: PositionInfo {
+                line,
+                column,
+                string: string.to_string(),
+            },
+        }
     }
 }
 
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:02}: {}", self.line, self.token_type)
+        write!(
+            f,
+            "{:03}:{:03}: {}",
+            self.position_info.line, self.position_info.column, self.token_type
+        )
     }
 }
 
