@@ -1,0 +1,270 @@
+use crate::error::types::ParserError;
+use crate::lexer::tokens::{PositionInfo, Token, TokenType, Types};
+use crate::parser::parse_tree::ParseTree;
+
+use std::collections::HashMap;
+
+pub struct Typing {}
+
+impl Typing {
+    pub fn type_check(
+        tree: &ParseTree,
+        functions: &HashMap<String, ParseTree>,
+    ) -> Result<(), ParserError> {
+        let mut stack = Vec::new();
+        Self::type_check_stack(tree, &mut stack, functions)?;
+
+        for (_, def) in functions.iter() {
+            let mut stack = Vec::new();
+            Self::type_check_stack(def, &mut stack, functions)?;
+        }
+
+        Ok(())
+    }
+
+    fn type_check_stack(
+        tree: &ParseTree,
+        stack: &mut Vec<Types>,
+        functions: &HashMap<String, ParseTree>,
+    ) -> Result<(), ParserError> {
+        match tree {
+            ParseTree::None => unreachable!("Invalid stack"),
+            ParseTree::Element(t) => Self::type_check_token(t, stack, functions)?,
+            ParseTree::Region(r) => {
+                for tree in r {
+                    Self::type_check_stack(tree, stack, functions)?;
+                }
+            }
+            ParseTree::If(conds, else_region) => {
+                let mut stacks = Vec::new();
+                let mut stack_cond = stack.clone();
+                for (c, r) in conds {
+                    let mut stack_copy = stack_cond.clone();
+                    Self::type_check_stack(c, &mut stack_copy, functions)?;
+                    Self::check_stack_length(&Token::new(TokenType::If, 0, 0, ""), &stack_copy, 1)?;
+                    Self::check_stack_types(
+                        &Token::new(TokenType::If, 0, 0, ""),
+                        &stack_copy,
+                        &vec![Types::Bool],
+                    )?;
+                    stack_copy.pop();
+                    stack_cond = stack_copy.clone();
+
+                    let mut stack_copy2 = stack_copy.clone();
+
+                    Self::type_check_stack(r, &mut stack_copy2, functions)?;
+                    stacks.push((stack_copy, stack_copy2));
+                }
+
+                if stacks.len() > 1 {
+                    for i in stacks.windows(2) {
+                        let (c1, r1) = &i[0];
+                        let (c2, r2) = &i[1];
+
+                        Self::verify_stack_equivalence(c1, c2)?;
+                        Self::verify_stack_equivalence(r1, r2)?;
+                    }
+                }
+
+                let (mut stack1, stack2) = stacks[0].clone();
+                Self::type_check_stack(else_region, &mut stack1, functions)?;
+                Self::verify_stack_equivalence(&stack1, &stack2)?;
+            }
+            ParseTree::While(cond, region) => {
+                let mut stack_copy = stack.clone();
+                Self::type_check_stack(cond, &mut stack_copy, functions)?;
+                Self::check_stack_length(&Token::new(TokenType::While, 0, 0, ""), &stack_copy, 1)?;
+                Self::check_stack_types(
+                    &Token::new(TokenType::While, 0, 0, ""),
+                    &stack_copy,
+                    &vec![Types::Bool],
+                )?;
+                stack_copy.pop();
+
+                Self::type_check_stack(region, &mut stack_copy, functions)?;
+
+                Self::verify_stack_equivalence(stack, &stack_copy)?;
+            }
+            ParseTree::FuncDecl(_, inputs, outputs, region) => {
+                let mut stack = inputs.clone();
+                Self::type_check_stack(&region, &mut stack, functions)?;
+                Self::check_stack_length(
+                    &Token::new(TokenType::Func, 0, 0, ""),
+                    &stack,
+                    outputs.len(),
+                )?;
+                Self::check_stack_types(
+                    &Token::new(TokenType::Func, 0, 0, ""),
+                    &stack,
+                    &outputs.iter().rev().cloned().collect::<Vec<Types>>(),
+                )?;
+            }
+        };
+        Ok(())
+    }
+
+    fn verify_stack_equivalence(
+        stack: &Vec<Types>,
+        stack_2: &Vec<Types>,
+    ) -> Result<(), ParserError> {
+        let false_position = PositionInfo {
+            line: 0,
+            column: 0,
+            string: "".to_string(),
+        };
+        if stack.len() != stack_2.len() {
+            return Err(ParserError::InvalidShape(false_position));
+        }
+
+        for (t1, t2) in stack.iter().zip(stack_2.iter()) {
+            if t1 != t2 {
+                return Err(ParserError::InvalidShape(false_position));
+            }
+        }
+
+        Ok(())
+    }
+
+    fn check_stack_length(
+        token: &Token,
+        stack: &Vec<Types>,
+        required_length: usize,
+    ) -> Result<(), ParserError> {
+        if stack.len() < required_length {
+            return Err(ParserError::InvalidNumberOfArguments(
+                token.position_info.clone(),
+                required_length,
+                stack.len(),
+            ));
+        } else {
+            Ok(())
+        }
+    }
+
+    fn check_stack_types(
+        token: &Token,
+        stack: &Vec<Types>,
+        required_types: &Vec<Types>,
+    ) -> Result<(), ParserError> {
+        for (i, t) in (0..).zip(required_types.iter()) {
+            let index = stack.len() - 1 - i;
+            if stack.get(index).unwrap() != t {
+                return Err(ParserError::InvalidType(
+                    token.position_info.clone(),
+                    t.clone(),
+                    stack.get(index).unwrap().clone(),
+                ));
+            }
+        }
+
+        return Ok(());
+    }
+
+    fn type_check_token(
+        token: &Token,
+        stack: &mut Vec<Types>,
+        functions: &HashMap<String, ParseTree>,
+    ) -> Result<(), ParserError> {
+        match &token.token_type {
+            TokenType::LeftBrace => {}
+            TokenType::RightBrace => {}
+            TokenType::Add
+            | TokenType::Subtract
+            | TokenType::Multiply
+            | TokenType::Divide
+            | TokenType::Modulo => {
+                Self::check_stack_length(token, stack, 2)?;
+                Self::check_stack_types(token, stack, &vec![Types::I32, Types::I32])?;
+                stack.pop();
+                stack.pop();
+                stack.push(Types::I32);
+            }
+            TokenType::Rotate3 => {
+                Self::check_stack_length(token, stack, 3)?;
+                let v3 = stack.pop().unwrap();
+                let v2 = stack.pop().unwrap();
+                let v1 = stack.pop().unwrap();
+                stack.push(v3);
+                stack.push(v1);
+                stack.push(v2);
+            }
+            TokenType::Duplicate => {
+                Self::check_stack_length(token, stack, 1)?;
+                stack.push(stack.last().unwrap().clone());
+            }
+            TokenType::Drop => {
+                Self::check_stack_length(token, stack, 1)?;
+                stack.pop().unwrap();
+            }
+            TokenType::Over => {
+                Self::check_stack_length(token, stack, 2)?;
+                stack.push(stack.get(stack.len() - 2).unwrap().clone());
+            }
+            TokenType::Swap => {
+                Self::check_stack_length(token, stack, 2)?;
+                let v1 = stack.pop().unwrap();
+                let v2 = stack.pop().unwrap();
+                stack.push(v2);
+                stack.push(v1);
+            }
+            TokenType::Print => {
+                Self::check_stack_length(token, stack, 1)?;
+                stack.pop();
+            }
+            TokenType::Less
+            | TokenType::Greater
+            | TokenType::LessEqual
+            | TokenType::GreaterEqual
+            | TokenType::Equal
+            | TokenType::NotEqual => {
+                Self::check_stack_length(token, stack, 2)?;
+                Self::check_stack_types(token, stack, &vec![Types::I32, Types::I32])?;
+                stack.pop();
+                stack.pop();
+                stack.push(Types::Bool);
+            }
+            TokenType::And | TokenType::Or => {
+                Self::check_stack_length(token, stack, 2)?;
+                Self::check_stack_types(token, stack, &vec![Types::Bool, Types::Bool])?;
+                stack.pop();
+                stack.pop();
+                stack.push(Types::Bool);
+            }
+            TokenType::Not => {
+                Self::check_stack_length(token, stack, 1)?;
+                Self::check_stack_types(token, stack, &vec![Types::Bool])?;
+                stack.pop();
+                stack.push(Types::Bool);
+            }
+            TokenType::Type(t) => stack.push(t.clone()),
+            TokenType::StringValue(_) => stack.push(Types::String),
+            TokenType::I32(_) => stack.push(Types::I32),
+            TokenType::BoolValue(_) => stack.push(Types::Bool),
+
+            TokenType::Identifier(s) => {
+                if let Some(ParseTree::FuncDecl(_, inputs, outputs, _)) = functions.get(s) {
+                    let token = Token::new(TokenType::Func, 0, 0, "");
+                    Self::check_stack_length(&token, &stack, inputs.len())?;
+                    Self::check_stack_types(&token, &stack, inputs)?;
+
+                    for _ in 0..inputs.len() {
+                        stack.pop();
+                    }
+
+                    for o in outputs {
+                        stack.push(o.clone());
+                    }
+                }
+            }
+            TokenType::If
+            | TokenType::Else
+            | TokenType::While
+            | TokenType::Func
+            | TokenType::Arrow => {
+                unreachable!();
+            }
+        }
+
+        Ok(())
+    }
+}

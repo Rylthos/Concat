@@ -16,6 +16,7 @@ pub enum ParserError {
     UnknownIdentifier(PositionInfo, String),
     InvalidNumberOfArguments(PositionInfo, usize, usize),
     InvalidType(PositionInfo, Types, Types),
+    InvalidShape(PositionInfo),
 }
 
 #[derive(Debug)]
@@ -84,6 +85,9 @@ fn handle_parser_error(error: ParserError) {
                 "[TYPE] [{}:{}] Expected {} arguments, got {}",
                 pos.line, pos.column, input, output
             );
+        }
+        ParserError::InvalidShape(pos) => {
+            eprintln!("[TYPE] [{}:{}] Stack shapes differ", pos.line, pos.column);
         }
     }
 }

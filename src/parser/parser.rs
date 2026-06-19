@@ -1,9 +1,8 @@
-use assert_cmd::assert;
-
 use crate::error::types::{ErrorType, ParserError};
-use crate::lexer::tokens::{PositionInfo, Token, TokenType, Types};
+use crate::lexer::tokens::{Token, TokenType, Types};
 use crate::parser::instructions::{Instruction, StackValue};
 use crate::parser::parse_tree::ParseTree;
+use crate::parser::typing::Typing;
 
 use crate::config::config::Config;
 
@@ -44,6 +43,11 @@ impl Parser {
             self.print_tree();
         }
 
+        match Typing::type_check(&self.parse_tree, &self.functions) {
+            Ok(_) => (),
+            Err(e) => return Err(ErrorType::Parser(e)),
+        };
+
         self.instructions = match self.parse_tree(self.parse_tree.clone()) {
             Ok(i) => i,
             Err(e) => return Err(ErrorType::Parser(e)),
@@ -55,11 +59,6 @@ impl Parser {
             Err(e) => return Err(ErrorType::Parser(e)),
         };
         self.instructions.append(&mut function_instructions);
-
-        match self.type_check() {
-            Ok(_) => (),
-            Err(e) => return Err(ErrorType::Parser(e)),
-        };
 
         self.evaluate_labels();
 
@@ -446,131 +445,130 @@ impl Parser {
         }
     }
 
-    fn type_check(&self) -> Result<(), ParserError> {
-        let mut stack: Vec<Types> = Vec::new();
-
-        let assert_length = |stack: &Vec<Types>, required| {
-            if stack.len() < required {
-                return Err(ParserError::InvalidNumberOfArguments(
-                    PositionInfo {
-                        line: 0,
-                        column: 0,
-                        string: "".to_string(),
-                    },
-                    required,
-                    stack.len(),
-                ));
-            }
-            return Ok(());
-        };
-
-        let assert_types = |stack: &Vec<Types>, required: &Vec<Types>| {
-            for (i, t) in (0..).zip(required.iter()) {
-                let index = stack.len() - 1 - i;
-                if stack.get(index).unwrap() != t {
-                    return Err(ParserError::InvalidType(
-                        PositionInfo {
-                            line: 0,
-                            column: 0,
-                            string: "".to_string(),
-                        },
-                        t.clone(),
-                        stack.get(index).unwrap().clone(),
-                    ));
-                }
-            }
-
-            return Ok(());
-        };
-
-        for instr in self.instructions.iter() {
-            match instr {
-                Instruction::Push(value) => match value {
-                    StackValue::String(_) => stack.push(Types::String),
-                    StackValue::I32(_) => stack.push(Types::I32),
-                    StackValue::Bool(_) => stack.push(Types::Bool),
-                    StackValue::Type(_) => stack.push(Types::Type),
-                    StackValue::Ptr(_) => todo!(),
-                },
-                Instruction::Rotate3 => {
-                    assert_length(&stack, 3)?;
-                }
-                Instruction::Duplicate => {
-                    assert_length(&stack, 1)?;
-                    stack.push(stack.last().unwrap().clone());
-                }
-                Instruction::Drop => {
-                    stack.pop();
-                }
-                Instruction::Over => {
-                    assert_length(&stack, 2)?;
-                    stack.push(stack.get(stack.len() - 1).unwrap().clone());
-                }
-                Instruction::Swap => {
-                    assert_length(&stack, 2)?;
-                    let v1 = stack.pop().unwrap();
-                    let v2 = stack.pop().unwrap();
-                    stack.push(v2);
-                    stack.push(v1);
-                }
-                Instruction::Print => {
-                    assert_length(&stack, 1)?;
-                    stack.pop();
-                }
-                Instruction::Less
-                | Instruction::Greater
-                | Instruction::LessEqual
-                | Instruction::GreaterEqual
-                | Instruction::Equal
-                | Instruction::NotEqual => {
-                    assert_length(&stack, 2)?;
-                    assert_types(&stack, &vec![Types::I32, Types::I32])?;
-                    stack.pop().unwrap();
-                    stack.pop().unwrap();
-                    stack.push(Types::Bool);
-                }
-                Instruction::Jump(_) => {}
-                Instruction::CondJump(_, _) => {
-                    assert_length(&stack, 1)?;
-                    assert_types(&stack, &vec![Types::Bool])?;
-                    stack.pop().unwrap();
-                }
-                Instruction::Add
-                | Instruction::Subtract
-                | Instruction::Multiply
-                | Instruction::Divide
-                | Instruction::Modulo => {
-                    assert_length(&stack, 2)?;
-                    assert_types(&stack, &vec![Types::I32, Types::I32])?;
-                    stack.pop().unwrap();
-                    stack.pop().unwrap();
-                    stack.push(Types::I32);
-                }
-                Instruction::And | Instruction::Or => {
-                    assert_length(&stack, 2)?;
-                    assert_types(&stack, &vec![Types::Bool, Types::Bool])?;
-                    stack.pop().unwrap();
-                    stack.pop().unwrap();
-                    stack.push(Types::Bool);
-                }
-                Instruction::Not => {
-                    assert_length(&stack, 1)?;
-                    assert_types(&stack, &vec![Types::Bool])?;
-                }
-                Instruction::Halt => {}
-                Instruction::Call(_) => {}
-                Instruction::Ret => {}
-                Instruction::Label(label, instr) => {
-                    todo!()
-                }
-                Instruction::LabelRef(label, instr) => {
-                    todo!()
-                }
-            }
-        }
-
-        Ok(())
-    }
+    // let mut stack: Vec<Types> = Vec::new();
+    //
+    // let assert_length = |stack: &Vec<Types>, required| {
+    //     if stack.len() < required {
+    //         return Err(ParserError::InvalidNumberOfArguments(
+    //             PositionInfo {
+    //                 line: 0,
+    //                 column: 0,
+    //                 string: "".to_string(),
+    //             },
+    //             required,
+    //             stack.len(),
+    //         ));
+    //     }
+    //     return Ok(());
+    // };
+    //
+    // let assert_types = |stack: &Vec<Types>, required: &Vec<Types>| {
+    //     for (i, t) in (0..).zip(required.iter()) {
+    //         let index = stack.len() - 1 - i;
+    //         if stack.get(index).unwrap() != t {
+    //             return Err(ParserError::InvalidType(
+    //                 PositionInfo {
+    //                     line: 0,
+    //                     column: 0,
+    //                     string: "".to_string(),
+    //                 },
+    //                 t.clone(),
+    //                 stack.get(index).unwrap().clone(),
+    //             ));
+    //         }
+    //     }
+    //
+    //     return Ok(());
+    // };
+    //
+    // for instr in self.instructions.iter() {
+    //     match instr {
+    //         Instruction::Push(value) => match value {
+    //             StackValue::String(_) => stack.push(Types::String),
+    //             StackValue::I32(_) => stack.push(Types::I32),
+    //             StackValue::Bool(_) => stack.push(Types::Bool),
+    //             StackValue::Type(_) => stack.push(Types::Type),
+    //             StackValue::Ptr(_) => todo!(),
+    //         },
+    //         Instruction::Rotate3 => {
+    //             assert_length(&stack, 3)?;
+    //         }
+    //         Instruction::Duplicate => {
+    //             assert_length(&stack, 1)?;
+    //             stack.push(stack.last().unwrap().clone());
+    //         }
+    //         Instruction::Drop => {
+    //             stack.pop();
+    //         }
+    //         Instruction::Over => {
+    //             assert_length(&stack, 2)?;
+    //             stack.push(stack.get(stack.len() - 1).unwrap().clone());
+    //         }
+    //         Instruction::Swap => {
+    //             assert_length(&stack, 2)?;
+    //             let v1 = stack.pop().unwrap();
+    //             let v2 = stack.pop().unwrap();
+    //             stack.push(v2);
+    //             stack.push(v1);
+    //         }
+    //         Instruction::Print => {
+    //             assert_length(&stack, 1)?;
+    //             stack.pop();
+    //         }
+    //         Instruction::Less
+    //         | Instruction::Greater
+    //         | Instruction::LessEqual
+    //         | Instruction::GreaterEqual
+    //         | Instruction::Equal
+    //         | Instruction::NotEqual => {
+    //             assert_length(&stack, 2)?;
+    //             assert_types(&stack, &vec![Types::I32, Types::I32])?;
+    //             stack.pop().unwrap();
+    //             stack.pop().unwrap();
+    //             stack.push(Types::Bool);
+    //         }
+    //         Instruction::Jump(_) => {}
+    //         Instruction::CondJump(_, _) => {
+    //             assert_length(&stack, 1)?;
+    //             assert_types(&stack, &vec![Types::Bool])?;
+    //             stack.pop().unwrap();
+    //         }
+    //         Instruction::Add
+    //         | Instruction::Subtract
+    //         | Instruction::Multiply
+    //         | Instruction::Divide
+    //         | Instruction::Modulo => {
+    //             assert_length(&stack, 2)?;
+    //             assert_types(&stack, &vec![Types::I32, Types::I32])?;
+    //             stack.pop().unwrap();
+    //             stack.pop().unwrap();
+    //             stack.push(Types::I32);
+    //         }
+    //         Instruction::And | Instruction::Or => {
+    //             assert_length(&stack, 2)?;
+    //             assert_types(&stack, &vec![Types::Bool, Types::Bool])?;
+    //             stack.pop().unwrap();
+    //             stack.pop().unwrap();
+    //             stack.push(Types::Bool);
+    //         }
+    //         Instruction::Not => {
+    //             assert_length(&stack, 1)?;
+    //             assert_types(&stack, &vec![Types::Bool])?;
+    //         }
+    //         Instruction::Halt => {}
+    //         Instruction::Call(_) => {}
+    //         Instruction::Ret => {}
+    //         Instruction::Label(label, instr) => {
+    //             todo!()
+    //         }
+    //         Instruction::LabelRef(label, instr) => {
+    //             todo!()
+    //         }
+    //     }
+    // }
+    //
+    //
+    // Ok(())
 
     fn parse_functions(&mut self) -> Result<Vec<Instruction>, ParserError> {
         let mut parsed_instructions = Vec::new();
@@ -863,7 +861,7 @@ mod tests {
             Token::new(TokenType::RightBrace, 1, 1, ""),
             Token::new(TokenType::Else, 1, 1, ""),
             Token::new(TokenType::LeftBrace, 1, 1, ""),
-            Token::new(TokenType::Drop, 1, 1, ""),
+            // Token::new(TokenType::Drop, 1, 1, ""),
             Token::new(TokenType::I32(4), 1, 1, ""),
             Token::new(TokenType::RightBrace, 1, 1, ""),
         ];
@@ -899,7 +897,7 @@ mod tests {
                     ),
                 ],
                 Box::new(ParseTree::Region(vec![
-                    ParseTree::Element(Token::new(TokenType::Drop, 1, 1, "")),
+                    // ParseTree::Element(Token::new(TokenType::Drop, 1, 1, "")),
                     ParseTree::Element(Token::new(TokenType::I32(4), 1, 1, "")),
                 ])),
             ),
@@ -911,14 +909,13 @@ mod tests {
             Instruction::Greater,
             Instruction::CondJump(1, 3),
             Instruction::Push(StackValue::I32(2)),
-            Instruction::Jump(9),
+            Instruction::Jump(8),
             Instruction::Duplicate,
             Instruction::Push(StackValue::I32(20)),
             Instruction::Greater,
             Instruction::CondJump(1, 3),
             Instruction::Push(StackValue::I32(3)),
-            Instruction::Jump(3),
-            Instruction::Drop,
+            Instruction::Jump(2),
             Instruction::Push(StackValue::I32(4)),
             Instruction::Halt,
         ];
