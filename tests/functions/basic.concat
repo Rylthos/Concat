@@ -13,4 +13,5 @@ func print_pair i32 i32 -> void {
 
 1 2 add_values
 3 4 add_values
+add_one_pair
 print_pair

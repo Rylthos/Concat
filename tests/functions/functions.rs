@@ -7,5 +7,5 @@ fn functions_basic() {
         .arg("tests/functions/basic.concat")
         .assert()
         .success()
-        .stdout("(3, 7)\n");
+        .stdout("(4, 8)\n");
 }
