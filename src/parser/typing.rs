@@ -35,66 +35,56 @@ impl Typing {
                     Self::type_check_stack(tree, stack, functions)?;
                 }
             }
-            ParseTree::If(conds, else_region) => {
+            ParseTree::If(conds, (t_else, else_region)) => {
                 let mut stacks = Vec::new();
                 let mut stack_cond = stack.clone();
-                for (c, r) in conds {
+                for (t, c, r) in conds {
                     let mut stack_copy = stack_cond.clone();
                     Self::type_check_stack(c, &mut stack_copy, functions)?;
-                    Self::check_stack_length(&Token::new(TokenType::If, 0, 0, ""), &stack_copy, 1)?;
-                    Self::check_stack_types(
-                        &Token::new(TokenType::If, 0, 0, ""),
-                        &stack_copy,
-                        &vec![Types::Bool],
-                    )?;
+                    Self::check_stack_length(&t, &stack_copy, 1)?;
+                    Self::check_stack_types(&t, &stack_copy, &vec![Types::Bool])?;
                     stack_copy.pop();
                     stack_cond = stack_copy.clone();
 
                     let mut stack_copy2 = stack_copy.clone();
 
                     Self::type_check_stack(r, &mut stack_copy2, functions)?;
-                    stacks.push((stack_copy, stack_copy2));
+                    stacks.push((t, stack_copy, stack_copy2));
                 }
 
                 if stacks.len() > 1 {
                     for i in stacks.windows(2) {
-                        let (c1, r1) = &i[0];
-                        let (c2, r2) = &i[1];
+                        let (t1, c1, r1) = &i[0];
+                        let (_, c2, r2) = &i[1];
 
-                        Self::verify_stack_equivalence(c1, c2)?;
-                        Self::verify_stack_equivalence(r1, r2)?;
+                        Self::verify_stack_equivalence(t1, c1, c2)?;
+                        Self::verify_stack_equivalence(t1, r1, r2)?;
                     }
                 }
 
-                let (mut stack1, stack2) = stacks[0].clone();
+                let (_, mut stack1, stack2) = stacks[0].clone();
                 Self::type_check_stack(else_region, &mut stack1, functions)?;
-                Self::verify_stack_equivalence(&stack1, &stack2)?;
+                Self::verify_stack_equivalence(&t_else, &stack1, &stack2)?;
+
+                *stack = stack2;
             }
-            ParseTree::While(cond, region) => {
+            ParseTree::While(t, cond, region) => {
                 let mut stack_copy = stack.clone();
                 Self::type_check_stack(cond, &mut stack_copy, functions)?;
-                Self::check_stack_length(&Token::new(TokenType::While, 0, 0, ""), &stack_copy, 1)?;
-                Self::check_stack_types(
-                    &Token::new(TokenType::While, 0, 0, ""),
-                    &stack_copy,
-                    &vec![Types::Bool],
-                )?;
+                Self::check_stack_length(&t, &stack_copy, 1)?;
+                Self::check_stack_types(&t, &stack_copy, &vec![Types::Bool])?;
                 stack_copy.pop();
 
                 Self::type_check_stack(region, &mut stack_copy, functions)?;
 
-                Self::verify_stack_equivalence(stack, &stack_copy)?;
+                Self::verify_stack_equivalence(&t, stack, &stack_copy)?;
             }
-            ParseTree::FuncDecl(_, inputs, outputs, region) => {
+            ParseTree::FuncDecl(t, _, inputs, outputs, region) => {
                 let mut stack = inputs.clone();
                 Self::type_check_stack(&region, &mut stack, functions)?;
-                Self::check_stack_length(
-                    &Token::new(TokenType::Func, 0, 0, ""),
-                    &stack,
-                    outputs.len(),
-                )?;
+                Self::check_stack_length(&t, &stack, outputs.len())?;
                 Self::check_stack_types(
-                    &Token::new(TokenType::Func, 0, 0, ""),
+                    &t,
                     &stack,
                     &outputs.iter().rev().cloned().collect::<Vec<Types>>(),
                 )?;
@@ -104,21 +94,17 @@ impl Typing {
     }
 
     fn verify_stack_equivalence(
+        token: &Token,
         stack: &Vec<Types>,
         stack_2: &Vec<Types>,
     ) -> Result<(), ParserError> {
-        let false_position = PositionInfo {
-            line: 0,
-            column: 0,
-            string: "".to_string(),
-        };
         if stack.len() != stack_2.len() {
-            return Err(ParserError::InvalidShape(false_position));
+            return Err(ParserError::InvalidShape(token.position_info.clone()));
         }
 
         for (t1, t2) in stack.iter().zip(stack_2.iter()) {
             if t1 != t2 {
-                return Err(ParserError::InvalidShape(false_position));
+                return Err(ParserError::InvalidShape(token.position_info.clone()));
             }
         }
 
@@ -242,10 +228,13 @@ impl Typing {
             TokenType::BoolValue(_) => stack.push(Types::Bool),
 
             TokenType::Identifier(s) => {
-                if let Some(ParseTree::FuncDecl(_, inputs, outputs, _)) = functions.get(s) {
-                    let token = Token::new(TokenType::Func, 0, 0, "");
+                if let Some(ParseTree::FuncDecl(_, _, inputs, outputs, _)) = functions.get(s) {
                     Self::check_stack_length(&token, &stack, inputs.len())?;
-                    Self::check_stack_types(&token, &stack, inputs)?;
+                    Self::check_stack_types(
+                        &token,
+                        &stack,
+                        &inputs.iter().rev().cloned().collect(),
+                    )?;
 
                     for _ in 0..inputs.len() {
                         stack.pop();

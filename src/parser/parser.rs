@@ -99,7 +99,7 @@ impl Parser {
                 TokenType::If => {
                     peekable.next();
                     let mut regions = Vec::new();
-                    let mut else_region = ParseTree::Region(vec![]);
+                    let mut else_region = (t.clone(), Box::new(ParseTree::Region(vec![])));
 
                     loop {
                         let conditional_tree =
@@ -107,7 +107,11 @@ impl Parser {
                         let region_tree =
                             self.generate_parse_tree(Self::get_region(&mut peekable)?.iter())?;
 
-                        regions.push((Box::new(conditional_tree), Box::new(region_tree)));
+                        regions.push((
+                            t.clone(),
+                            Box::new(conditional_tree),
+                            Box::new(region_tree),
+                        ));
 
                         if let Some(&t) = peekable.peek() {
                             match t.token_type {
@@ -123,9 +127,12 @@ impl Parser {
                                         }
                                     }
 
-                                    else_region = self.generate_parse_tree(
-                                        Self::get_region(&mut peekable)?.iter(),
-                                    )?;
+                                    else_region = (
+                                        t.clone(),
+                                        Box::new(self.generate_parse_tree(
+                                            Self::get_region(&mut peekable)?.iter(),
+                                        )?),
+                                    );
 
                                     break;
                                 }
@@ -136,7 +143,7 @@ impl Parser {
                         }
                     }
 
-                    region.push(ParseTree::If(regions, Box::new(else_region)));
+                    region.push(ParseTree::If(regions, else_region));
                 }
                 TokenType::While => {
                     peekable.next();
@@ -146,6 +153,7 @@ impl Parser {
                         self.generate_parse_tree(Self::get_region(&mut peekable)?.iter())?;
 
                     region.push(ParseTree::While(
+                        t.clone(),
                         Box::new(conditional_tree),
                         Box::new(region_tree),
                     ))
@@ -210,6 +218,7 @@ impl Parser {
                     self.functions.insert(
                         function_name.clone(),
                         ParseTree::FuncDecl(
+                            t.clone(),
                             function_name,
                             input_types,
                             output_types,
@@ -285,7 +294,7 @@ impl Parser {
                     match e.token_type {
                         TokenType::Identifier(iden) => {
                             if self.functions.contains_key(&iden) {
-                                if let ParseTree::FuncDecl(_, input_types, _, _) =
+                                if let ParseTree::FuncDecl(_, _, input_types, _, _) =
                                     self.functions.get(&iden).unwrap()
                                 {
                                     parsed_expression.push(Instruction::Push(StackValue::I32(
@@ -327,10 +336,10 @@ impl Parser {
                     .flatten()
                     .collect::<Vec<Instruction>>(),
             ),
-            ParseTree::If(if_branches, else_branch) => {
+            ParseTree::If(if_branches, (_, else_branch)) => {
                 let if_branches_result = if_branches
                     .iter()
-                    .map(|(c, m)| {
+                    .map(|(_, c, m)| {
                         let c1 = self.parse_tree(*c.clone());
                         let c2 = self.parse_tree(*m.clone());
                         (c1, c2)
@@ -382,7 +391,7 @@ impl Parser {
 
                 parsed_expression.append(&mut else_branch);
             }
-            ParseTree::While(c, r) => {
+            ParseTree::While(_, c, r) => {
                 let mut condition_tree = self.parse_tree(*c)?;
                 let mut region_tree = self.parse_tree(*r)?;
 
@@ -392,7 +401,7 @@ impl Parser {
                 parsed_expression.append(&mut region_tree);
                 parsed_expression.push(Instruction::Jump(-(total_length as isize) - 1));
             }
-            ParseTree::FuncDecl(name, _, output_types, region) => {
+            ParseTree::FuncDecl(_, name, _, output_types, region) => {
                 let mut region = self.parse_tree(*region)?;
 
                 region.push(Instruction::Push(
@@ -770,13 +779,17 @@ mod tests {
             ParseTree::Element(Token::new(TokenType::I32(0), 1, 1, "")),
             ParseTree::If(
                 vec![(
+                    Token::new(TokenType::If, 1, 1, ""),
                     Box::new(ParseTree::Region(vec![
                         ParseTree::Element(Token::new(TokenType::I32(10), 1, 1, "")),
                         ParseTree::Element(Token::new(TokenType::Greater, 1, 1, "")),
                     ])),
                     Box::new(ParseTree::Region(vec![])),
                 )],
-                Box::new(ParseTree::Region(vec![])),
+                (
+                    Token::new(TokenType::If, 1, 1, ""),
+                    Box::new(ParseTree::Region(vec![])),
+                ),
             ),
         ]);
         let expected_instructions = vec![
@@ -808,6 +821,7 @@ mod tests {
             ParseTree::Element(Token::new(TokenType::I32(0), 1, 1, "")),
             ParseTree::If(
                 vec![(
+                    Token::new(TokenType::If, 1, 1, ""),
                     Box::new(ParseTree::Region(vec![
                         ParseTree::Element(Token::new(TokenType::I32(10), 1, 1, "")),
                         ParseTree::Element(Token::new(TokenType::Greater, 1, 1, "")),
@@ -819,12 +833,15 @@ mod tests {
                         "",
                     ))])),
                 )],
-                Box::new(ParseTree::Region(vec![ParseTree::Element(Token::new(
-                    TokenType::I32(3),
-                    1,
-                    1,
-                    "",
-                ))])),
+                (
+                    Token::new(TokenType::Else, 1, 1, ""),
+                    Box::new(ParseTree::Region(vec![ParseTree::Element(Token::new(
+                        TokenType::I32(3),
+                        1,
+                        1,
+                        "",
+                    ))])),
+                ),
             ),
         ]);
         let expected_instructions = vec![
@@ -870,6 +887,7 @@ mod tests {
             ParseTree::If(
                 vec![
                     (
+                        Token::new(TokenType::If, 1, 1, ""),
                         Box::new(ParseTree::Region(vec![
                             ParseTree::Element(Token::new(TokenType::Duplicate, 1, 1, "")),
                             ParseTree::Element(Token::new(TokenType::I32(10), 1, 1, "")),
@@ -883,6 +901,7 @@ mod tests {
                         ))])),
                     ),
                     (
+                        Token::new(TokenType::If, 1, 1, ""),
                         Box::new(ParseTree::Region(vec![
                             ParseTree::Element(Token::new(TokenType::Duplicate, 1, 1, "")),
                             ParseTree::Element(Token::new(TokenType::I32(20), 1, 1, "")),
@@ -896,10 +915,15 @@ mod tests {
                         ))])),
                     ),
                 ],
-                Box::new(ParseTree::Region(vec![
-                    // ParseTree::Element(Token::new(TokenType::Drop, 1, 1, "")),
-                    ParseTree::Element(Token::new(TokenType::I32(4), 1, 1, "")),
-                ])),
+                (
+                    Token::new(TokenType::Else, 1, 1, ""),
+                    Box::new(ParseTree::Region(vec![ParseTree::Element(Token::new(
+                        TokenType::I32(4),
+                        1,
+                        1,
+                        "",
+                    ))])),
+                ),
             ),
         ]);
         let expected_instructions = vec![
@@ -938,6 +962,7 @@ mod tests {
         let expected_tree = ParseTree::Region(vec![
             ParseTree::Element(Token::new(TokenType::I32(0), 1, 1, "")),
             ParseTree::While(
+                Token::new(TokenType::While, 1, 1, ""),
                 Box::new(ParseTree::Region(vec![
                     ParseTree::Element(Token::new(TokenType::Duplicate, 1, 1, "")),
                     ParseTree::Element(Token::new(TokenType::I32(10), 1, 1, "")),
@@ -984,6 +1009,7 @@ mod tests {
         let expected_function = HashMap::from([(
             "test".to_string(),
             ParseTree::FuncDecl(
+                Token::new(TokenType::Func, 1, 1, ""),
                 "test".to_string(),
                 vec![Types::I32, Types::I32],
                 vec![Types::I32],
