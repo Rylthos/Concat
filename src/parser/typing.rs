@@ -190,8 +190,8 @@ impl Typing {
                 Self::check_stack_length(token, stack, 2)?;
                 let v1 = stack.pop().unwrap();
                 let v2 = stack.pop().unwrap();
-                stack.push(v2);
                 stack.push(v1);
+                stack.push(v2);
             }
             TokenType::Print => {
                 Self::check_stack_length(token, stack, 1)?;
