@@ -9,3 +9,13 @@ fn functions_basic() {
         .success()
         .stdout("(4, 8)\n");
 }
+
+#[test]
+fn functions_multiple_io() {
+    Command::cargo_bin("concat")
+        .unwrap()
+        .arg("tests/functions/multiple_io.concat")
+        .assert()
+        .success()
+        .stdout("test0\n1");
+}

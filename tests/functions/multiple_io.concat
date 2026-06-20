@@ -1,0 +1,12 @@
+func test void -> i32 bool string {
+  0 true "test"
+}
+
+func test2 bool i32 -> void {
+  print drop
+}
+
+test print drop print
+"\n" print
+
+false 1 test2
