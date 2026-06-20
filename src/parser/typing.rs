@@ -1,5 +1,5 @@
 use crate::error::types::ParserError;
-use crate::lexer::tokens::{PositionInfo, Token, TokenType, Types};
+use crate::lexer::tokens::{Token, TokenType, Types};
 use crate::parser::parse_tree::ParseTree;
 
 use std::collections::HashMap;

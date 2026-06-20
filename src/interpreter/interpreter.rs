@@ -13,7 +13,6 @@ pub fn interpret(instructions: &Vec<Instruction>) {
             }
             //
             Instruction::Rotate3 => {
-                assert!(stack.len() >= 3, "Invalid stack length");
                 let v3 = stack.pop().unwrap();
                 let v2 = stack.pop().unwrap();
                 let v1 = stack.pop().unwrap();
@@ -23,16 +22,13 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                 stack.push(v2);
             }
             Instruction::Duplicate => {
-                assert!(stack.len() >= 1, "Invalid stack length");
                 let stack_value = stack.last().unwrap();
                 stack.push(stack_value.clone());
             }
             Instruction::Drop => {
-                assert!(stack.len() >= 1, "Invalid stack length");
                 stack.pop();
             }
             Instruction::Over => {
-                assert!(stack.len() >= 2, "Invalid stack length");
                 let v2 = stack.pop().unwrap();
                 let v1 = stack.pop().unwrap();
                 stack.push(v1.clone());
@@ -40,7 +36,6 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                 stack.push(v1.clone());
             }
             Instruction::Swap => {
-                assert!(stack.len() >= 2, "Invalid stack length");
                 let v2 = stack.pop().unwrap();
                 let v1 = stack.pop().unwrap();
                 stack.push(v2.clone());
@@ -54,10 +49,10 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                     } else if let StackValue::I32(i) = v {
                         print!("{}", i);
                     } else {
-                        panic!("Expected String Value");
+                        unreachable!("Expected printable Value");
                     }
                 } else {
-                    panic!("Stack Empty");
+                    unreachable!("Stack Empty");
                 }
             }
             //
@@ -69,7 +64,6 @@ pub fn interpret(instructions: &Vec<Instruction>) {
             | Instruction::NotEqual
             | Instruction::And
             | Instruction::Or => {
-                assert!(stack.len() >= 2, "Invalid stack length");
                 let v2 = stack.pop().unwrap();
                 let v1 = stack.pop().unwrap();
 
@@ -83,7 +77,7 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                         Instruction::GreaterEqual => StackValue::Bool(v1 >= v2),
                         Instruction::Equal => StackValue::Bool(v1 == v2),
                         Instruction::NotEqual => StackValue::Bool(v1 != v2),
-                        _ => panic!("Unhandled"),
+                        _ => unreachable!("Unhandled"),
                     };
                     stack.push(output);
                 } else if let StackValue::Bool(b1) = v1
@@ -92,20 +86,19 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                     let output = match instruction {
                         Instruction::And => StackValue::Bool(b1 && b2),
                         Instruction::Or => StackValue::Bool(b1 || b2),
-                        _ => panic!("Unhandled"),
+                        _ => unreachable!("Unhandled"),
                     };
                     stack.push(output);
                 } else {
-                    panic!("Unhandled type");
+                    unreachable!("Unhandled type");
                 }
             }
             Instruction::Not => {
-                assert!(stack.len() >= 1, "Invalid stack length");
                 let v1 = stack.pop().unwrap();
                 if let StackValue::Bool(b) = v1 {
                     stack.push(StackValue::Bool(!b));
                 } else {
-                    panic!("Unhandled type");
+                    unreachable!("Unhandled type");
                 }
             }
             //
@@ -119,7 +112,6 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                 continue;
             }
             Instruction::CondJump(offset_true, offset_false) => {
-                assert!(stack.len() >= 1, "Invalid stack length");
                 let value = stack.pop().unwrap();
                 if let StackValue::Bool(b) = value {
                     let offset = match b {
@@ -129,7 +121,7 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                     index += offset;
                     continue;
                 } else {
-                    panic!("Expected bool type");
+                    unreachable!("Expected bool type");
                 }
             }
             Instruction::Add
@@ -137,7 +129,6 @@ pub fn interpret(instructions: &Vec<Instruction>) {
             | Instruction::Multiply
             | Instruction::Divide
             | Instruction::Modulo => {
-                assert!(stack.len() >= 2, "Invalid stack length");
                 let v2 = stack.pop().unwrap();
                 let v1 = stack.pop().unwrap();
 
@@ -150,11 +141,11 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                         Instruction::Multiply => StackValue::I32(v1 * v2),
                         Instruction::Divide => StackValue::I32(v1 / v2),
                         Instruction::Modulo => StackValue::I32(v1 % v2),
-                        _ => panic!("Unhandled value"),
+                        _ => unreachable!("Unhandled value"),
                     };
                     stack.push(new_value);
                 } else {
-                    panic!(
+                    unreachable!(
                         "Expected number types: {:?} got {:?} {:?}",
                         instruction, v1, v2
                     );
@@ -164,7 +155,6 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                 break;
             }
             Instruction::Call(call_index) => {
-                assert!(stack.len() >= 1, "Invalid stack length");
                 let num_arguments = if let StackValue::I32(i) = stack.pop().unwrap() {
                     i
                 } else {
@@ -172,12 +162,6 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                 };
 
                 let mut arguments = Vec::new();
-                assert!(
-                    stack.len() >= num_arguments as usize,
-                    "Expected length {} got {}",
-                    num_arguments,
-                    stack.len()
-                );
                 for _ in 0..num_arguments {
                     arguments.push(stack.pop().unwrap());
                 }
@@ -199,7 +183,6 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                 };
 
                 let mut arguments = Vec::new();
-                assert!(stack.len() >= num_arguments as usize);
                 for _ in 0..num_arguments {
                     arguments.push(stack.pop().unwrap());
                 }
