@@ -3,7 +3,7 @@ Stack based programming language
 
 ## Goals
 - Compile to assembly
-- Implement a type system to ensure safety
+- Implement a type system to stack shape and safety
 - Bootstrap the compiler
 
 ## Language Features
@@ -12,6 +12,7 @@ Stack based programming language
 ## Examples
 - fibonacci
 - fizzbuzz
+- fizzbuzzfuzz
 
 ## Language syntax
 Arithmetic operations
@@ -29,7 +30,19 @@ Boolean Operations
 < > <= >= = != && || !
 ```
 
+Conditionals
+```text
+if else
+```
+
 Loops
 ```text
-if else while
+while
+```
+
+Functions
+```
+func <name> [<types>] -> [<types>] {
+
+}
 ```
