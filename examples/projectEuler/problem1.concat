@@ -1,0 +1,28 @@
+func should_count i32 -> bool {
+  dup 3 % 0 ==
+  swap 5 % 0 == ||
+
+  if {
+    true
+  } else {
+    false
+  }
+}
+
+0 0 // count i
+while dup 1000 < {
+
+  swap
+
+  over should_count
+
+  if {
+    over +
+  } else {}
+
+  swap
+
+  1 +
+}
+
+drop print "\n" print
