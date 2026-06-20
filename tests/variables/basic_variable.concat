@@ -1,0 +1,7 @@
+i32: variable
+
+variable 0 =
+variable @ print "\n" print
+
+variable 1 =
+variable @ print "\n" print

@@ -249,7 +249,10 @@ impl Typing {
             | TokenType::Else
             | TokenType::While
             | TokenType::Func
-            | TokenType::Arrow => {
+            | TokenType::Arrow
+            | TokenType::Declare
+            | TokenType::Assignment
+            | TokenType::Read => {
                 unreachable!();
             }
         }

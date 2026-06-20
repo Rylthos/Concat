@@ -49,6 +49,11 @@ pub enum TokenType {
     Func,
     Arrow,
 
+    // Variables
+    Declare,
+    Assignment,
+    Read,
+
     //
     Identifier(String),
 
@@ -136,8 +141,14 @@ impl fmt::Display for TokenType {
             TokenType::If => write!(f, "if"),
             TokenType::Else => write!(f, "else"),
             TokenType::While => write!(f, "while"),
+
             TokenType::Func => write!(f, "func"),
             TokenType::Arrow => write!(f, "=>"),
+
+            TokenType::Declare => write!(f, ":"),
+            TokenType::Assignment => write!(f, "="),
+            TokenType::Read => write!(f, "@"),
+
             TokenType::Identifier(s) => write!(f, "Iden({:?})", s),
 
             TokenType::Type(t) => write!(f, "{}", t),

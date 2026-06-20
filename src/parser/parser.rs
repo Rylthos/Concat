@@ -244,7 +244,10 @@ impl Parser {
             | TokenType::Else
             | TokenType::While
             | TokenType::Arrow
-            | TokenType::Func => {
+            | TokenType::Func
+            | TokenType::Declare
+            | TokenType::Assignment
+            | TokenType::Read => {
                 unreachable!("Unreachable: {:?}", token);
             }
             TokenType::StringValue(s) => Instruction::Push(StackValue::String(s.to_string())),
