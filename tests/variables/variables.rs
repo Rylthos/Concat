@@ -4,7 +4,7 @@ use assert_cmd::Command;
 fn basic_variables() {
     Command::cargo_bin("concat")
         .unwrap()
-        .arg("tests/variables/basic_variables.concat")
+        .arg("tests/variables/basic_variable.concat")
         .assert()
         .success()
         .stdout("0\n1\n");

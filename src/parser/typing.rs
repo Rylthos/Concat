@@ -1,6 +1,6 @@
 use crate::error::types::ParserError;
 use crate::lexer::tokens::{Token, TokenType, Types};
-use crate::parser::parse_tree::ParseTree;
+use crate::parser::parse_tree::{FuncDecl, ParseTree};
 
 use std::collections::HashMap;
 
@@ -9,14 +9,13 @@ pub struct Typing {}
 impl Typing {
     pub fn type_check(
         tree: &ParseTree,
-        functions: &HashMap<String, ParseTree>,
+        functions: &HashMap<String, FuncDecl>,
     ) -> Result<(), ParserError> {
         let mut stack = Vec::new();
         Self::type_check_stack(tree, &mut stack, functions)?;
 
-        for (_, def) in functions.iter() {
-            let mut stack = Vec::new();
-            Self::type_check_stack(def, &mut stack, functions)?;
+        for (_, f) in functions.iter() {
+            Self::type_check_function(f, functions)?;
         }
 
         Ok(())
@@ -25,12 +24,12 @@ impl Typing {
     fn type_check_stack(
         tree: &ParseTree,
         stack: &mut Vec<Types>,
-        functions: &HashMap<String, ParseTree>,
+        functions: &HashMap<String, FuncDecl>,
     ) -> Result<(), ParserError> {
         match tree {
             ParseTree::None => unreachable!("Invalid stack"),
             ParseTree::Element(t) => Self::type_check_token(t, stack, functions)?,
-            ParseTree::Region(r) => {
+            ParseTree::Region(v, r) => {
                 for tree in r {
                     Self::type_check_stack(tree, stack, functions)?;
                 }
@@ -79,17 +78,26 @@ impl Typing {
 
                 Self::verify_stack_equivalence(&t, stack, &stack_copy)?;
             }
-            ParseTree::FuncDecl(t, _, inputs, outputs, region) => {
-                let mut stack = inputs.clone();
-                Self::type_check_stack(&region, &mut stack, functions)?;
-                Self::check_stack_length(&t, &stack, outputs.len())?;
-                Self::check_stack_types(
-                    &t,
-                    &stack,
-                    &outputs.iter().rev().cloned().collect::<Vec<Types>>(),
-                )?;
+            ParseTree::FuncDecl(func) => {
+                Self::type_check_function(func, functions)?;
             }
         };
+        Ok(())
+    }
+
+    fn type_check_function(
+        func: &FuncDecl,
+        functions: &HashMap<String, FuncDecl>,
+    ) -> Result<(), ParserError> {
+        let mut stack = func.inputs.clone();
+        Self::type_check_stack(&func.region, &mut stack, functions)?;
+        Self::check_stack_length(&func.token, &stack, func.outputs.len())?;
+        Self::check_stack_types(
+            &func.token,
+            &stack,
+            &func.outputs.iter().rev().cloned().collect::<Vec<Types>>(),
+        )?;
+
         Ok(())
     }
 
@@ -149,7 +157,7 @@ impl Typing {
     fn type_check_token(
         token: &Token,
         stack: &mut Vec<Types>,
-        functions: &HashMap<String, ParseTree>,
+        functions: &HashMap<String, FuncDecl>,
     ) -> Result<(), ParserError> {
         match &token.token_type {
             TokenType::LeftBrace => {}
@@ -228,19 +236,19 @@ impl Typing {
             TokenType::BoolValue(_) => stack.push(Types::Bool),
 
             TokenType::Identifier(s) => {
-                if let Some(ParseTree::FuncDecl(_, _, inputs, outputs, _)) = functions.get(s) {
-                    Self::check_stack_length(&token, &stack, inputs.len())?;
+                if let Some(func) = functions.get(s) {
+                    Self::check_stack_length(&token, &stack, func.inputs.len())?;
                     Self::check_stack_types(
                         &token,
                         &stack,
-                        &inputs.iter().rev().cloned().collect(),
+                        &func.inputs.iter().rev().cloned().collect(),
                     )?;
 
-                    for _ in 0..inputs.len() {
+                    for _ in 0..func.inputs.len() {
                         stack.pop();
                     }
 
-                    for o in outputs {
+                    for o in func.outputs.iter() {
                         stack.push(o.clone());
                     }
                 }
