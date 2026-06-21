@@ -5,13 +5,13 @@ use clap::Parser;
 pub struct Config {
     pub path: std::path::PathBuf,
 
-    #[arg(short, long, default_value_t = false)]
+    #[arg(short, long = "expr", default_value_t = false)]
     pub expr_print: bool,
 
-    #[arg(long, default_value_t = false)]
+    #[arg(long = "tree", default_value_t = false)]
     pub tree_print: bool,
 
-    #[arg(long, default_value_t = false)]
+    #[arg(long = "token", default_value_t = false)]
     pub token_print: bool,
 }
 
