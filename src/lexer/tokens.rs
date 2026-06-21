@@ -50,6 +50,11 @@ pub enum TokenType {
     Arrow,
 
     //
+    Assignment,
+    Assign,
+    Read,
+
+    //
     Identifier(String),
 
     Type(Types),
@@ -139,6 +144,10 @@ impl fmt::Display for TokenType {
 
             TokenType::Func => write!(f, "func"),
             TokenType::Arrow => write!(f, "=>"),
+
+            TokenType::Assignment => write!(f, "assign"),
+            TokenType::Assign => write!(f, "="),
+            TokenType::Read => write!(f, "@"),
 
             TokenType::Identifier(s) => write!(f, "Iden({:?})", s),
 

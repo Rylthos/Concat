@@ -1,0 +1,5 @@
+0 assign x {
+  x @ print " " print
+  x 1 =
+  x @ print "\n" print
+}

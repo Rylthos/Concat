@@ -81,6 +81,8 @@ impl Lexer {
             ("while".to_string(), TokenType::While),
             //
             ("func".to_string(), TokenType::Func),
+            //
+            ("assign".to_string(), TokenType::Assignment),
         ]);
 
         while let Some(&(column_number, c)) = chars.peek() {
@@ -195,7 +197,7 @@ impl Lexer {
                         match c {
                             '<' => TokenType::Less,
                             '>' => TokenType::Greater,
-                            '=' => todo!(),
+                            '=' => TokenType::Assign,
                             '!' => TokenType::Not,
                             _ => unreachable!("Unhandled case"),
                         }
@@ -207,13 +209,14 @@ impl Lexer {
                         &lexed_string,
                     ));
                 }
-                '+' | '*' | '%' | '{' | '}' => {
+                '+' | '*' | '%' | '{' | '}' | '@' => {
                     let token = match c {
                         '+' => TokenType::Add,
                         '*' => TokenType::Multiply,
                         '%' => TokenType::Modulo,
                         '{' => TokenType::LeftBrace,
                         '}' => TokenType::RightBrace,
+                        '@' => TokenType::Read,
                         _ => unreachable!("Unhandled case"),
                     };
                     tokens.push(Token::new(
@@ -535,6 +538,25 @@ mod tests {
             Token::new(TokenType::Type(Types::I32), 1, 22, "i32"),
             Token::new(TokenType::LeftBrace, 1, 26, "{"),
             Token::new(TokenType::Add, 1, 28, "+"),
+            Token::new(TokenType::RightBrace, 1, 30, "}"),
+        ];
+        test_input(input, &output);
+    }
+
+    #[test]
+    fn lex_variables() {
+        let input = r#"0 assign x { x @ print x 1 = }"#;
+        let output = vec![
+            Token::new(TokenType::I32(0), 1, 1, "0"),
+            Token::new(TokenType::Assignment, 1, 3, "assign"),
+            Token::new(TokenType::Identifier("x".to_string()), 1, 10, "x"),
+            Token::new(TokenType::LeftBrace, 1, 12, "{"),
+            Token::new(TokenType::Identifier("x".to_string()), 1, 14, "x"),
+            Token::new(TokenType::Read, 1, 16, "@"),
+            Token::new(TokenType::Print, 1, 18, "print"),
+            Token::new(TokenType::Identifier("x".to_string()), 1, 24, "x"),
+            Token::new(TokenType::I32(1), 1, 26, "1"),
+            Token::new(TokenType::Assign, 1, 28, "="),
             Token::new(TokenType::RightBrace, 1, 30, "}"),
         ];
         test_input(input, &output);
