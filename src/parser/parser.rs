@@ -248,6 +248,7 @@ impl Parser {
                 parsed_expression.append(&mut region_tree);
                 parsed_expression.push(Instruction::Jump(-(total_length as isize) - 1));
             }
+            ParseTree::Assign(_, v, r) => {}
             ParseTree::FuncDecl(func) => {
                 let mut region = self.parse_tree(*func.region)?;
 
@@ -372,6 +373,35 @@ impl Parser {
         }
 
         return Ok(values);
+    }
+
+    pub fn get_identifier_list<'a, I>(
+        tokens: &mut std::iter::Peekable<I>,
+    ) -> Result<Vec<Token>, ParserError>
+    where
+        I: Iterator<Item = &'a Token>,
+    {
+        let mut identifiers: Vec<Token> = Vec::new();
+        while let Some(&t) = tokens.peek() {
+            match t.token_type {
+                TokenType::LeftBrace => {
+                    break;
+                }
+                TokenType::Identifier(_) => {
+                    identifiers.push(t.clone());
+                }
+                _ => {
+                    return Err(ParserError::ExpectedTokenGot(
+                        t.position_info.clone(),
+                        TokenType::Identifier("".to_string()),
+                        t.token_type.clone(),
+                    ));
+                }
+            }
+            tokens.next();
+        }
+
+        Ok(identifiers)
     }
 
     pub fn get_region<'a, I>(tokens: &mut std::iter::Peekable<I>) -> Result<Vec<Token>, ParserError>

@@ -78,6 +78,7 @@ impl Typing {
 
                 Self::verify_stack_equivalence(&t, stack, &stack_copy)?;
             }
+            ParseTree::Assign(t, v, r) => {}
             ParseTree::FuncDecl(func) => {
                 Self::type_check_function(func, functions)?;
             }
