@@ -195,7 +195,7 @@ impl Lexer {
                         match c {
                             '<' => TokenType::Less,
                             '>' => TokenType::Greater,
-                            '=' => TokenType::Assignment,
+                            '=' => todo!(),
                             '!' => TokenType::Not,
                             _ => unreachable!("Unhandled case"),
                         }
@@ -207,15 +207,13 @@ impl Lexer {
                         &lexed_string,
                     ));
                 }
-                '+' | '*' | '%' | '{' | '}' | '@' | ':' => {
+                '+' | '*' | '%' | '{' | '}' => {
                     let token = match c {
                         '+' => TokenType::Add,
                         '*' => TokenType::Multiply,
                         '%' => TokenType::Modulo,
                         '{' => TokenType::LeftBrace,
                         '}' => TokenType::RightBrace,
-                        '@' => TokenType::Read,
-                        ':' => TokenType::Declare,
                         _ => unreachable!("Unhandled case"),
                     };
                     tokens.push(Token::new(
@@ -538,38 +536,6 @@ mod tests {
             Token::new(TokenType::LeftBrace, 1, 26, "{"),
             Token::new(TokenType::Add, 1, 28, "+"),
             Token::new(TokenType::RightBrace, 1, 30, "}"),
-        ];
-        test_input(input, &output);
-    }
-
-    #[test]
-    fn lex_variable() {
-        let input = r#"i32: iterations iterations 0 = iterations @ print"#;
-        let output = vec![
-            Token::new(TokenType::Type(Types::I32), 1, 1, "i32"),
-            Token::new(TokenType::Declare, 1, 4, ":"),
-            Token::new(
-                TokenType::Identifier("iterations".to_string()),
-                1,
-                6,
-                "iterations",
-            ),
-            Token::new(
-                TokenType::Identifier("iterations".to_string()),
-                1,
-                17,
-                "iterations",
-            ),
-            Token::new(TokenType::I32(0), 1, 28, "0"),
-            Token::new(TokenType::Assignment, 1, 30, "="),
-            Token::new(
-                TokenType::Identifier("iterations".to_string()),
-                1,
-                32,
-                "iterations",
-            ),
-            Token::new(TokenType::Read, 1, 43, "@"),
-            Token::new(TokenType::Print, 1, 45, "print"),
         ];
         test_input(input, &output);
     }

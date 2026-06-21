@@ -8,12 +8,6 @@ use std::collections::HashMap;
 use std::fmt;
 
 #[derive(Debug, Clone)]
-pub struct VariableDecl {
-    pub name: String,
-    pub r#type: Types,
-}
-
-#[derive(Debug, Clone)]
 pub struct FuncDecl {
     pub token: Token,
     pub name: String,
@@ -26,7 +20,7 @@ pub struct FuncDecl {
 pub enum ParseTree {
     None,
     Element(Token),
-    Region(HashMap<String, VariableDecl>, Vec<ParseTree>),
+    Region(Vec<ParseTree>),
     If(
         Vec<(Token, Box<ParseTree>, Box<ParseTree>)>,
         (Token, Box<ParseTree>),
@@ -42,10 +36,11 @@ impl ParseTree {
         match self {
             ParseTree::None => write!(f, "{}NONE\n", padding(indent)),
             ParseTree::Element(t) => write!(f, "{}({})", padding(indent), t),
-            ParseTree::Region(v, r) => {
-                write!(f, "{} {{\n", padding(indent))?;
+            ParseTree::Region(r) => {
+                write!(f, "{}{{\n", padding(indent))?;
+                write!(f, "{} {{\n", padding(indent + 1))?;
                 for region in r {
-                    region.fmt_indent(f, indent + 1)?;
+                    region.fmt_indent(f, indent + 2)?;
                     write!(f, "\n")?;
                 }
                 write!(f, "{}}}", padding(indent))
@@ -81,19 +76,15 @@ impl ParseTree {
         functions: &mut HashMap<String, FuncDecl>,
     ) -> Result<ParseTree, ParserError> {
         let mut region: Vec<ParseTree> = Vec::new();
-        let mut peekable = tokens.peekable();
 
-        let mut variables: HashMap<String, VariableDecl> = HashMap::new();
+        let mut peekable = tokens.peekable();
 
         while let Some(&t) = peekable.peek() {
             match t.token_type {
                 TokenType::If => {
                     peekable.next();
                     let mut regions = Vec::new();
-                    let mut else_region = (
-                        t.clone(),
-                        Box::new(ParseTree::Region(HashMap::new(), vec![])),
-                    );
+                    let mut else_region = (t.clone(), Box::new(ParseTree::Region(vec![])));
 
                     loop {
                         let conditional_tree = Self::generate_parse_tree(
@@ -238,7 +229,7 @@ impl ParseTree {
             }
         }
 
-        return Ok(ParseTree::Region(variables, region));
+        return Ok(ParseTree::Region(region));
     }
 }
 

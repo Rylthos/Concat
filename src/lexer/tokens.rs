@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Types {
     String,
     I32,
@@ -48,11 +48,6 @@ pub enum TokenType {
     // Func
     Func,
     Arrow,
-
-    // Variables
-    Declare,
-    Assignment,
-    Read,
 
     //
     Identifier(String),
@@ -144,10 +139,6 @@ impl fmt::Display for TokenType {
 
             TokenType::Func => write!(f, "func"),
             TokenType::Arrow => write!(f, "=>"),
-
-            TokenType::Declare => write!(f, ":"),
-            TokenType::Assignment => write!(f, "="),
-            TokenType::Read => write!(f, "@"),
 
             TokenType::Identifier(s) => write!(f, "Iden({:?})", s),
 

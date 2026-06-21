@@ -29,7 +29,7 @@ impl Typing {
         match tree {
             ParseTree::None => unreachable!("Invalid stack"),
             ParseTree::Element(t) => Self::type_check_token(t, stack, functions)?,
-            ParseTree::Region(v, r) => {
+            ParseTree::Region(r) => {
                 for tree in r {
                     Self::type_check_stack(tree, stack, functions)?;
                 }
@@ -257,10 +257,7 @@ impl Typing {
             | TokenType::Else
             | TokenType::While
             | TokenType::Func
-            | TokenType::Arrow
-            | TokenType::Declare
-            | TokenType::Assignment
-            | TokenType::Read => {
+            | TokenType::Arrow => {
                 unreachable!();
             }
         }
