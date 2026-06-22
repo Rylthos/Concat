@@ -2,6 +2,7 @@ use crate::error::types::{self, ParserError};
 use crate::lexer::tokens::{Token, TokenType, Types};
 
 use crate::parser::parser::Parser;
+use crate::parser::stack_types::StackType;
 
 use std::collections::HashMap;
 
@@ -11,8 +12,8 @@ use std::fmt;
 pub struct FuncDecl {
     pub token: Token,
     pub name: String,
-    pub inputs: Vec<Types>,
-    pub outputs: Vec<Types>,
+    pub inputs: Vec<StackType>,
+    pub outputs: Vec<StackType>,
     pub region: Box<ParseTree>,
 }
 
@@ -187,7 +188,7 @@ impl ParseTree {
                             Types::Void => false,
                             _ => true,
                         })
-                        .cloned()
+                        .map(|i| StackType::convert_type(&i))
                         .collect();
 
                     if let Some(t) = peekable.next() {
@@ -213,7 +214,7 @@ impl ParseTree {
                             Types::Void => false,
                             _ => true,
                         })
-                        .cloned()
+                        .map(|t| StackType::convert_type(&t))
                         .collect();
 
                     let region_tree = Self::generate_parse_tree(

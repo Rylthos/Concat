@@ -1,4 +1,5 @@
-use crate::parser::instructions::{Instruction, StackValue};
+use crate::parser::instructions::Instruction;
+use crate::parser::stack_values::StackValue;
 
 pub fn interpret(instructions: &Vec<Instruction>) {
     let mut stack: Vec<StackValue> = Vec::new();

@@ -1,6 +1,7 @@
 use crate::error::types::ParserError;
 use crate::lexer::tokens::{Token, TokenType, Types};
 use crate::parser::parse_tree::{FuncDecl, ParseTree};
+use crate::parser::stack_types::StackType;
 
 use std::collections::HashMap;
 
@@ -23,7 +24,7 @@ impl Typing {
 
     fn type_check_stack(
         tree: &ParseTree,
-        stack: &mut Vec<Types>,
+        stack: &mut Vec<StackType>,
         functions: &HashMap<String, FuncDecl>,
     ) -> Result<(), ParserError> {
         match tree {
@@ -41,7 +42,7 @@ impl Typing {
                     let mut stack_copy = stack_cond.clone();
                     Self::type_check_stack(c, &mut stack_copy, functions)?;
                     Self::check_stack_length(&t, &stack_copy, 1)?;
-                    Self::check_stack_types(&t, &stack_copy, &vec![Types::Bool])?;
+                    Self::check_stack_types(&t, &stack_copy, &vec![StackType::Bool])?;
                     stack_copy.pop();
                     stack_cond = stack_copy.clone();
 
@@ -71,7 +72,7 @@ impl Typing {
                 let mut stack_copy = stack.clone();
                 Self::type_check_stack(cond, &mut stack_copy, functions)?;
                 Self::check_stack_length(&t, &stack_copy, 1)?;
-                Self::check_stack_types(&t, &stack_copy, &vec![Types::Bool])?;
+                Self::check_stack_types(&t, &stack_copy, &vec![StackType::Bool])?;
                 stack_copy.pop();
 
                 Self::type_check_stack(region, &mut stack_copy, functions)?;
@@ -96,7 +97,12 @@ impl Typing {
         Self::check_stack_types(
             &func.token,
             &stack,
-            &func.outputs.iter().rev().cloned().collect::<Vec<Types>>(),
+            &func
+                .outputs
+                .iter()
+                .rev()
+                .cloned()
+                .collect::<Vec<StackType>>(),
         )?;
 
         Ok(())
@@ -104,8 +110,8 @@ impl Typing {
 
     fn verify_stack_equivalence(
         token: &Token,
-        stack: &Vec<Types>,
-        stack_2: &Vec<Types>,
+        stack: &Vec<StackType>,
+        stack_2: &Vec<StackType>,
     ) -> Result<(), ParserError> {
         if stack.len() != stack_2.len() {
             return Err(ParserError::InvalidShape(token.position_info.clone()));
@@ -122,7 +128,7 @@ impl Typing {
 
     fn check_stack_length(
         token: &Token,
-        stack: &Vec<Types>,
+        stack: &Vec<StackType>,
         required_length: usize,
     ) -> Result<(), ParserError> {
         if stack.len() < required_length {
@@ -138,8 +144,8 @@ impl Typing {
 
     fn check_stack_types(
         token: &Token,
-        stack: &Vec<Types>,
-        required_types: &Vec<Types>,
+        stack: &Vec<StackType>,
+        required_types: &Vec<StackType>,
     ) -> Result<(), ParserError> {
         for (i, t) in (0..).zip(required_types.iter()) {
             let index = stack.len() - 1 - i;
@@ -157,7 +163,7 @@ impl Typing {
 
     fn type_check_token(
         token: &Token,
-        stack: &mut Vec<Types>,
+        stack: &mut Vec<StackType>,
         functions: &HashMap<String, FuncDecl>,
     ) -> Result<(), ParserError> {
         match &token.token_type {
@@ -169,10 +175,10 @@ impl Typing {
             | TokenType::Divide
             | TokenType::Modulo => {
                 Self::check_stack_length(token, stack, 2)?;
-                Self::check_stack_types(token, stack, &vec![Types::I32, Types::I32])?;
+                Self::check_stack_types(token, stack, &vec![StackType::I32, StackType::I32])?;
                 stack.pop();
                 stack.pop();
-                stack.push(Types::I32);
+                stack.push(StackType::I32);
             }
             TokenType::Rotate3 => {
                 Self::check_stack_length(token, stack, 3)?;
@@ -213,28 +219,28 @@ impl Typing {
             | TokenType::Equal
             | TokenType::NotEqual => {
                 Self::check_stack_length(token, stack, 2)?;
-                Self::check_stack_types(token, stack, &vec![Types::I32, Types::I32])?;
+                Self::check_stack_types(token, stack, &vec![StackType::I32, StackType::I32])?;
                 stack.pop();
                 stack.pop();
-                stack.push(Types::Bool);
+                stack.push(StackType::Bool);
             }
             TokenType::And | TokenType::Or => {
                 Self::check_stack_length(token, stack, 2)?;
-                Self::check_stack_types(token, stack, &vec![Types::Bool, Types::Bool])?;
+                Self::check_stack_types(token, stack, &vec![StackType::Bool, StackType::Bool])?;
                 stack.pop();
                 stack.pop();
-                stack.push(Types::Bool);
+                stack.push(StackType::Bool);
             }
             TokenType::Not => {
                 Self::check_stack_length(token, stack, 1)?;
-                Self::check_stack_types(token, stack, &vec![Types::Bool])?;
+                Self::check_stack_types(token, stack, &vec![StackType::Bool])?;
                 stack.pop();
-                stack.push(Types::Bool);
+                stack.push(StackType::Bool);
             }
-            TokenType::Type(t) => stack.push(t.clone()),
-            TokenType::StringValue(_) => stack.push(Types::String),
-            TokenType::I32(_) => stack.push(Types::I32),
-            TokenType::BoolValue(_) => stack.push(Types::Bool),
+            TokenType::Type(t) => stack.push(StackType::convert_type(&t)),
+            TokenType::StringValue(_) => stack.push(StackType::String),
+            TokenType::I32(_) => stack.push(StackType::I32),
+            TokenType::BoolValue(_) => stack.push(StackType::Bool),
 
             TokenType::Identifier(s) => {
                 if let Some(func) = functions.get(s) {

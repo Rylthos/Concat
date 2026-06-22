@@ -1,7 +1,9 @@
 use crate::error::types::{ErrorType, ParserError};
 use crate::lexer::tokens::{Token, TokenType, Types};
-use crate::parser::instructions::{Instruction, StackValue};
+use crate::parser::instructions::Instruction;
 use crate::parser::parse_tree::{FuncDecl, ParseTree};
+use crate::parser::stack_types::StackType;
+use crate::parser::stack_values::StackValue;
 use crate::parser::typing::Typing;
 
 use crate::config::config::Config;
@@ -103,7 +105,7 @@ impl Parser {
             TokenType::StringValue(s) => Instruction::Push(StackValue::String(s.to_string())),
             TokenType::I32(n) => Instruction::Push(StackValue::I32(n)),
             TokenType::BoolValue(b) => Instruction::Push(StackValue::Bool(b)),
-            TokenType::Type(t) => Instruction::Push(StackValue::Type(t.clone())),
+            TokenType::Type(t) => Instruction::Push(StackValue::Type(StackType::convert_type(&t))),
             //
             TokenType::Add => Instruction::Add,
             TokenType::Subtract => Instruction::Subtract,
@@ -800,8 +802,8 @@ mod tests {
             FuncDecl {
                 token: Token::new(TokenType::Func, 1, 1, ""),
                 name: "test".to_string(),
-                inputs: vec![Types::I32, Types::I32],
-                outputs: vec![Types::I32],
+                inputs: vec![StackType::I32, StackType::I32],
+                outputs: vec![StackType::I32],
                 region: Box::new(ParseTree::Region(vec![ParseTree::Element(Token::new(
                     TokenType::Add,
                     1,

@@ -1,16 +1,5 @@
 use crate::lexer::tokens::Types;
-
-#[derive(Debug, Clone)]
-pub enum StackValue {
-    String(String),
-    I32(i32),
-    Bool(bool),
-    Type(Types),
-    Ptr(usize),
-    Frame(isize),
-    Call(usize),
-    VarRef(usize, usize),
-}
+use crate::parser::stack_values::StackValue;
 
 #[derive(Debug, Clone)]
 pub enum Instruction {

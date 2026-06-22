@@ -1,4 +1,5 @@
-use crate::lexer::tokens::{PositionInfo, TokenType, Types};
+use crate::lexer::tokens::{PositionInfo, TokenType};
+use crate::parser::stack_types::StackType;
 
 #[derive(Debug)]
 pub enum LexerError {
@@ -15,7 +16,7 @@ pub enum ParserError {
     InvalidParseTree(),
     UnknownIdentifier(PositionInfo, String),
     InvalidNumberOfArguments(PositionInfo, usize, usize),
-    InvalidType(PositionInfo, Types, Types),
+    InvalidType(PositionInfo, StackType, StackType),
     InvalidShape(PositionInfo),
 }
 
