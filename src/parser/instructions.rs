@@ -7,7 +7,7 @@ pub enum StackValue {
     Bool(bool),
     Type(Types),
     Ptr(usize),
-    Frame(usize),
+    Frame(isize),
     Call(usize),
     VarRef(usize, usize),
 }

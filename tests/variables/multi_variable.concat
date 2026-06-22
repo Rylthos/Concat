@@ -1,0 +1,17 @@
+func print_value i32 string -> void {
+  print print "\n" print
+}
+
+0 1 assign x y {
+  2 assign z {
+    x @ "x: " print_value
+    y @ "y: " print_value
+    y 100 =
+    z @ "z: " print_value
+    y @ "y: " print_value
+    3 assign y {
+      y @ "y': " print_value
+    }
+    y @ "y: " print_value
+  }
+}

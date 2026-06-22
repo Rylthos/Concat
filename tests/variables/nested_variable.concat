@@ -1,0 +1,8 @@
+0 assign x {
+  1 assign y {
+    "x: " print x @ print "\n" print
+    "y: " print y @ print "\n" print
+    y @
+  }
+  "y after: " print print "\n" print
+}

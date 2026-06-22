@@ -5,7 +5,7 @@ pub fn interpret(instructions: &Vec<Instruction>) {
 
     let mut index = 0;
 
-    let mut frame_index = 0;
+    let mut frame_index: isize = -1;
 
     while index < instructions.len() {
         let instruction = instructions.get(index).unwrap();
@@ -203,7 +203,7 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                 };
                 let mut frame = frame_index;
                 for i in 0..depth {
-                    if let Some(s) = stack.get(frame) {
+                    if let Some(s) = stack.get(frame as usize) {
                         match s {
                             StackValue::Frame(i) => frame = *i,
                             _ => unreachable!(),
@@ -213,7 +213,7 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                     }
                 }
 
-                stack.push(stack.get(frame + slot + 1).unwrap().clone());
+                stack.push(stack.get((frame as usize) + slot + 1).unwrap().clone());
             }
             Instruction::Assign => {
                 let value = stack.pop().unwrap();
@@ -226,7 +226,7 @@ pub fn interpret(instructions: &Vec<Instruction>) {
 
                 let mut frame = frame_index;
                 for i in 0..depth {
-                    if let Some(s) = stack.get(frame) {
+                    if let Some(s) = stack.get(frame as usize) {
                         match s {
                             StackValue::Frame(i) => frame = *i,
                             _ => unreachable!(),
@@ -236,7 +236,7 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                     }
                 }
 
-                if let Some(s) = stack.get_mut(frame + slot + 1) {
+                if let Some(s) = stack.get_mut((frame as usize) + slot + 1) {
                     *s = value;
                 } else {
                     unreachable!();
@@ -255,6 +255,7 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                 }
 
                 stack.push(StackValue::Frame(frame_index));
+                frame_index = (stack.len() - 1) as isize;
 
                 for v in values.iter().rev() {
                     stack.push(v.clone());

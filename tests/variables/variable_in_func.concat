@@ -1,0 +1,14 @@
+func counter void -> i32 {
+  0 0 assign loop total {
+    while loop @ 10 < {
+      loop @ print "\n" print
+
+      total total @ loop @ + =
+
+      loop loop @ 1 + =
+    }
+    total @
+  }
+}
+
+counter "\n" print print "\n" print
