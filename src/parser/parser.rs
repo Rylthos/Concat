@@ -132,6 +132,8 @@ impl Parser {
             TokenType::Assign => Instruction::Assign,
             //
             TokenType::Identifier(_) => return None,
+            //
+            TokenType::DebugPrintStack => Instruction::DebugPrintStack,
         };
 
         return Some(instr);

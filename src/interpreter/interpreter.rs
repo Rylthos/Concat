@@ -288,6 +288,9 @@ pub fn interpret(instructions: &Vec<Instruction>) {
             Instruction::Lookup(d, s) => {
                 stack.push(StackValue::VarRef(*d, *s));
             }
+            Instruction::DebugPrintStack => {
+                println!("{:?}", stack);
+            }
             Instruction::FuncLabelDecl(_, _) | Instruction::FuncLabelRef(_, _) => {
                 panic!("Pseudo instructions: Should not be executed");
             }

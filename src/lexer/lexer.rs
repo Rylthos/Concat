@@ -83,6 +83,8 @@ impl Lexer {
             ("func".to_string(), TokenType::Func),
             //
             ("assign".to_string(), TokenType::Assignment),
+            //
+            ("__PRINT_STACK__".to_string(), TokenType::DebugPrintStack),
         ]);
 
         while let Some(&(column_number, c)) = chars.peek() {

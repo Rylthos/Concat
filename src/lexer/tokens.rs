@@ -62,6 +62,8 @@ pub enum TokenType {
     StringValue(String),
     I32(i32),
     BoolValue(bool),
+
+    DebugPrintStack,
 }
 
 #[derive(Debug, Clone)]
@@ -155,6 +157,7 @@ impl fmt::Display for TokenType {
             TokenType::StringValue(s) => write!(f, "{:?}", s),
             TokenType::I32(i) => write!(f, "{}", i),
             TokenType::BoolValue(b) => write!(f, "{}", b),
+            TokenType::DebugPrintStack => write!(f, "__PRINT_STACK__"),
         }
     }
 }

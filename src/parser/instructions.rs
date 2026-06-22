@@ -57,4 +57,6 @@ pub enum Instruction {
 
     FuncLabelDecl(String, Box<Instruction>),
     FuncLabelRef(String, Box<Instruction>),
+
+    DebugPrintStack,
 }
