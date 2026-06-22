@@ -49,7 +49,7 @@ impl Parser {
             Err(e) => return Err(ErrorType::Parser(e)),
         };
 
-        self.instructions = match self.parse_tree(self.parse_tree.clone()) {
+        self.instructions = match self.parse_tree(self.parse_tree.clone(), &HashMap::new()) {
             Ok(i) => i,
             Err(e) => return Err(ErrorType::Parser(e)),
         };
@@ -97,9 +97,7 @@ impl Parser {
             | TokenType::While
             | TokenType::Arrow
             | TokenType::Func
-            | TokenType::Assignment
-            | TokenType::Assign
-            | TokenType::Read => {
+            | TokenType::Assignment => {
                 unreachable!("Unreachable: {:?}", token);
             }
             TokenType::StringValue(s) => Instruction::Push(StackValue::String(s.to_string())),
@@ -130,13 +128,20 @@ impl Parser {
             TokenType::Or => Instruction::Or,
             TokenType::Not => Instruction::Not,
             //
+            TokenType::Read => Instruction::Read,
+            TokenType::Assign => Instruction::Assign,
+            //
             TokenType::Identifier(_) => return None,
         };
 
         return Some(instr);
     }
 
-    fn parse_tree<'a>(&self, tree: ParseTree) -> Result<Vec<Instruction>, ParserError> {
+    fn parse_tree<'a>(
+        &self,
+        tree: ParseTree,
+        variable_lookup: &HashMap<String, (usize, usize)>,
+    ) -> Result<Vec<Instruction>, ParserError> {
         let mut parsed_expression: Vec<Instruction> = Vec::new();
 
         match tree {
@@ -156,6 +161,8 @@ impl Parser {
                                     iden,
                                     Box::new(Instruction::Call(0)),
                                 ));
+                            } else if let Some((d, s)) = variable_lookup.get(&iden) {
+                                parsed_expression.push(Instruction::Lookup(*d, *s));
                             } else {
                                 return Err(ParserError::UnknownIdentifier(
                                     e.position_info,
@@ -176,7 +183,7 @@ impl Parser {
             ParseTree::Region(r) => parsed_expression.append(
                 &mut r
                     .iter()
-                    .map(|m| match self.parse_tree(m.clone()) {
+                    .map(|m| match self.parse_tree(m.clone(), variable_lookup) {
                         Ok(r) => r,
                         Err(_) => panic!(),
                     })
@@ -187,8 +194,8 @@ impl Parser {
                 let if_branches_result = if_branches
                     .iter()
                     .map(|(_, c, m)| {
-                        let c1 = self.parse_tree(*c.clone());
-                        let c2 = self.parse_tree(*m.clone());
+                        let c1 = self.parse_tree(*c.clone(), variable_lookup);
+                        let c2 = self.parse_tree(*m.clone(), variable_lookup);
                         (c1, c2)
                     })
                     .collect::<Vec<(
@@ -203,7 +210,7 @@ impl Parser {
                     if_branches.push((c, r));
                 }
 
-                let mut else_branch = self.parse_tree(*else_branch)?;
+                let mut else_branch = self.parse_tree(*else_branch, variable_lookup)?;
 
                 let total_length = if_branches
                     .iter()
@@ -239,8 +246,8 @@ impl Parser {
                 parsed_expression.append(&mut else_branch);
             }
             ParseTree::While(_, c, r) => {
-                let mut condition_tree = self.parse_tree(*c)?;
-                let mut region_tree = self.parse_tree(*r)?;
+                let mut condition_tree = self.parse_tree(*c, variable_lookup)?;
+                let mut region_tree = self.parse_tree(*r, variable_lookup)?;
 
                 let total_length = condition_tree.len() + region_tree.len();
                 parsed_expression.append(&mut condition_tree);
@@ -248,9 +255,30 @@ impl Parser {
                 parsed_expression.append(&mut region_tree);
                 parsed_expression.push(Instruction::Jump(-(total_length as isize) - 1));
             }
-            ParseTree::Assign(_, v, r) => {}
+            ParseTree::Assign(_, v, r) => {
+                let mut lookup = variable_lookup.clone();
+
+                for (_, (d, _)) in lookup.iter_mut() {
+                    *d += 1
+                }
+
+                let mut slot = 0;
+                for v in v.iter() {
+                    lookup.insert(v.to_string(), (0, slot));
+                    slot += 1;
+                }
+
+                let mut region_tree = self.parse_tree(*r, &lookup)?;
+
+                parsed_expression.push(Instruction::Push(StackValue::I32(v.len() as i32)));
+                parsed_expression.push(Instruction::FrameCreate);
+
+                parsed_expression.append(&mut region_tree);
+                parsed_expression.push(Instruction::Push(StackValue::I32(v.len() as i32)));
+                parsed_expression.push(Instruction::FrameRemove);
+            }
             ParseTree::FuncDecl(func) => {
-                let mut region = self.parse_tree(*func.region)?;
+                let mut region = self.parse_tree(*func.region, variable_lookup)?;
 
                 region.push(Instruction::Push(
                     StackValue::I32(func.outputs.len() as i32),
@@ -305,7 +333,7 @@ impl Parser {
     fn parse_functions(&mut self) -> Result<Vec<Instruction>, ParserError> {
         let mut parsed_instructions = Vec::new();
         for (_, func) in self.functions.iter() {
-            let mut instructions = self.parse_tree(*func.region.clone())?;
+            let mut instructions = self.parse_tree(*func.region.clone(), &HashMap::new())?;
 
             instructions.push(Instruction::Ret);
             let first_instr = instructions.get(0).unwrap().clone();

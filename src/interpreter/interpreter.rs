@@ -195,6 +195,53 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                 }
                 continue;
             }
+            Instruction::Read => {
+                let var_pointer = stack.pop().unwrap();
+                let (depth, slot) = match var_pointer {
+                    StackValue::VarRef(d, s) => (d, s),
+                    _ => unreachable!(),
+                };
+                let mut frame = frame_index;
+                for i in 0..depth {
+                    if let Some(s) = stack.get(frame) {
+                        match s {
+                            StackValue::Frame(i) => frame = *i,
+                            _ => unreachable!(),
+                        }
+                    } else {
+                        unreachable!()
+                    }
+                }
+
+                stack.push(stack.get(frame + slot + 1).unwrap().clone());
+            }
+            Instruction::Assign => {
+                let value = stack.pop().unwrap();
+
+                let var_pointer = stack.pop().unwrap();
+                let (depth, slot) = match var_pointer {
+                    StackValue::VarRef(d, s) => (d, s),
+                    _ => unreachable!(),
+                };
+
+                let mut frame = frame_index;
+                for i in 0..depth {
+                    if let Some(s) = stack.get(frame) {
+                        match s {
+                            StackValue::Frame(i) => frame = *i,
+                            _ => unreachable!(),
+                        }
+                    } else {
+                        unreachable!()
+                    }
+                }
+
+                if let Some(s) = stack.get_mut(frame + slot + 1) {
+                    *s = value;
+                } else {
+                    unreachable!();
+                };
+            }
             Instruction::FrameCreate => {
                 let num_values = if let StackValue::I32(i) = stack.pop().unwrap() {
                     i
@@ -214,6 +261,12 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                 }
             }
             Instruction::FrameRemove => {
+                let num_values: usize = if let StackValue::I32(i) = stack.pop().unwrap() {
+                    i as usize
+                } else {
+                    unreachable!("Invalid call")
+                };
+
                 let mut values = Vec::new();
                 while let Some(s) = stack.pop() {
                     match s {
@@ -227,9 +280,12 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                     }
                 }
 
-                for v in values.iter().rev() {
+                for v in values[0..(values.len() - num_values)].iter().rev() {
                     stack.push(v.clone());
                 }
+            }
+            Instruction::Lookup(d, s) => {
+                stack.push(StackValue::VarRef(*d, *s));
             }
             Instruction::FuncLabelDecl(_, _) | Instruction::FuncLabelRef(_, _) => {
                 panic!("Pseudo instructions: Should not be executed");

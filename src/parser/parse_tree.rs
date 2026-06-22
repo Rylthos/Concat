@@ -26,7 +26,7 @@ pub enum ParseTree {
         (Token, Box<ParseTree>),
     ),
     While(Token, Box<ParseTree>, Box<ParseTree>),
-    Assign(Token, Box<ParseTree>, Box<ParseTree>),
+    Assign(Token, Vec<String>, Box<ParseTree>),
     FuncDecl(FuncDecl),
 }
 
@@ -70,8 +70,10 @@ impl ParseTree {
             ParseTree::Assign(t, var, region) => {
                 write!(f, "{}ASSIGN {} {{\n", padding(indent), t)?;
                 write!(f, "{}VAR\n", padding(indent + 1))?;
-                var.fmt_indent(f, indent + 2)?;
-                write!(f, "\n{}REGION\n", padding(indent + 1))?;
+                for v in var {
+                    write!(f, "{}{}\n", padding(indent + 2), v)?;
+                }
+                write!(f, "{}REGION\n", padding(indent + 1))?;
                 region.fmt_indent(f, indent + 2)?;
                 write!(f, "\n{}}}", padding(indent))
             }
@@ -232,10 +234,13 @@ impl ParseTree {
                 }
                 TokenType::Assignment => {
                     peekable.next();
-                    let variable_tree = Self::generate_parse_tree(
-                        Parser::get_identifier_list(&mut peekable)?.iter(),
-                        functions,
-                    )?;
+                    let variable_list = Parser::get_identifier_list(&mut peekable)?
+                        .iter()
+                        .map(|t| match &t.token_type {
+                            TokenType::Identifier(s) => s.clone(),
+                            _ => unreachable!(),
+                        })
+                        .collect();
 
                     let region_tree = Self::generate_parse_tree(
                         Parser::get_region(&mut peekable)?.iter(),
@@ -244,7 +249,7 @@ impl ParseTree {
 
                     region.push(ParseTree::Assign(
                         t.clone(),
-                        Box::new(variable_tree),
+                        variable_list,
                         Box::new(region_tree),
                     ));
                 }

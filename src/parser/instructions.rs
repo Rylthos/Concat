@@ -9,6 +9,7 @@ pub enum StackValue {
     Ptr(usize),
     Frame(usize),
     Call(usize),
+    VarRef(usize, usize),
 }
 
 #[derive(Debug, Clone)]
@@ -46,8 +47,13 @@ pub enum Instruction {
     Call(usize),
     Ret,
 
+    Read,
+    Assign,
+
     FrameCreate,
     FrameRemove,
+
+    Lookup(usize, usize),
 
     FuncLabelDecl(String, Box<Instruction>),
     FuncLabelRef(String, Box<Instruction>),
