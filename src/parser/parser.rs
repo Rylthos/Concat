@@ -307,9 +307,6 @@ impl Parser {
         for (_, func) in self.functions.iter() {
             let mut instructions = self.parse_tree(*func.region.clone())?;
 
-            instructions.push(Instruction::Push(
-                StackValue::I32(func.outputs.len() as i32),
-            ));
             instructions.push(Instruction::Ret);
             let first_instr = instructions.get(0).unwrap().clone();
             *instructions.get_mut(0).unwrap() =
@@ -804,7 +801,6 @@ mod tests {
             Instruction::Print,
             Instruction::Halt,
             Instruction::Add,
-            Instruction::Push(StackValue::I32(1)),
             Instruction::Ret,
         ];
 

@@ -7,6 +7,8 @@ pub enum StackValue {
     Bool(bool),
     Type(Types),
     Ptr(usize),
+    Frame(usize),
+    Call(usize),
 }
 
 #[derive(Debug, Clone)]
@@ -43,6 +45,9 @@ pub enum Instruction {
 
     Call(usize),
     Ret,
+
+    FrameCreate,
+    FrameRemove,
 
     Label(String, Box<Instruction>),
     LabelRef(String, Box<Instruction>),

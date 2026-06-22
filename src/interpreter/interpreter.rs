@@ -5,6 +5,8 @@ pub fn interpret(instructions: &Vec<Instruction>) {
 
     let mut index = 0;
 
+    let mut frame_index = 0;
+
     while index < instructions.len() {
         let instruction = instructions.get(index).unwrap();
         match instruction {
@@ -166,7 +168,7 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                     arguments.push(stack.pop().unwrap());
                 }
 
-                stack.push(StackValue::I32((index + 1) as i32));
+                stack.push(StackValue::Call(index + 1));
                 index = *call_index;
 
                 for v in arguments.iter().rev() {
@@ -175,30 +177,59 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                 continue;
             }
             Instruction::Ret => {
-                assert!(stack.len() >= 1, "Invalid stack length");
-                let num_arguments = if let StackValue::I32(i) = stack.pop().unwrap() {
-                    i
-                } else {
-                    unreachable!("Invalid call")
-                };
-
                 let mut arguments = Vec::new();
-                for _ in 0..num_arguments {
-                    arguments.push(stack.pop().unwrap());
+                while let Some(s) = stack.pop() {
+                    match s {
+                        StackValue::Call(i) => {
+                            index = i;
+                            break;
+                        }
+                        _ => {
+                            arguments.push(s);
+                        }
+                    }
                 }
-
-                let return_address = if let StackValue::I32(v) = stack.pop().unwrap() {
-                    v
-                } else {
-                    unreachable!("Invalid Ret")
-                };
-
-                index = return_address as usize;
 
                 for v in arguments.iter().rev() {
                     stack.push(v.clone());
                 }
                 continue;
+            }
+            Instruction::FrameCreate => {
+                let num_values = if let StackValue::I32(i) = stack.pop().unwrap() {
+                    i
+                } else {
+                    unreachable!("Invalid call")
+                };
+
+                let mut values = Vec::new();
+                for _ in 0..num_values {
+                    values.push(stack.pop().unwrap());
+                }
+
+                stack.push(StackValue::Frame(frame_index));
+
+                for v in values.iter().rev() {
+                    stack.push(v.clone());
+                }
+            }
+            Instruction::FrameRemove => {
+                let mut values = Vec::new();
+                while let Some(s) = stack.pop() {
+                    match s {
+                        StackValue::Frame(i) => {
+                            frame_index = i;
+                            break;
+                        }
+                        _ => {
+                            values.push(s);
+                        }
+                    }
+                }
+
+                for v in values.iter().rev() {
+                    stack.push(v.clone());
+                }
             }
             Instruction::Label(_, _) | Instruction::LabelRef(_, _) => {
                 panic!("Pseudo instructions: Should not be executed");
