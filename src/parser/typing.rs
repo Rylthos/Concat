@@ -1,9 +1,13 @@
+use clap::Parser;
+
 use crate::error::types::ParserError;
 use crate::lexer::tokens::{Token, TokenType};
 use crate::parser::parse_tree::{FuncDecl, ParseTree};
 use crate::parser::stack_types::StackType;
+use crate::parser::stack_values::StackValue;
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 pub struct Typing {}
 
@@ -179,6 +183,25 @@ impl Typing {
         return Ok(());
     }
 
+    fn check_stack_types_multi(
+        token: &Token,
+        stack: &Vec<StackType>,
+        required_types: &Vec<HashSet<StackType>>,
+    ) -> Result<(), ParserError> {
+        for (i, t) in (0..).zip(required_types.iter()) {
+            let index = stack.len() - 1 - i;
+            if !t.contains(stack.get(index).unwrap()) {
+                return Err(ParserError::InvalidTypeSet(
+                    token.position_info.clone(),
+                    t.clone(),
+                    stack.get(index).unwrap().clone(),
+                ));
+            }
+        }
+
+        return Ok(());
+    }
+
     fn type_check_token(
         token: &Token,
         stack: &mut Vec<StackType>,
@@ -188,11 +211,42 @@ impl Typing {
         match &token.token_type {
             TokenType::LeftBrace => {}
             TokenType::RightBrace => {}
-            TokenType::Add
-            | TokenType::Subtract
-            | TokenType::Multiply
-            | TokenType::Divide
-            | TokenType::Modulo => {
+            TokenType::Add => {
+                Self::check_stack_length(token, stack, 2)?;
+                let v2 = stack.pop().unwrap();
+                let v1 = stack.pop().unwrap();
+
+                match v2 {
+                    StackType::I32 => (),
+                    _ => {
+                        return Err(ParserError::InvalidType(
+                            token.position_info.clone(),
+                            StackType::I32,
+                            v2,
+                        ));
+                    }
+                }
+
+                match v1 {
+                    StackType::I32 => {
+                        stack.push(StackType::I32);
+                    }
+                    StackType::Ptr(t) => {
+                        stack.push(StackType::Ptr(t));
+                    }
+                    _ => {
+                        return Err(ParserError::InvalidTypeSet(
+                            token.position_info.clone(),
+                            HashSet::from([
+                                StackType::I32,
+                                StackType::Ptr(Box::new(StackType::I32)),
+                            ]),
+                            v1,
+                        ));
+                    }
+                }
+            }
+            TokenType::Subtract | TokenType::Multiply | TokenType::Divide | TokenType::Modulo => {
                 Self::check_stack_length(token, stack, 2)?;
                 Self::check_stack_types(token, stack, &vec![StackType::I32, StackType::I32])?;
                 stack.pop();
@@ -287,10 +341,14 @@ impl Typing {
                 let stack_value = stack.pop().unwrap();
                 let stack_type = match stack_value {
                     StackType::Var(t) => *t,
+                    StackType::Ptr(t) => *t,
                     _ => {
-                        return Err(ParserError::InvalidType(
+                        return Err(ParserError::InvalidTypeSet(
                             token.position_info.clone(),
-                            StackType::Var(Box::new(StackType::String)),
+                            HashSet::from([
+                                StackType::Var(Box::new(StackType::String)),
+                                StackType::Ptr(Box::new(StackType::I32)),
+                            ]),
                             stack_value,
                         ));
                     }
@@ -303,10 +361,14 @@ impl Typing {
                 let stack_value = stack.pop().unwrap();
                 let stack_type = match stack_value {
                     StackType::Var(t) => *t,
+                    StackType::Ptr(t) => *t,
                     _ => {
-                        return Err(ParserError::InvalidType(
+                        return Err(ParserError::InvalidTypeSet(
                             token.position_info.clone(),
-                            StackType::Var(Box::new(StackType::String)),
+                            HashSet::from([
+                                StackType::Var(Box::new(StackType::String)),
+                                StackType::Ptr(Box::new(StackType::I32)),
+                            ]),
                             stack_value,
                         ));
                     }
@@ -318,6 +380,25 @@ impl Typing {
                         write_value,
                     ));
                 }
+            }
+            TokenType::Mem => {
+                Self::check_stack_length(&token, &stack, 2)?;
+
+                if let Some(t) = stack.pop() {
+                    match t {
+                        StackType::I32 => (),
+                        _ => {
+                            return Err(ParserError::InvalidType(
+                                token.position_info.clone(),
+                                StackType::I32,
+                                t,
+                            ));
+                        }
+                    }
+                }
+
+                let t = stack.pop().unwrap();
+                stack.push(StackType::Ptr(Box::new(t)));
             }
             TokenType::DebugPrintStack => {}
 

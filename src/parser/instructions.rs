@@ -39,6 +39,8 @@ pub enum Instruction {
     Read,
     Assign,
 
+    Mem,
+
     FrameCreate,
     FrameRemove,
 

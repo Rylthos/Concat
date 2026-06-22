@@ -1,0 +1,13 @@
+i32 10 mem
+assign array {
+  0 while dup 10 < {
+    array @ over + over =
+    1 +
+  }
+  drop
+
+  9 while dup 0 >= {
+    array @ over + @ print "\n" print
+    1 -
+  }
+}

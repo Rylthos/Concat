@@ -1,8 +1,11 @@
+use crate::parser::heap_value::HeapValue;
 use crate::parser::instructions::Instruction;
-use crate::parser::stack_values::StackValue;
+use crate::parser::stack_types::StackType;
+use crate::parser::stack_values::{PointerValue, StackValue};
 
 pub fn interpret(instructions: &Vec<Instruction>) {
     let mut stack: Vec<StackValue> = Vec::new();
+    let mut heap: Vec<HeapValue> = Vec::new();
 
     let mut index = 0;
 
@@ -127,8 +130,27 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                     unreachable!("Expected bool type");
                 }
             }
-            Instruction::Add
-            | Instruction::Subtract
+            Instruction::Add => {
+                let v2 = stack.pop().unwrap();
+                let v1 = stack.pop().unwrap();
+
+                let iv2 = match v2 {
+                    StackValue::I32(v) => v,
+                    _ => unreachable!(),
+                };
+
+                if let StackValue::I32(v1) = v1 {
+                    stack.push(StackValue::I32(v1 + iv2));
+                } else if let StackValue::Pointer(p) = v1 {
+                    stack.push(StackValue::Pointer(PointerValue {
+                        allocation: p.allocation,
+                        offset: p.offset + iv2 as usize,
+                    }))
+                } else {
+                    unreachable!();
+                }
+            }
+            Instruction::Subtract
             | Instruction::Multiply
             | Instruction::Divide
             | Instruction::Modulo => {
@@ -139,7 +161,6 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                     && let StackValue::I32(v2) = v2
                 {
                     let new_value = match instruction {
-                        Instruction::Add => StackValue::I32(v1 + v2),
                         Instruction::Subtract => StackValue::I32(v1 - v2),
                         Instruction::Multiply => StackValue::I32(v1 * v2),
                         Instruction::Divide => StackValue::I32(v1 / v2),
@@ -197,51 +218,91 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                 continue;
             }
             Instruction::Read => {
-                let var_pointer = stack.pop().unwrap();
-                let (depth, slot) = match var_pointer {
-                    StackValue::VarRef(d, s) => (d, s),
+                let value = stack.pop().unwrap();
+                match value {
+                    StackValue::VarRef(depth, slot) => {
+                        let mut frame = frame_index;
+                        for _ in 0..depth {
+                            if let Some(s) = stack.get(frame as usize) {
+                                match s {
+                                    StackValue::Frame(i) => frame = *i,
+                                    _ => unreachable!(),
+                                }
+                            } else {
+                                unreachable!()
+                            }
+                        }
+
+                        stack.push(stack.get((frame as usize) + slot + 1).unwrap().clone());
+                    }
+                    StackValue::Pointer(p) => {
+                        let value = heap.get(p.allocation).unwrap();
+                        assert!(value.len > p.offset, "Invalid Length");
+                        stack.push(load_value(value, p.offset));
+                    }
                     _ => unreachable!(),
                 };
-                let mut frame = frame_index;
-                for i in 0..depth {
-                    if let Some(s) = stack.get(frame as usize) {
-                        match s {
-                            StackValue::Frame(i) => frame = *i,
-                            _ => unreachable!(),
-                        }
-                    } else {
-                        unreachable!()
-                    }
-                }
-
-                stack.push(stack.get((frame as usize) + slot + 1).unwrap().clone());
             }
             Instruction::Assign => {
                 let value = stack.pop().unwrap();
-
                 let var_pointer = stack.pop().unwrap();
-                let (depth, slot) = match var_pointer {
-                    StackValue::VarRef(d, s) => (d, s),
+
+                match var_pointer {
+                    StackValue::VarRef(depth, slot) => {
+                        let mut frame = frame_index;
+                        for _ in 0..depth {
+                            if let Some(s) = stack.get(frame as usize) {
+                                match s {
+                                    StackValue::Frame(i) => frame = *i,
+                                    _ => unreachable!(),
+                                }
+                            } else {
+                                unreachable!()
+                            }
+                        }
+
+                        if let Some(s) = stack.get_mut((frame as usize) + slot + 1) {
+                            *s = value;
+                        } else {
+                            unreachable!();
+                        };
+                    }
+                    StackValue::Pointer(ref p) => {
+                        store_value(&value, &mut heap.get_mut(p.allocation).unwrap(), p.offset);
+                    }
+                    _ => unreachable!(),
+                }
+            }
+            Instruction::Mem => {
+                let size = if let StackValue::I32(i) = stack.pop().unwrap() {
+                    i as usize
+                } else {
+                    unreachable!("Invalid")
+                };
+
+                let r#type = if let StackValue::Type(t) = stack.pop().unwrap() {
+                    t
+                } else {
+                    unreachable!("Invalid");
+                };
+
+                let elem_size = match r#type.clone() {
+                    StackType::I32 => std::mem::size_of::<i32>(),
                     _ => unreachable!(),
                 };
 
-                let mut frame = frame_index;
-                for i in 0..depth {
-                    if let Some(s) = stack.get(frame as usize) {
-                        match s {
-                            StackValue::Frame(i) => frame = *i,
-                            _ => unreachable!(),
-                        }
-                    } else {
-                        unreachable!()
-                    }
-                }
+                let handle = heap.len();
 
-                if let Some(s) = stack.get_mut((frame as usize) + slot + 1) {
-                    *s = value;
-                } else {
-                    unreachable!();
-                };
+                heap.push(HeapValue {
+                    r#type,
+                    len: size,
+                    data: vec![0u8; elem_size * size].into_boxed_slice(),
+                });
+
+                stack.push(StackValue::Pointer(PointerValue {
+                    allocation: handle,
+                    offset: 0,
+                }));
             }
             Instruction::FrameCreate => {
                 let num_values = if let StackValue::I32(i) = stack.pop().unwrap() {
@@ -297,5 +358,34 @@ pub fn interpret(instructions: &Vec<Instruction>) {
             }
         }
         index += 1;
+    }
+}
+
+fn load_value(heap_element: &HeapValue, offset: usize) -> StackValue {
+    match heap_element.r#type {
+        StackType::I32 => {
+            let start = offset * std::mem::size_of::<i32>();
+
+            StackValue::I32(i32::from_le_bytes(
+                heap_element.data[start..(start + 4)].try_into().unwrap(),
+            ))
+        }
+        _ => unreachable!(),
+    }
+}
+
+fn store_value(value: &StackValue, heap_element: &mut HeapValue, offset: usize) {
+    match heap_element.r#type {
+        StackType::I32 => {
+            let start = offset * std::mem::size_of::<i32>();
+
+            let value = match value {
+                StackValue::I32(v) => v,
+                _ => unreachable!(),
+            };
+
+            heap_element.data[start..(start + 4)].copy_from_slice(&value.to_le_bytes());
+        }
+        _ => unreachable!("{}", heap_element.r#type),
     }
 }

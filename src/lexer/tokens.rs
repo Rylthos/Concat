@@ -1,12 +1,11 @@
 use std::fmt;
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Types {
     String,
     I32,
     Bool,
     Void,
-    Type,
 }
 
 #[derive(Debug, Clone)]
@@ -56,6 +55,8 @@ pub enum TokenType {
 
     //
     Identifier(String),
+
+    Mem,
 
     Type(Types),
 
@@ -109,7 +110,6 @@ impl fmt::Display for Types {
             Types::I32 => write!(f, "I32"),
             Types::Bool => write!(f, "BOOL"),
             Types::Void => write!(f, "VOID"),
-            Types::Type => write!(f, "TYPE"),
         }
     }
 }
@@ -150,6 +150,8 @@ impl fmt::Display for TokenType {
             TokenType::Assignment => write!(f, "assign"),
             TokenType::Assign => write!(f, "="),
             TokenType::Read => write!(f, "@"),
+
+            TokenType::Mem => write!(f, "mem"),
 
             TokenType::Identifier(s) => write!(f, "Iden({:?})", s),
 

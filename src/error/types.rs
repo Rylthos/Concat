@@ -1,6 +1,8 @@
 use crate::lexer::tokens::{PositionInfo, TokenType};
 use crate::parser::stack_types::StackType;
 
+use std::collections::HashSet;
+
 #[derive(Debug)]
 pub enum LexerError {
     InvalidToken(PositionInfo, String),
@@ -17,6 +19,7 @@ pub enum ParserError {
     UnknownIdentifier(PositionInfo, String),
     InvalidNumberOfArguments(PositionInfo, usize, usize),
     InvalidType(PositionInfo, StackType, StackType),
+    InvalidTypeSet(PositionInfo, HashSet<StackType>, StackType),
     InvalidShape(PositionInfo),
 }
 
@@ -85,6 +88,12 @@ fn handle_parser_error(error: ParserError) {
             eprintln!(
                 "[TYPE] [{}:{}] Expected {} arguments, got {}",
                 pos.line, pos.column, input, output
+            );
+        }
+        ParserError::InvalidTypeSet(pos, inputs, output) => {
+            eprintln!(
+                "[TYPE] [{}:{}] Expected one of {:?}, got {}",
+                pos.line, pos.column, inputs, output
             );
         }
         ParserError::InvalidShape(pos) => {

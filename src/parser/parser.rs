@@ -133,6 +133,8 @@ impl Parser {
             TokenType::Read => Instruction::Read,
             TokenType::Assign => Instruction::Assign,
             //
+            TokenType::Mem => Instruction::Mem,
+            //
             TokenType::Identifier(_) => return None,
             //
             TokenType::DebugPrintStack => Instruction::DebugPrintStack,

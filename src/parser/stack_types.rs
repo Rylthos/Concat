@@ -1,13 +1,13 @@
 use crate::lexer::tokens::Types;
 use std::fmt;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum StackType {
     String,
     I32,
     Bool,
-    Type,
     Var(Box<StackType>),
+    Ptr(Box<StackType>),
 }
 
 impl StackType {
@@ -17,7 +17,6 @@ impl StackType {
             Types::I32 => StackType::I32,
             Types::Bool => StackType::Bool,
             Types::Void => unreachable!("Void should not be visible within parser"),
-            Types::Type => StackType::Type,
         }
     }
 }
@@ -28,8 +27,8 @@ impl fmt::Display for StackType {
             StackType::String => write!(f, "STRING"),
             StackType::I32 => write!(f, "I32"),
             StackType::Bool => write!(f, "BOOL"),
-            StackType::Type => write!(f, "TYPE"),
             StackType::Var(v) => write!(f, "Var({})", *v),
+            StackType::Ptr(p) => write!(f, "Ptr({})", *p),
         }
     }
 }
