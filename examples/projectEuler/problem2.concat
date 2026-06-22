@@ -1,0 +1,19 @@
+func next_fib i32 i32 -> i32 i32 {
+  assign n1 n2 {
+    n2 @
+    n1 @ n2 @ +
+  }
+}
+
+2 assign count {
+  1 2
+  while dup 4000000 < {
+    next_fib
+
+    if dup 2 % 0 == {
+      dup count @ + count swap =
+    }
+
+  }
+  count @ print "\n" print
+}

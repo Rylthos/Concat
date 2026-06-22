@@ -1,0 +1,46 @@
+func reverse i32 -> i32 {
+  0 assign current reversed {
+    while current @ 0 > {
+      reversed reversed @ 10 * =
+      reversed reversed @ current @ 10 % + =
+      current current @ 10 / =
+    }
+
+    reversed @
+  }
+}
+
+func is_palindrome i32 -> bool {
+  dup reverse ==
+}
+
+999 999 0 assign counter1 counter2 max {
+  while counter1 @ 100 >= counter2 @ 100 >= && {
+
+    counter1 @ counter2 @ *
+    if dup max @ > {
+      dup is_palindrome
+    } else {
+      false
+    }
+
+    if {
+      if dup max @ > {
+        max swap =
+      } else {
+        drop
+      }
+    } else {
+      drop
+    }
+
+    counter2 counter2 @ 1 - =
+    if counter2 @ 100 < {
+      counter2 counter1 @ =
+      counter1 counter1 @ 1 - =
+    }
+
+  }
+
+  max @ print "\n" print
+}
