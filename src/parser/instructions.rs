@@ -49,6 +49,6 @@ pub enum Instruction {
     FrameCreate,
     FrameRemove,
 
-    Label(String, Box<Instruction>),
-    LabelRef(String, Box<Instruction>),
+    FuncLabelDecl(String, Box<Instruction>),
+    FuncLabelRef(String, Box<Instruction>),
 }

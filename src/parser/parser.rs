@@ -152,7 +152,7 @@ impl Parser {
                                 parsed_expression.push(Instruction::Push(StackValue::I32(
                                     func.inputs.len() as i32,
                                 )));
-                                parsed_expression.push(Instruction::LabelRef(
+                                parsed_expression.push(Instruction::FuncLabelRef(
                                     iden,
                                     Box::new(Instruction::Call(0)),
                                 ));
@@ -258,7 +258,7 @@ impl Parser {
                 region.push(Instruction::Ret);
                 let initial_token = region.get(0).unwrap();
                 *region.get_mut(0).unwrap() =
-                    Instruction::Label(func.name, Box::new(initial_token.clone()));
+                    Instruction::FuncLabelDecl(func.name, Box::new(initial_token.clone()));
 
                 parsed_expression.append(&mut region);
             }
@@ -273,11 +273,11 @@ impl Parser {
             .iter()
             .zip(0..)
             .filter(|(instr, _)| match instr {
-                Instruction::Label(_, _) => true,
+                Instruction::FuncLabelDecl(_, _) => true,
                 _ => false,
             })
             .map(|(instr, i)| match instr {
-                Instruction::Label(name, _) => (name.to_string(), i),
+                Instruction::FuncLabelDecl(name, _) => (name.to_string(), i),
                 _ => unreachable!(),
             })
             .collect();
@@ -289,12 +289,12 @@ impl Parser {
 
         for instr in self.instructions.iter_mut() {
             match instr {
-                Instruction::LabelRef(name, i) => {
+                Instruction::FuncLabelRef(name, i) => {
                     let index = labels.get(name).unwrap();
 
                     *instr = evaluate_expr(*i.clone(), *index);
                 }
-                Instruction::Label(_, i) => {
+                Instruction::FuncLabelDecl(_, i) => {
                     *instr = *i.clone();
                 }
                 _ => (),
@@ -310,7 +310,7 @@ impl Parser {
             instructions.push(Instruction::Ret);
             let first_instr = instructions.get(0).unwrap().clone();
             *instructions.get_mut(0).unwrap() =
-                Instruction::Label(func.name.clone(), Box::new(first_instr));
+                Instruction::FuncLabelDecl(func.name.clone(), Box::new(first_instr));
 
             parsed_instructions.append(&mut instructions);
         }

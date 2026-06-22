@@ -231,7 +231,7 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                     stack.push(v.clone());
                 }
             }
-            Instruction::Label(_, _) | Instruction::LabelRef(_, _) => {
+            Instruction::FuncLabelDecl(_, _) | Instruction::FuncLabelRef(_, _) => {
                 panic!("Pseudo instructions: Should not be executed");
             }
         }
