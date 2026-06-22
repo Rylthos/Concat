@@ -1,5 +1,5 @@
 use crate::error::types::ParserError;
-use crate::lexer::tokens::{Token, TokenType, Types};
+use crate::lexer::tokens::{Token, TokenType};
 use crate::parser::parse_tree::{FuncDecl, ParseTree};
 use crate::parser::stack_types::StackType;
 
@@ -13,10 +13,12 @@ impl Typing {
         functions: &HashMap<String, FuncDecl>,
     ) -> Result<(), ParserError> {
         let mut stack = Vec::new();
-        Self::type_check_stack(tree, &mut stack, functions)?;
+        let variable_lookup = HashMap::new();
+        Self::type_check_stack(tree, &mut stack, functions, &variable_lookup)?;
 
+        let variable_lookup = HashMap::new();
         for (_, f) in functions.iter() {
-            Self::type_check_function(f, functions)?;
+            Self::type_check_function(f, functions, &variable_lookup)?;
         }
 
         Ok(())
@@ -26,13 +28,14 @@ impl Typing {
         tree: &ParseTree,
         stack: &mut Vec<StackType>,
         functions: &HashMap<String, FuncDecl>,
+        variable_lookup: &HashMap<String, StackType>,
     ) -> Result<(), ParserError> {
         match tree {
             ParseTree::None => unreachable!("Invalid stack"),
-            ParseTree::Element(t) => Self::type_check_token(t, stack, functions)?,
+            ParseTree::Element(t) => Self::type_check_token(t, stack, functions, variable_lookup)?,
             ParseTree::Region(r) => {
                 for tree in r {
-                    Self::type_check_stack(tree, stack, functions)?;
+                    Self::type_check_stack(tree, stack, functions, variable_lookup)?;
                 }
             }
             ParseTree::If(conds, (t_else, else_region)) => {
@@ -40,7 +43,7 @@ impl Typing {
                 let mut stack_cond = stack.clone();
                 for (t, c, r) in conds {
                     let mut stack_copy = stack_cond.clone();
-                    Self::type_check_stack(c, &mut stack_copy, functions)?;
+                    Self::type_check_stack(c, &mut stack_copy, functions, variable_lookup)?;
                     Self::check_stack_length(&t, &stack_copy, 1)?;
                     Self::check_stack_types(&t, &stack_copy, &vec![StackType::Bool])?;
                     stack_copy.pop();
@@ -48,7 +51,7 @@ impl Typing {
 
                     let mut stack_copy2 = stack_copy.clone();
 
-                    Self::type_check_stack(r, &mut stack_copy2, functions)?;
+                    Self::type_check_stack(r, &mut stack_copy2, functions, variable_lookup)?;
                     stacks.push((t, stack_copy, stack_copy2));
                 }
 
@@ -63,25 +66,39 @@ impl Typing {
                 }
 
                 let (_, mut stack1, stack2) = stacks[0].clone();
-                Self::type_check_stack(else_region, &mut stack1, functions)?;
+                Self::type_check_stack(else_region, &mut stack1, functions, variable_lookup)?;
                 Self::verify_stack_equivalence(&t_else, &stack1, &stack2)?;
 
                 *stack = stack2;
             }
             ParseTree::While(t, cond, region) => {
                 let mut stack_copy = stack.clone();
-                Self::type_check_stack(cond, &mut stack_copy, functions)?;
+                Self::type_check_stack(cond, &mut stack_copy, functions, variable_lookup)?;
                 Self::check_stack_length(&t, &stack_copy, 1)?;
                 Self::check_stack_types(&t, &stack_copy, &vec![StackType::Bool])?;
                 stack_copy.pop();
 
-                Self::type_check_stack(region, &mut stack_copy, functions)?;
+                Self::type_check_stack(region, &mut stack_copy, functions, variable_lookup)?;
 
                 Self::verify_stack_equivalence(&t, stack, &stack_copy)?;
             }
-            ParseTree::Assign(t, v, r) => {}
+            ParseTree::Assign(t, v, r) => {
+                Self::check_stack_length(t, stack, v.len())?;
+                let mut stack_copy: Vec<StackType> = stack[(stack.len() - v.len())..(stack.len())]
+                    .iter()
+                    .cloned()
+                    .collect();
+
+                let mut new_variable_lookup: HashMap<String, StackType> = variable_lookup.clone();
+
+                for (v, t) in v.iter().zip(stack_copy.iter()) {
+                    new_variable_lookup.insert(v.to_string(), t.clone());
+                }
+
+                Self::type_check_stack(r, &mut stack_copy, functions, &new_variable_lookup)?;
+            }
             ParseTree::FuncDecl(func) => {
-                Self::type_check_function(func, functions)?;
+                Self::type_check_function(func, functions, variable_lookup)?;
             }
         };
         Ok(())
@@ -90,9 +107,10 @@ impl Typing {
     fn type_check_function(
         func: &FuncDecl,
         functions: &HashMap<String, FuncDecl>,
+        variable_lookup: &HashMap<String, StackType>,
     ) -> Result<(), ParserError> {
         let mut stack = func.inputs.clone();
-        Self::type_check_stack(&func.region, &mut stack, functions)?;
+        Self::type_check_stack(&func.region, &mut stack, functions, variable_lookup)?;
         Self::check_stack_length(&func.token, &stack, func.outputs.len())?;
         Self::check_stack_types(
             &func.token,
@@ -165,6 +183,7 @@ impl Typing {
         token: &Token,
         stack: &mut Vec<StackType>,
         functions: &HashMap<String, FuncDecl>,
+        variable_lookup: &HashMap<String, StackType>,
     ) -> Result<(), ParserError> {
         match &token.token_type {
             TokenType::LeftBrace => {}
@@ -258,16 +277,56 @@ impl Typing {
                     for o in func.outputs.iter() {
                         stack.push(o.clone());
                     }
+                } else if let Some(t) = variable_lookup.get(s) {
+                    stack.push(StackType::Var(Box::new(t.clone())));
                 }
             }
+
+            TokenType::Read => {
+                Self::check_stack_length(&token, &stack, 1)?;
+                let stack_value = stack.pop().unwrap();
+                let stack_type = match stack_value {
+                    StackType::Var(t) => *t,
+                    _ => {
+                        return Err(ParserError::InvalidType(
+                            token.position_info.clone(),
+                            StackType::Var(Box::new(StackType::String)),
+                            stack_value,
+                        ));
+                    }
+                };
+                stack.push(stack_type);
+            }
+            TokenType::Assign => {
+                Self::check_stack_length(&token, &stack, 2)?;
+                let write_value = stack.pop().unwrap();
+                let stack_value = stack.pop().unwrap();
+                let stack_type = match stack_value {
+                    StackType::Var(t) => *t,
+                    _ => {
+                        return Err(ParserError::InvalidType(
+                            token.position_info.clone(),
+                            StackType::Var(Box::new(StackType::String)),
+                            stack_value,
+                        ));
+                    }
+                };
+                if write_value != stack_type {
+                    return Err(ParserError::InvalidType(
+                        token.position_info.clone(),
+                        stack_type,
+                        write_value,
+                    ));
+                }
+            }
+            TokenType::DebugPrintStack => {}
+
             TokenType::If
             | TokenType::Else
             | TokenType::While
             | TokenType::Func
             | TokenType::Arrow
-            | TokenType::Assignment
-            | TokenType::Assign
-            | TokenType::Read => {
+            | TokenType::Assignment => {
                 unreachable!();
             }
         }
