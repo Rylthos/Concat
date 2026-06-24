@@ -13,10 +13,11 @@ pub enum TokenType {
     LeftBrace,
     RightBrace,
 
+    Asterisk,
+
     // Arithmetic Operations
     Add,
     Subtract,
-    Multiply,
     Divide,
     Modulo,
 
@@ -121,7 +122,7 @@ impl fmt::Display for TokenType {
             TokenType::RightBrace => write!(f, "}}"),
             TokenType::Add => write!(f, "+"),
             TokenType::Subtract => write!(f, "-"),
-            TokenType::Multiply => write!(f, "*"),
+            TokenType::Asterisk => write!(f, "*"),
             TokenType::Divide => write!(f, "/"),
             TokenType::Modulo => write!(f, "%"),
             TokenType::Rotate3 => write!(f, "rot3"),

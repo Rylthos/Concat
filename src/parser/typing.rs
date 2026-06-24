@@ -246,7 +246,7 @@ impl Typing {
                     }
                 }
             }
-            TokenType::Subtract | TokenType::Multiply | TokenType::Divide | TokenType::Modulo => {
+            TokenType::Subtract | TokenType::Asterisk | TokenType::Divide | TokenType::Modulo => {
                 Self::check_stack_length(token, stack, 2)?;
                 Self::check_stack_types(token, stack, &vec![StackType::I32, StackType::I32])?;
                 stack.pop();

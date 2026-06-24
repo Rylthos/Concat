@@ -216,7 +216,7 @@ impl Lexer {
                 '+' | '*' | '%' | '{' | '}' | '@' => {
                     let token = match c {
                         '+' => TokenType::Add,
-                        '*' => TokenType::Multiply,
+                        '*' => TokenType::Asterisk,
                         '%' => TokenType::Modulo,
                         '{' => TokenType::LeftBrace,
                         '}' => TokenType::RightBrace,
@@ -378,7 +378,7 @@ mod tests {
             Token::new(TokenType::Subtract, 1, 3, "-"),
             Token::new(TokenType::LeftBrace, 1, 5, "{"),
             Token::new(TokenType::RightBrace, 1, 6, "}"),
-            Token::new(TokenType::Multiply, 1, 8, "*"),
+            Token::new(TokenType::Asterisk, 1, 8, "*"),
             Token::new(TokenType::Divide, 1, 10, "/"),
         ];
         test_input(input, &output);
@@ -448,7 +448,7 @@ mod tests {
             Token::new(TokenType::I32(3), 3, 1, "3"),
             Token::new(TokenType::I32(4), 3, 3, "4"),
             Token::new(TokenType::Add, 3, 5, "+"),
-            Token::new(TokenType::Multiply, 4, 1, "*"),
+            Token::new(TokenType::Asterisk, 4, 1, "*"),
             Token::new(TokenType::Print, 5, 1, "print"),
         ];
         test_input(input, &output);

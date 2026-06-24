@@ -107,10 +107,11 @@ impl Parser {
             TokenType::BoolValue(b) => Instruction::Push(StackValue::Bool(b)),
             TokenType::Type(t) => Instruction::Push(StackValue::Type(StackType::convert_type(&t))),
             //
+            TokenType::Asterisk => Instruction::Multiply,
+            //
             TokenType::Add => Instruction::Add,
             TokenType::Subtract => Instruction::Subtract,
             TokenType::Divide => Instruction::Divide,
-            TokenType::Multiply => Instruction::Multiply,
             TokenType::Modulo => Instruction::Modulo,
             //
             TokenType::Rotate3 => Instruction::Rotate3,
