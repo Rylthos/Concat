@@ -1,0 +1,66 @@
+func swap_element i32* i32 i32 -> void {
+  assign buffer i j {
+    buffer @ i @ + @
+    buffer @ i @ + buffer @ j @ + @ =
+    buffer @ j @ + swap =
+  }
+}
+
+func print_buffer i32 i32* -> void {
+  assign length buffer {
+    0 while dup length @ < {
+      if dup 0 > {
+        ", " print
+      }
+      dup buffer @ swap + @ print
+
+      1 +
+    }
+  }
+}
+
+
+func bubble_sort i32 i32* -> i32* {
+  assign length buffer {
+    0 while dup length @ <= { // i
+      0 while dup length @ 1 - < { // j
+        // i j
+
+        dup buffer @ swap + @
+        // i j buffer[j]
+
+        over 1 + buffer @ swap + @
+        // i j buffer[j] buffer[j+1]
+
+        if > {
+          dup dup 1 + buffer @ rot3 swap_element
+        }
+
+        1 +
+      }
+      drop
+      1 +
+    }
+  }
+}
+
+20 assign length {
+  i32 length @ mem assign buffer {
+    0 while dup length @ < {
+      // i
+      dup length @ 1 - swap -
+      // i length-i-1
+      over buffer @ swap + swap =
+
+      1 +
+    }
+
+    "Before: " print
+    length @ buffer @ print_buffer "\n" print
+
+    length @ buffer @ bubble_sort
+
+    "After : " print
+    length @ buffer @ print_buffer "\n" print
+  }
+}
