@@ -1,4 +1,3 @@
-use crate::lexer::tokens::Types;
 use crate::parser::stack_values::StackValue;
 
 #[derive(Debug, Clone)]
@@ -45,9 +44,6 @@ pub enum Instruction {
     FrameRemove,
 
     Lookup(usize, usize),
-
-    FuncLabelDecl(String, Box<Instruction>),
-    FuncLabelRef(String, Box<Instruction>),
 
     DebugPrintStack,
 }

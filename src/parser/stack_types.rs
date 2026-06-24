@@ -1,4 +1,4 @@
-use crate::lexer::tokens::Types;
+use crate::lexer::tokens::TokenType;
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -11,12 +11,12 @@ pub enum StackType {
 }
 
 impl StackType {
-    pub fn convert_type(t: &Types) -> StackType {
+    pub fn convert_type(t: &TokenType) -> StackType {
         match t {
-            Types::String => StackType::String,
-            Types::I32 => StackType::I32,
-            Types::Bool => StackType::Bool,
-            Types::Void => unreachable!("Void should not be visible within parser"),
+            TokenType::String => StackType::String,
+            TokenType::I32 => StackType::I32,
+            TokenType::Bool => StackType::Bool,
+            _ => unreachable!("Invalid Type"),
         }
     }
 }

@@ -1,13 +1,5 @@
 use std::fmt;
 
-#[derive(Debug, PartialEq, Clone)]
-pub enum Types {
-    String,
-    I32,
-    Bool,
-    Void,
-}
-
 #[derive(Debug, Clone)]
 pub enum TokenType {
     LeftBrace,
@@ -59,10 +51,13 @@ pub enum TokenType {
 
     Mem,
 
-    Type(Types),
+    String,
+    I32,
+    Bool,
+    Void,
 
     StringValue(String),
-    I32(i32),
+    I32Value(i32),
     BoolValue(bool),
 
     DebugPrintStack,
@@ -72,12 +67,12 @@ pub enum TokenType {
 pub struct PositionInfo {
     pub line: usize,
     pub column: usize,
-    pub string: String,
 }
 
 #[derive(Debug, Clone)]
 pub struct Token {
     pub token_type: TokenType,
+    pub string: String,
     pub position_info: PositionInfo,
 }
 
@@ -85,11 +80,8 @@ impl Token {
     pub fn new(token_type: TokenType, line: usize, column: usize, string: &str) -> Token {
         Token {
             token_type,
-            position_info: PositionInfo {
-                line,
-                column,
-                string: string.to_string(),
-            },
+            string: string.to_string(),
+            position_info: PositionInfo { line, column },
         }
     }
 }
@@ -98,20 +90,9 @@ impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{:03}:{:03}: {}",
-            self.position_info.line, self.position_info.column, self.token_type
+            "{}: {} ({})",
+            self.position_info, self.token_type, self.string
         )
-    }
-}
-
-impl fmt::Display for Types {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Types::String => write!(f, "STRING"),
-            Types::I32 => write!(f, "I32"),
-            Types::Bool => write!(f, "BOOL"),
-            Types::Void => write!(f, "VOID"),
-        }
     }
 }
 
@@ -156,11 +137,22 @@ impl fmt::Display for TokenType {
 
             TokenType::Identifier(s) => write!(f, "Iden({:?})", s),
 
-            TokenType::Type(t) => write!(f, "{}", t),
+            TokenType::String => write!(f, "STRING"),
+            TokenType::I32 => write!(f, "I32"),
+            TokenType::Bool => write!(f, "BOOL"),
+            TokenType::Void => write!(f, "VOID"),
+
             TokenType::StringValue(s) => write!(f, "{:?}", s),
-            TokenType::I32(i) => write!(f, "{}", i),
+            TokenType::I32Value(i) => write!(f, "{}", i),
             TokenType::BoolValue(b) => write!(f, "{}", b),
+
             TokenType::DebugPrintStack => write!(f, "__PRINT_STACK__"),
         }
+    }
+}
+
+impl fmt::Display for PositionInfo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:03}:{:03}", self.line, self.column)
     }
 }

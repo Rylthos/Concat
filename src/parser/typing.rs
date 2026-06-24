@@ -1,7 +1,7 @@
-use clap::Parser;
-
 use crate::error::types::ParserError;
-use crate::lexer::tokens::{Token, TokenType};
+use crate::lexer::tokens::{PositionInfo, Token};
+use crate::parser::instructions::Instruction;
+use crate::parser::intrinsics::Intrinsic;
 use crate::parser::parse_tree::{FuncDecl, ParseTree};
 use crate::parser::stack_types::StackType;
 use crate::parser::stack_values::StackValue;
@@ -36,7 +36,9 @@ impl Typing {
     ) -> Result<(), ParserError> {
         match tree {
             ParseTree::None => unreachable!("Invalid stack"),
-            ParseTree::Element(t) => Self::type_check_token(t, stack, functions, variable_lookup)?,
+            ParseTree::Element(p, i) => {
+                Self::type_check_intrinsic(i, &p, stack, functions, variable_lookup)?
+            }
             ParseTree::Region(r) => {
                 for tree in r {
                     Self::type_check_stack(tree, stack, functions, variable_lookup)?;
@@ -48,8 +50,8 @@ impl Typing {
                 for (t, c, r) in conds {
                     let mut stack_copy = stack_cond.clone();
                     Self::type_check_stack(c, &mut stack_copy, functions, variable_lookup)?;
-                    Self::check_stack_length(&t, &stack_copy, 1)?;
-                    Self::check_stack_types(&t, &stack_copy, &vec![StackType::Bool])?;
+                    Self::check_stack_length(&t.position_info, &stack_copy, 1)?;
+                    Self::check_stack_types(&t.position_info, &stack_copy, &vec![StackType::Bool])?;
                     stack_copy.pop();
                     stack_cond = stack_copy.clone();
 
@@ -78,8 +80,8 @@ impl Typing {
             ParseTree::While(t, cond, region) => {
                 let mut stack_copy = stack.clone();
                 Self::type_check_stack(cond, &mut stack_copy, functions, variable_lookup)?;
-                Self::check_stack_length(&t, &stack_copy, 1)?;
-                Self::check_stack_types(&t, &stack_copy, &vec![StackType::Bool])?;
+                Self::check_stack_length(&t.position_info, &stack_copy, 1)?;
+                Self::check_stack_types(&t.position_info, &stack_copy, &vec![StackType::Bool])?;
                 stack_copy.pop();
 
                 Self::type_check_stack(region, &mut stack_copy, functions, variable_lookup)?;
@@ -87,7 +89,7 @@ impl Typing {
                 Self::verify_stack_equivalence(&t, stack, &stack_copy)?;
             }
             ParseTree::Assign(t, v, r) => {
-                Self::check_stack_length(t, stack, v.len())?;
+                Self::check_stack_length(&t.position_info, stack, v.len())?;
                 let mut stack_copy: Vec<StackType> = stack[(stack.len() - v.len())..(stack.len())]
                     .iter()
                     .cloned()
@@ -115,9 +117,9 @@ impl Typing {
     ) -> Result<(), ParserError> {
         let mut stack = func.inputs.clone();
         Self::type_check_stack(&func.region, &mut stack, functions, variable_lookup)?;
-        Self::check_stack_length(&func.token, &stack, func.outputs.len())?;
+        Self::check_stack_length(&func.position_info, &stack, func.outputs.len())?;
         Self::check_stack_types(
-            &func.token,
+            &func.position_info,
             &stack,
             &func
                 .outputs
@@ -136,12 +138,20 @@ impl Typing {
         stack_2: &Vec<StackType>,
     ) -> Result<(), ParserError> {
         if stack.len() != stack_2.len() {
-            return Err(ParserError::InvalidShape(token.position_info.clone()));
+            return Err(ParserError::InvalidShape(
+                token.position_info.clone(),
+                stack.to_vec(),
+                stack_2.to_vec(),
+            ));
         }
 
         for (t1, t2) in stack.iter().zip(stack_2.iter()) {
             if t1 != t2 {
-                return Err(ParserError::InvalidShape(token.position_info.clone()));
+                return Err(ParserError::InvalidShape(
+                    token.position_info.clone(),
+                    stack.to_vec(),
+                    stack_2.to_vec(),
+                ));
             }
         }
 
@@ -149,13 +159,13 @@ impl Typing {
     }
 
     fn check_stack_length(
-        token: &Token,
+        position: &PositionInfo,
         stack: &Vec<StackType>,
         required_length: usize,
     ) -> Result<(), ParserError> {
         if stack.len() < required_length {
             return Err(ParserError::InvalidNumberOfArguments(
-                token.position_info.clone(),
+                position.clone(),
                 required_length,
                 stack.len(),
             ));
@@ -165,7 +175,7 @@ impl Typing {
     }
 
     fn check_stack_types(
-        token: &Token,
+        position: &PositionInfo,
         stack: &Vec<StackType>,
         required_types: &Vec<StackType>,
     ) -> Result<(), ParserError> {
@@ -173,7 +183,7 @@ impl Typing {
             let index = stack.len() - 1 - i;
             if stack.get(index).unwrap() != t {
                 return Err(ParserError::InvalidType(
-                    token.position_info.clone(),
+                    position.clone(),
                     t.clone(),
                     stack.get(index).unwrap().clone(),
                 ));
@@ -202,17 +212,16 @@ impl Typing {
         return Ok(());
     }
 
-    fn type_check_token(
-        token: &Token,
+    fn type_check_intrinsic(
+        intrinsic: &Intrinsic,
+        position: &PositionInfo,
         stack: &mut Vec<StackType>,
         functions: &HashMap<String, FuncDecl>,
         variable_lookup: &HashMap<String, StackType>,
     ) -> Result<(), ParserError> {
-        match &token.token_type {
-            TokenType::LeftBrace => {}
-            TokenType::RightBrace => {}
-            TokenType::Add => {
-                Self::check_stack_length(token, stack, 2)?;
+        match intrinsic {
+            Intrinsic::Add => {
+                Self::check_stack_length(position, stack, 2)?;
                 let v2 = stack.pop().unwrap();
                 let v1 = stack.pop().unwrap();
 
@@ -220,7 +229,7 @@ impl Typing {
                     StackType::I32 => (),
                     _ => {
                         return Err(ParserError::InvalidType(
-                            token.position_info.clone(),
+                            position.clone(),
                             StackType::I32,
                             v2,
                         ));
@@ -236,7 +245,7 @@ impl Typing {
                     }
                     _ => {
                         return Err(ParserError::InvalidTypeSet(
-                            token.position_info.clone(),
+                            position.clone(),
                             HashSet::from([
                                 StackType::I32,
                                 StackType::Ptr(Box::new(StackType::I32)),
@@ -246,15 +255,15 @@ impl Typing {
                     }
                 }
             }
-            TokenType::Subtract | TokenType::Asterisk | TokenType::Divide | TokenType::Modulo => {
-                Self::check_stack_length(token, stack, 2)?;
-                Self::check_stack_types(token, stack, &vec![StackType::I32, StackType::I32])?;
+            Intrinsic::Subtract | Intrinsic::Multiply | Intrinsic::Divide | Intrinsic::Modulo => {
+                Self::check_stack_length(position, stack, 2)?;
+                Self::check_stack_types(position, stack, &vec![StackType::I32, StackType::I32])?;
                 stack.pop();
                 stack.pop();
                 stack.push(StackType::I32);
             }
-            TokenType::Rotate3 => {
-                Self::check_stack_length(token, stack, 3)?;
+            Intrinsic::Rotate3 => {
+                Self::check_stack_length(position, stack, 3)?;
                 let v3 = stack.pop().unwrap();
                 let v2 = stack.pop().unwrap();
                 let v1 = stack.pop().unwrap();
@@ -262,64 +271,64 @@ impl Typing {
                 stack.push(v1);
                 stack.push(v2);
             }
-            TokenType::Duplicate => {
-                Self::check_stack_length(token, stack, 1)?;
+            Intrinsic::Duplicate => {
+                Self::check_stack_length(position, stack, 1)?;
                 stack.push(stack.last().unwrap().clone());
             }
-            TokenType::Drop => {
-                Self::check_stack_length(token, stack, 1)?;
+            Intrinsic::Drop => {
+                Self::check_stack_length(position, stack, 1)?;
                 stack.pop().unwrap();
             }
-            TokenType::Over => {
-                Self::check_stack_length(token, stack, 2)?;
+            Intrinsic::Over => {
+                Self::check_stack_length(position, stack, 2)?;
                 stack.push(stack.get(stack.len() - 2).unwrap().clone());
             }
-            TokenType::Swap => {
-                Self::check_stack_length(token, stack, 2)?;
+            Intrinsic::Swap => {
+                Self::check_stack_length(position, stack, 2)?;
                 let v1 = stack.pop().unwrap();
                 let v2 = stack.pop().unwrap();
                 stack.push(v1);
                 stack.push(v2);
             }
-            TokenType::Print => {
-                Self::check_stack_length(token, stack, 1)?;
+            Intrinsic::Print => {
+                Self::check_stack_length(position, stack, 1)?;
                 stack.pop();
             }
-            TokenType::Less
-            | TokenType::Greater
-            | TokenType::LessEqual
-            | TokenType::GreaterEqual
-            | TokenType::Equal
-            | TokenType::NotEqual => {
-                Self::check_stack_length(token, stack, 2)?;
-                Self::check_stack_types(token, stack, &vec![StackType::I32, StackType::I32])?;
+            Intrinsic::Less
+            | Intrinsic::Greater
+            | Intrinsic::LessEqual
+            | Intrinsic::GreaterEqual
+            | Intrinsic::Equal
+            | Intrinsic::NotEqual => {
+                Self::check_stack_length(position, stack, 2)?;
+                Self::check_stack_types(position, stack, &vec![StackType::I32, StackType::I32])?;
                 stack.pop();
                 stack.pop();
                 stack.push(StackType::Bool);
             }
-            TokenType::And | TokenType::Or => {
-                Self::check_stack_length(token, stack, 2)?;
-                Self::check_stack_types(token, stack, &vec![StackType::Bool, StackType::Bool])?;
+            Intrinsic::And | Intrinsic::Or => {
+                Self::check_stack_length(position, stack, 2)?;
+                Self::check_stack_types(position, stack, &vec![StackType::Bool, StackType::Bool])?;
                 stack.pop();
                 stack.pop();
                 stack.push(StackType::Bool);
             }
-            TokenType::Not => {
-                Self::check_stack_length(token, stack, 1)?;
-                Self::check_stack_types(token, stack, &vec![StackType::Bool])?;
+            Intrinsic::Not => {
+                Self::check_stack_length(position, stack, 1)?;
+                Self::check_stack_types(position, stack, &vec![StackType::Bool])?;
                 stack.pop();
                 stack.push(StackType::Bool);
             }
-            TokenType::Type(t) => stack.push(StackType::convert_type(&t)),
-            TokenType::StringValue(_) => stack.push(StackType::String),
-            TokenType::I32(_) => stack.push(StackType::I32),
-            TokenType::BoolValue(_) => stack.push(StackType::Bool),
+            Intrinsic::StackType(t) => stack.push(t.clone()),
+            Intrinsic::StringValue(_) => stack.push(StackType::String),
+            Intrinsic::I32Value(_) => stack.push(StackType::I32),
+            Intrinsic::BoolValue(_) => stack.push(StackType::Bool),
 
-            TokenType::Identifier(s) => {
+            Intrinsic::Identifier(s) => {
                 if let Some(func) = functions.get(s) {
-                    Self::check_stack_length(&token, &stack, func.inputs.len())?;
+                    Self::check_stack_length(&position, &stack, func.inputs.len())?;
                     Self::check_stack_types(
-                        &token,
+                        &position,
                         &stack,
                         &func.inputs.iter().rev().cloned().collect(),
                     )?;
@@ -336,15 +345,15 @@ impl Typing {
                 }
             }
 
-            TokenType::Read => {
-                Self::check_stack_length(&token, &stack, 1)?;
+            Intrinsic::Read => {
+                Self::check_stack_length(&position, &stack, 1)?;
                 let stack_value = stack.pop().unwrap();
                 let stack_type = match stack_value {
                     StackType::Var(t) => *t,
                     StackType::Ptr(t) => *t,
                     _ => {
                         return Err(ParserError::InvalidTypeSet(
-                            token.position_info.clone(),
+                            position.clone(),
                             HashSet::from([
                                 StackType::Var(Box::new(StackType::String)),
                                 StackType::Ptr(Box::new(StackType::I32)),
@@ -355,8 +364,9 @@ impl Typing {
                 };
                 stack.push(stack_type);
             }
-            TokenType::Assign => {
-                Self::check_stack_length(&token, &stack, 2)?;
+
+            Intrinsic::Assign => {
+                Self::check_stack_length(&position, &stack, 2)?;
                 let write_value = stack.pop().unwrap();
                 let stack_value = stack.pop().unwrap();
                 let stack_type = match stack_value {
@@ -364,7 +374,7 @@ impl Typing {
                     StackType::Ptr(t) => *t,
                     _ => {
                         return Err(ParserError::InvalidTypeSet(
-                            token.position_info.clone(),
+                            position.clone(),
                             HashSet::from([
                                 StackType::Var(Box::new(StackType::String)),
                                 StackType::Ptr(Box::new(StackType::I32)),
@@ -375,21 +385,21 @@ impl Typing {
                 };
                 if write_value != stack_type {
                     return Err(ParserError::InvalidType(
-                        token.position_info.clone(),
+                        position.clone(),
                         stack_type,
                         write_value,
                     ));
                 }
             }
-            TokenType::Mem => {
-                Self::check_stack_length(&token, &stack, 2)?;
+            Intrinsic::Mem => {
+                Self::check_stack_length(&position, &stack, 2)?;
 
                 if let Some(t) = stack.pop() {
                     match t {
                         StackType::I32 => (),
                         _ => {
                             return Err(ParserError::InvalidType(
-                                token.position_info.clone(),
+                                position.clone(),
                                 StackType::I32,
                                 t,
                             ));
@@ -400,15 +410,19 @@ impl Typing {
                 let t = stack.pop().unwrap();
                 stack.push(StackType::Ptr(Box::new(t)));
             }
-            TokenType::DebugPrintStack => {}
+            Intrinsic::DebugPrintStack => {}
 
-            TokenType::If
-            | TokenType::Else
-            | TokenType::While
-            | TokenType::Func
-            | TokenType::Arrow
-            | TokenType::Assignment => {
-                unreachable!();
+            Intrinsic::Jump(_)
+            | Intrinsic::CondJump(_, _)
+            | Intrinsic::Ret
+            | Intrinsic::Call(_)
+            | Intrinsic::Halt
+            | Intrinsic::FrameCreate
+            | Intrinsic::FrameRemove
+            | Intrinsic::FuncLabelDecl(_, _)
+            | Intrinsic::FuncLabelRef(_, _)
+            | Intrinsic::Lookup(_, _) => {
+                unreachable!("Intrinsics should be generated and not used defined");
             }
         }
 

@@ -1,4 +1,5 @@
 use crate::lexer::tokens::{PositionInfo, TokenType};
+use crate::parser::intrinsics::Intrinsic;
 use crate::parser::stack_types::StackType;
 
 use std::collections::HashSet;
@@ -14,13 +15,16 @@ pub enum LexerError {
 pub enum ParserError {
     InvalidFunctionDef(PositionInfo, TokenType),
     ExpectedToken(PositionInfo, TokenType),
-    ExpectedTokenGot(PositionInfo, TokenType, TokenType),
+    ExpectedIdentifierGot(PositionInfo, TokenType),
+    ExpectedIntrinsic(PositionInfo, Intrinsic),
+    ExpectedIntrinsicGot(PositionInfo, Intrinsic, Intrinsic),
+    ExpectedTypeGot(PositionInfo, TokenType),
     InvalidParseTree(),
     UnknownIdentifier(PositionInfo, String),
     InvalidNumberOfArguments(PositionInfo, usize, usize),
     InvalidType(PositionInfo, StackType, StackType),
     InvalidTypeSet(PositionInfo, HashSet<StackType>, StackType),
-    InvalidShape(PositionInfo),
+    InvalidShape(PositionInfo, Vec<StackType>, Vec<StackType>),
 }
 
 #[derive(Debug)]
@@ -53,51 +57,57 @@ fn handle_parser_error(error: ParserError) {
     match error {
         ParserError::InvalidFunctionDef(pos, token) => {
             eprintln!(
-                "[PARSER] [{}:{}] Invalid function definition, expected identifier, got {:?}",
-                pos.line, pos.column, token
+                "[PARSER] [{}] Invalid function definition, expected identifier, got {}",
+                pos, token
             )
         }
         ParserError::ExpectedToken(pos, token) => {
+            eprintln!("[PARSER] [{}] Expected token {}", pos, token);
+        }
+        ParserError::ExpectedIdentifierGot(pos, token) => {
+            eprintln!("[PARSER] [{}] Expected identifier got {}", pos, token);
+        }
+        ParserError::ExpectedIntrinsic(pos, token) => {
+            eprintln!("[PARSER] [{}] Expected intrinsic {}", pos, token);
+        }
+        ParserError::ExpectedIntrinsicGot(pos, expected, got) => {
             eprintln!(
-                "[PARSER] [{}:{}] Expected token {:?}",
-                pos.line, pos.column, token
+                "[PARSER] [{}] Expected intrinsic {}, got {}",
+                pos, expected, got
             );
         }
-        ParserError::ExpectedTokenGot(pos, expected, got) => {
-            eprintln!(
-                "[PARSER] [{}:{}] Expected token {:?}, got {:?}",
-                pos.line, pos.column, expected, got
-            );
+        ParserError::ExpectedTypeGot(pos, got) => {
+            eprintln!("[PARSER] [{}] Expected type , got {}", pos, got);
         }
         ParserError::InvalidParseTree() => {
             eprintln!("[PARSER]: Invalid parse tree");
         }
         ParserError::UnknownIdentifier(pos, name) => {
-            eprintln!(
-                "[PARSER] [{}:{}] Unknown identifier {}",
-                pos.line, pos.column, name
-            );
+            eprintln!("[PARSER] [{}] Unknown identifier {}", pos, name);
         }
         ParserError::InvalidNumberOfArguments(pos, expected, got) => {
             eprintln!(
-                "[TYPE] [{}:{}] Expected {} arguments, got {}",
-                pos.line, pos.column, expected, got
+                "[TYPE] [{}] Expected {} arguments, got {}",
+                pos, expected, got
             );
         }
         ParserError::InvalidType(pos, input, output) => {
             eprintln!(
-                "[TYPE] [{}:{}] Expected {} arguments, got {}",
-                pos.line, pos.column, input, output
+                "[TYPE] [{}] Expected {} arguments, got {}",
+                pos, input, output
             );
         }
         ParserError::InvalidTypeSet(pos, inputs, output) => {
             eprintln!(
-                "[TYPE] [{}:{}] Expected one of {:?}, got {}",
-                pos.line, pos.column, inputs, output
+                "[TYPE] [{}] Expected one of {:?}, got {}",
+                pos, inputs, output
             );
         }
-        ParserError::InvalidShape(pos) => {
-            eprintln!("[TYPE] [{}:{}] Stack shapes differ", pos.line, pos.column);
+        ParserError::InvalidShape(pos, stack1, stack2) => {
+            eprintln!(
+                "[TYPE] [{}] Stack shapes differ {:?} {:?}",
+                pos, stack1, stack2
+            );
         }
     }
 }

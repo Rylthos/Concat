@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use crate::config::config::Config;
 use crate::error::types::{ErrorType, LexerError};
 
-use tokens::{Token, TokenType, Types};
+use tokens::{Token, TokenType};
 
 pub struct Lexer {
     config: Config,
@@ -64,10 +64,10 @@ impl Lexer {
             ("true".to_string(), TokenType::BoolValue(true)),
             ("false".to_string(), TokenType::BoolValue(false)),
             //
-            ("string".to_string(), TokenType::Type(Types::String)),
-            ("bool".to_string(), TokenType::Type(Types::Bool)),
-            ("i32".to_string(), TokenType::Type(Types::I32)),
-            ("void".to_string(), TokenType::Type(Types::Void)),
+            ("string".to_string(), TokenType::String),
+            ("bool".to_string(), TokenType::Bool),
+            ("i32".to_string(), TokenType::I32),
+            ("void".to_string(), TokenType::Void),
             //
             ("rot3".to_string(), TokenType::Rotate3),
             ("dup".to_string(), TokenType::Duplicate),
@@ -139,7 +139,6 @@ impl Lexer {
                                 PositionInfo {
                                     line: line_number,
                                     column: column_number,
-                                    string: "".to_string(),
                                 },
                                 format!("&{:?}", c2),
                             ));
@@ -148,7 +147,6 @@ impl Lexer {
                         return Err(LexerError::ExpectedCharacter(PositionInfo {
                             line: line_number,
                             column: column_number,
-                            string: "".to_string(),
                         }));
                     }
                 }
@@ -168,7 +166,6 @@ impl Lexer {
                                 PositionInfo {
                                     line: line_number,
                                     column: column_number,
-                                    string: "".to_string(),
                                 },
                                 format!("|{:?}", c2),
                             ));
@@ -177,7 +174,6 @@ impl Lexer {
                         return Err(LexerError::ExpectedCharacter(PositionInfo {
                             line: line_number,
                             column: column_number,
-                            string: "".to_string(),
                         }));
                     }
                 }
@@ -303,7 +299,7 @@ impl Lexer {
                     }
 
                     tokens.push(Token::new(
-                        TokenType::I32(s.parse::<i32>().unwrap()),
+                        TokenType::I32Value(s.parse::<i32>().unwrap()),
                         line_number,
                         column_number,
                         &s,
@@ -342,7 +338,6 @@ impl Lexer {
                         PositionInfo {
                             line: line_number,
                             column: column_number,
-                            string: "".to_string(),
                         },
                         c,
                     ));
@@ -388,10 +383,10 @@ mod tests {
     fn lex_keywords() {
         let input = "string i32 void bool print true false \"Hello, World!\"";
         let output = vec![
-            Token::new(TokenType::Type(Types::String), 1, 1, "string"),
-            Token::new(TokenType::Type(Types::I32), 1, 8, "i32"),
-            Token::new(TokenType::Type(Types::Void), 1, 12, "void"),
-            Token::new(TokenType::Type(Types::Bool), 1, 17, "bool"),
+            Token::new(TokenType::String, 1, 1, "string"),
+            Token::new(TokenType::I32, 1, 8, "i32"),
+            Token::new(TokenType::Void, 1, 12, "void"),
+            Token::new(TokenType::Bool, 1, 17, "bool"),
             Token::new(TokenType::Print, 1, 22, "print"),
             Token::new(TokenType::BoolValue(true), 1, 28, "true"),
             Token::new(TokenType::BoolValue(false), 1, 33, "false"),
@@ -409,9 +404,9 @@ mod tests {
     fn lex_numbers() {
         let input = "0 10 1234";
         let output = vec![
-            Token::new(TokenType::I32(0), 1, 1, "0"),
-            Token::new(TokenType::I32(10), 1, 3, "10"),
-            Token::new(TokenType::I32(1234), 1, 6, "1234"),
+            Token::new(TokenType::I32Value(0), 1, 1, "0"),
+            Token::new(TokenType::I32Value(10), 1, 3, "10"),
+            Token::new(TokenType::I32Value(1234), 1, 6, "1234"),
         ];
         test_input(input, &output);
     }
@@ -432,8 +427,8 @@ mod tests {
     fn lex_comments() {
         let input = "i32 // Hello World\n i32";
         let output = vec![
-            Token::new(TokenType::Type(Types::I32), 1, 1, "i32"),
-            Token::new(TokenType::Type(Types::I32), 2, 2, "i32"),
+            Token::new(TokenType::I32, 1, 1, "i32"),
+            Token::new(TokenType::I32, 2, 2, "i32"),
         ];
         test_input(input, &output);
     }
@@ -442,11 +437,11 @@ mod tests {
     fn lex_arithmetic() {
         let input = "\n1 2 +\n3 4 +\n*\nprint";
         let output = vec![
-            Token::new(TokenType::I32(1), 2, 1, "1"),
-            Token::new(TokenType::I32(2), 2, 3, "2"),
+            Token::new(TokenType::I32Value(1), 2, 1, "1"),
+            Token::new(TokenType::I32Value(2), 2, 3, "2"),
             Token::new(TokenType::Add, 2, 5, "+"),
-            Token::new(TokenType::I32(3), 3, 1, "3"),
-            Token::new(TokenType::I32(4), 3, 3, "4"),
+            Token::new(TokenType::I32Value(3), 3, 1, "3"),
+            Token::new(TokenType::I32Value(4), 3, 3, "4"),
             Token::new(TokenType::Add, 3, 5, "+"),
             Token::new(TokenType::Asterisk, 4, 1, "*"),
             Token::new(TokenType::Print, 5, 1, "print"),
@@ -486,13 +481,13 @@ mod tests {
     fn lex_while_loop() {
         let input = r#"0 while dup 1 > {1 +}"#;
         let output = vec![
-            Token::new(TokenType::I32(0), 1, 1, "0"),
+            Token::new(TokenType::I32Value(0), 1, 1, "0"),
             Token::new(TokenType::While, 1, 3, "while"),
             Token::new(TokenType::Duplicate, 1, 9, "dup"),
-            Token::new(TokenType::I32(1), 1, 13, "1"),
+            Token::new(TokenType::I32Value(1), 1, 13, "1"),
             Token::new(TokenType::Greater, 1, 15, ">"),
             Token::new(TokenType::LeftBrace, 1, 17, "{"),
-            Token::new(TokenType::I32(1), 1, 18, "1"),
+            Token::new(TokenType::I32Value(1), 1, 18, "1"),
             Token::new(TokenType::Add, 1, 20, "+"),
             Token::new(TokenType::RightBrace, 1, 21, "}"),
         ];
@@ -503,9 +498,9 @@ mod tests {
     fn lex_if() {
         let input = r#"0 if 1 > { "Less\n" print } else { "Greater\n" print }"#;
         let output = vec![
-            Token::new(TokenType::I32(0), 1, 1, "0"),
+            Token::new(TokenType::I32Value(0), 1, 1, "0"),
             Token::new(TokenType::If, 1, 3, "if"),
-            Token::new(TokenType::I32(1), 1, 6, "1"),
+            Token::new(TokenType::I32Value(1), 1, 6, "1"),
             Token::new(TokenType::Greater, 1, 8, ">"),
             Token::new(TokenType::LeftBrace, 1, 10, "{"),
             Token::new(
@@ -536,10 +531,10 @@ mod tests {
         let output = vec![
             Token::new(TokenType::Func, 1, 1, "func"),
             Token::new(TokenType::Identifier("test".to_string()), 1, 6, "test"),
-            Token::new(TokenType::Type(Types::I32), 1, 11, "i32"),
-            Token::new(TokenType::Type(Types::I32), 1, 15, "i32"),
+            Token::new(TokenType::I32, 1, 11, "i32"),
+            Token::new(TokenType::I32, 1, 15, "i32"),
             Token::new(TokenType::Arrow, 1, 19, "->"),
-            Token::new(TokenType::Type(Types::I32), 1, 22, "i32"),
+            Token::new(TokenType::I32, 1, 22, "i32"),
             Token::new(TokenType::LeftBrace, 1, 26, "{"),
             Token::new(TokenType::Add, 1, 28, "+"),
             Token::new(TokenType::RightBrace, 1, 30, "}"),
@@ -551,7 +546,7 @@ mod tests {
     fn lex_variables() {
         let input = r#"0 assign x { x @ print x 1 = }"#;
         let output = vec![
-            Token::new(TokenType::I32(0), 1, 1, "0"),
+            Token::new(TokenType::I32Value(0), 1, 1, "0"),
             Token::new(TokenType::Assignment, 1, 3, "assign"),
             Token::new(TokenType::Identifier("x".to_string()), 1, 10, "x"),
             Token::new(TokenType::LeftBrace, 1, 12, "{"),
@@ -559,7 +554,7 @@ mod tests {
             Token::new(TokenType::Read, 1, 16, "@"),
             Token::new(TokenType::Print, 1, 18, "print"),
             Token::new(TokenType::Identifier("x".to_string()), 1, 24, "x"),
-            Token::new(TokenType::I32(1), 1, 26, "1"),
+            Token::new(TokenType::I32Value(1), 1, 26, "1"),
             Token::new(TokenType::Assign, 1, 28, "="),
             Token::new(TokenType::RightBrace, 1, 30, "}"),
         ];

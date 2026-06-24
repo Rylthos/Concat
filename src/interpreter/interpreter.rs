@@ -353,9 +353,6 @@ pub fn interpret(instructions: &Vec<Instruction>) {
             Instruction::DebugPrintStack => {
                 println!("{:?}", stack);
             }
-            Instruction::FuncLabelDecl(_, _) | Instruction::FuncLabelRef(_, _) => {
-                panic!("Pseudo instructions: Should not be executed");
-            }
         }
         index += 1;
     }

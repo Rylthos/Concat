@@ -1,5 +1,6 @@
 pub mod heap_value;
 pub mod instructions;
+pub mod intrinsics;
 pub mod parse_tree;
 pub mod parser;
 pub mod stack_types;

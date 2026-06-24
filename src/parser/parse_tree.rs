@@ -1,6 +1,7 @@
-use crate::error::types::{self, ParserError};
-use crate::lexer::tokens::{Token, TokenType, Types};
+use crate::error::types::ParserError;
+use crate::lexer::tokens::{PositionInfo, Token, TokenType};
 
+use crate::parser::intrinsics::Intrinsic;
 use crate::parser::parser::Parser;
 use crate::parser::stack_types::StackType;
 
@@ -10,7 +11,7 @@ use std::fmt;
 
 #[derive(Debug, Clone)]
 pub struct FuncDecl {
-    pub token: Token,
+    pub position_info: PositionInfo,
     pub name: String,
     pub inputs: Vec<StackType>,
     pub outputs: Vec<StackType>,
@@ -20,7 +21,7 @@ pub struct FuncDecl {
 #[derive(Debug, Clone)]
 pub enum ParseTree {
     None,
-    Element(Token),
+    Element(PositionInfo, Intrinsic),
     Region(Vec<ParseTree>),
     If(
         Vec<(Token, Box<ParseTree>, Box<ParseTree>)>,
@@ -37,7 +38,7 @@ impl ParseTree {
 
         match self {
             ParseTree::None => write!(f, "{}NONE\n", padding(indent)),
-            ParseTree::Element(t) => write!(f, "{}({})", padding(indent), t),
+            ParseTree::Element(p, t) => write!(f, "{}({}: {})", padding(indent), p, t),
             ParseTree::Region(r) => {
                 write!(f, "{}{{\n", padding(indent))?;
                 for region in r {
@@ -182,14 +183,7 @@ impl ParseTree {
                         ));
                     };
 
-                    let input_types = Parser::get_types(&mut peekable)?
-                        .iter()
-                        .filter(|i| match i {
-                            Types::Void => false,
-                            _ => true,
-                        })
-                        .map(|i| StackType::convert_type(&i))
-                        .collect();
+                    let input_types = Parser::get_types(&mut peekable)?;
 
                     if let Some(t) = peekable.next() {
                         match &t.token_type {
@@ -208,15 +202,7 @@ impl ParseTree {
                         ));
                     };
 
-                    let output_types = Parser::get_types(&mut peekable)?
-                        .iter()
-                        .filter(|i| match i {
-                            Types::Void => false,
-                            _ => true,
-                        })
-                        .map(|t| StackType::convert_type(&t))
-                        .collect();
-
+                    let output_types = Parser::get_types(&mut peekable)?;
                     let region_tree = Self::generate_parse_tree(
                         Parser::get_region(&mut peekable)?.iter(),
                         functions,
@@ -225,7 +211,7 @@ impl ParseTree {
                     functions.insert(
                         function_name.clone(),
                         FuncDecl {
-                            token: t.clone(),
+                            position_info: t.position_info.clone(),
                             name: function_name,
                             inputs: input_types,
                             outputs: output_types,
@@ -254,9 +240,32 @@ impl ParseTree {
                         Box::new(region_tree),
                     ));
                 }
+                TokenType::I32 | TokenType::String | TokenType::Bool => {
+                    peekable.next();
+                    if let Some(t2) = peekable.peek() {
+                        match t2.token_type {
+                            TokenType::Asterisk => {
+                                peekable.next();
+                                region.push(ParseTree::Element(
+                                    t.position_info.clone(),
+                                    Intrinsic::StackType(StackType::Ptr(Box::new(
+                                        StackType::convert_type(&t.token_type),
+                                    ))),
+                                ))
+                            }
+                            _ => region.push(ParseTree::Element(
+                                t.position_info.clone(),
+                                Intrinsic::StackType(StackType::convert_type(&t.token_type)),
+                            )),
+                        }
+                    }
+                }
                 _ => {
                     peekable.next();
-                    region.push(ParseTree::Element(t.clone().clone()))
+                    region.push(ParseTree::Element(
+                        t.position_info.clone(),
+                        Parser::convert_token(&t),
+                    ))
                 }
             }
         }
@@ -275,7 +284,13 @@ impl FuncDecl {
     pub fn fmt_indent(&self, f: &mut fmt::Formatter, indent: usize) -> fmt::Result {
         let padding = |indent| "  ".repeat(indent);
 
-        write!(f, "{}{}: {} {{\n", padding(indent), self.name, self.token)?;
+        write!(
+            f,
+            "{}{}: {} {{\n",
+            padding(indent),
+            self.name,
+            self.position_info
+        )?;
         write!(f, "{}INPUT: ", padding(indent + 1))?;
         for input in self.inputs.iter() {
             write!(f, "{} ", input)?;
