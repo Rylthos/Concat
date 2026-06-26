@@ -59,6 +59,7 @@ pub enum Intrinsic {
     FuncLabelRef(String, Box<Intrinsic>),
 
     DebugPrintStack,
+    DebugHeapStack,
 
     Halt,
 }
@@ -105,6 +106,7 @@ impl fmt::Display for Intrinsic {
             Intrinsic::FuncLabelDecl(iden, intri) => write!(f, "FuncDecl({iden}, {intri})"),
             Intrinsic::FuncLabelRef(iden, intri) => write!(f, "FuncRef({iden}, {intri})"),
             Intrinsic::DebugPrintStack => write!(f, "__print_stack__"),
+            Intrinsic::DebugHeapStack => write!(f, "__print_heap__"),
             Intrinsic::Halt => write!(f, "halt"),
         }
     }

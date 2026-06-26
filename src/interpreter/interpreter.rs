@@ -391,6 +391,9 @@ pub fn interpret(instructions: &Vec<Instruction>, default_heap: &Vec<HeapValue>)
             Instruction::DebugPrintStack => {
                 println!("{:?}", stack);
             }
+            Instruction::DebugHeapStack => {
+                println!("{:?}", heap);
+            }
         }
         index += 1;
     }

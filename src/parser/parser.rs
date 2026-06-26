@@ -120,7 +120,6 @@ impl Parser {
             TokenType::BoolValue(b) => Intrinsic::BoolValue(b),
             TokenType::CharValue(c) => Intrinsic::CharValue(c),
             TokenType::StringValue(s) => Intrinsic::StringValue(s),
-            TokenType::StringValue(s) => Intrinsic::StringValue(s),
             TokenType::Identifier(s) => Intrinsic::Identifier(s),
             //
             TokenType::Add => Intrinsic::Add,
@@ -152,6 +151,7 @@ impl Parser {
             TokenType::Mem => Intrinsic::Mem,
             //
             TokenType::DebugPrintStack => Intrinsic::DebugPrintStack,
+            TokenType::DebugHeapStack => Intrinsic::DebugHeapStack,
         }
     }
 
@@ -222,6 +222,7 @@ impl Parser {
             },
 
             Intrinsic::DebugPrintStack => Instruction::DebugPrintStack,
+            Intrinsic::DebugHeapStack => Instruction::DebugHeapStack,
 
             Intrinsic::Halt => Instruction::Halt,
         }

@@ -440,6 +440,7 @@ impl Typing {
                 stack.push(StackType::Ptr(false, Box::new(t)));
             }
             Intrinsic::DebugPrintStack => {}
+            Intrinsic::DebugHeapStack => {}
 
             Intrinsic::Jump(_)
             | Intrinsic::CondJump(_, _)

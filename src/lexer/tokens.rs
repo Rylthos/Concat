@@ -64,6 +64,7 @@ pub enum TokenType {
     CharValue(char),
 
     DebugPrintStack,
+    DebugHeapStack,
 }
 
 #[derive(Debug, Clone)]
@@ -159,6 +160,7 @@ impl fmt::Display for TokenType {
             TokenType::CharValue(c) => write!(f, "'{}'", c),
 
             TokenType::DebugPrintStack => write!(f, "__PRINT_STACK__"),
+            TokenType::DebugHeapStack => write!(f, "__PRINT_Heap__"),
         }
     }
 }

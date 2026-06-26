@@ -46,4 +46,5 @@ pub enum Instruction {
     Lookup(usize, usize),
 
     DebugPrintStack,
+    DebugHeapStack,
 }
