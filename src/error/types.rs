@@ -8,6 +8,7 @@ use std::collections::HashSet;
 pub enum LexerError {
     InvalidToken(PositionInfo, String),
     ExpectedCharacter(PositionInfo),
+    ExpectedCharacterGot(PositionInfo, char, char),
     InvalidCharacter(PositionInfo, char),
 }
 
@@ -36,19 +37,19 @@ pub enum ErrorType {
 fn handle_lexer_error(error: LexerError) {
     match error {
         LexerError::InvalidToken(pos, token) => {
-            eprintln!(
-                "[LEXER] [{}:{}] Invalid token {}",
-                pos.line, pos.column, token
-            );
+            eprintln!("[LEXER] [{}] Invalid token {}", pos, token);
         }
         LexerError::ExpectedCharacter(pos) => {
-            eprintln!("[LEXER] [{}:{}] Expected character", pos.line, pos.column);
+            eprintln!("[LEXER] [{}] Expected character", pos);
+        }
+        LexerError::ExpectedCharacterGot(pos, got, expected) => {
+            eprintln!(
+                "[LEXER] [{}] Expected character {}, got {}",
+                pos, got, expected
+            );
         }
         LexerError::InvalidCharacter(pos, c) => {
-            eprintln!(
-                "[LEXER] [{}:{}] Invalid character {}",
-                pos.line, pos.column, c
-            );
+            eprintln!("[LEXER] [{}] Invalid character {}", pos, c);
         }
     }
 }

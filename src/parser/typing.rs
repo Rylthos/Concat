@@ -323,6 +323,7 @@ impl Typing {
             Intrinsic::StringValue(_) => stack.push(StackType::String),
             Intrinsic::I32Value(_) => stack.push(StackType::I32),
             Intrinsic::BoolValue(_) => stack.push(StackType::Bool),
+            Intrinsic::CharValue(_) => stack.push(StackType::Char),
 
             Intrinsic::Identifier(s) => {
                 if let Some(func) = functions.get(s) {

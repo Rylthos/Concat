@@ -55,10 +55,12 @@ pub enum TokenType {
     I32,
     Bool,
     Void,
+    Char,
 
     StringValue(String),
     I32Value(i32),
     BoolValue(bool),
+    CharValue(char),
 
     DebugPrintStack,
 }
@@ -83,6 +85,12 @@ impl Token {
             string: string.to_string(),
             position_info: PositionInfo { line, column },
         }
+    }
+}
+
+impl PositionInfo {
+    pub fn new(line: usize, column: usize) -> PositionInfo {
+        PositionInfo { line, column }
     }
 }
 
@@ -141,10 +149,12 @@ impl fmt::Display for TokenType {
             TokenType::I32 => write!(f, "I32"),
             TokenType::Bool => write!(f, "BOOL"),
             TokenType::Void => write!(f, "VOID"),
+            TokenType::Char => write!(f, "CHAR"),
 
             TokenType::StringValue(s) => write!(f, "{:?}", s),
             TokenType::I32Value(i) => write!(f, "{}", i),
             TokenType::BoolValue(b) => write!(f, "{}", b),
+            TokenType::CharValue(c) => write!(f, "'{}'", c),
 
             TokenType::DebugPrintStack => write!(f, "__PRINT_STACK__"),
         }

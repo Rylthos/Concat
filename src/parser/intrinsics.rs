@@ -50,6 +50,7 @@ pub enum Intrinsic {
     StringValue(String),
     I32Value(i32),
     BoolValue(bool),
+    CharValue(char),
 
     FrameCreate,
     FrameRemove,
@@ -98,6 +99,7 @@ impl fmt::Display for Intrinsic {
             Intrinsic::StringValue(s) => write!(f, "STRING {s}"),
             Intrinsic::I32Value(i) => write!(f, "I32 {i}"),
             Intrinsic::BoolValue(b) => write!(f, "BOOL {b}"),
+            Intrinsic::CharValue(c) => write!(f, "CHAR '{c}'"),
             Intrinsic::FrameCreate => write!(f, "frameCreate"),
             Intrinsic::FrameRemove => write!(f, "frameRemove"),
             Intrinsic::FuncLabelDecl(iden, intri) => write!(f, "FuncDecl({iden}, {intri})"),

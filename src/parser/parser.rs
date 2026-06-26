@@ -107,12 +107,14 @@ impl Parser {
             | TokenType::Void
             | TokenType::I32
             | TokenType::String
-            | TokenType::Bool => {
+            | TokenType::Bool
+            | TokenType::Char => {
                 unreachable!("Unreachable: {:?}", token)
             }
             TokenType::StringValue(s) => Intrinsic::StringValue(s.clone()),
             TokenType::I32Value(n) => Intrinsic::I32Value(n),
             TokenType::BoolValue(b) => Intrinsic::BoolValue(b),
+            TokenType::CharValue(c) => Intrinsic::CharValue(c),
             TokenType::Identifier(s) => Intrinsic::Identifier(s),
             //
             TokenType::Add => Intrinsic::Add,
@@ -189,6 +191,7 @@ impl Parser {
             Intrinsic::StringValue(s) => Instruction::Push(StackValue::String(s.clone())),
             Intrinsic::I32Value(i) => Instruction::Push(StackValue::I32(*i)),
             Intrinsic::BoolValue(b) => Instruction::Push(StackValue::Bool(*b)),
+            Intrinsic::CharValue(c) => Instruction::Push(StackValue::Char(*c)),
 
             Intrinsic::FrameCreate => Instruction::FrameCreate,
             Intrinsic::FrameRemove => Instruction::FrameRemove,

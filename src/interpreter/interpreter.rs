@@ -54,6 +54,8 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                         print!("{}", s);
                     } else if let StackValue::I32(i) = v {
                         print!("{}", i);
+                    } else if let StackValue::Char(c) = v {
+                        print!("{}", c);
                     } else {
                         unreachable!("Expected printable Value");
                     }

@@ -68,6 +68,7 @@ impl Lexer {
             ("bool".to_string(), TokenType::Bool),
             ("i32".to_string(), TokenType::I32),
             ("void".to_string(), TokenType::Void),
+            ("char".to_string(), TokenType::Char),
             //
             ("rot3".to_string(), TokenType::Rotate3),
             ("dup".to_string(), TokenType::Duplicate),
@@ -248,29 +249,72 @@ impl Lexer {
                         ));
                     }
                 }
+                '\'' => {
+                    let mut c: char;
+                    chars.next();
+
+                    if let Some((col2, c2)) = chars.next() {
+                        if c2 == '\\' {
+                            if let Some((_, c3)) = chars.next() {
+                                c = Self::convert_slash_char(
+                                    &PositionInfo::new(line_number, col2),
+                                    c3,
+                                )?;
+                            } else {
+                                return Err(LexerError::ExpectedCharacter(PositionInfo::new(
+                                    line_number,
+                                    col2,
+                                )));
+                            }
+                        } else {
+                            c = c2;
+                        }
+                    } else {
+                        return Err(LexerError::ExpectedCharacter(PositionInfo::new(
+                            line_number,
+                            column_number,
+                        )));
+                    }
+
+                    if let Some((_, c2)) = chars.next() {
+                        if c2 == '\'' {
+                        } else {
+                            return Err(LexerError::ExpectedCharacterGot(
+                                PositionInfo::new(line_number, column_number),
+                                '\'',
+                                c2,
+                            ));
+                        }
+                    }
+
+                    tokens.push(Token::new(
+                        TokenType::CharValue(c),
+                        line_number,
+                        column_number,
+                        &format!("'{}'", c),
+                    ));
+                }
                 '"' => {
                     let mut s = String::new();
 
                     chars.next();
-                    while let Some(&(_, c2)) = chars.peek() {
+                    while let Some((col2, c2)) = chars.next() {
                         if c2 == '"' {
-                            chars.next();
                             break;
                         } else if c2 == '\\' {
-                            chars.next();
-                            if let Some(&(_, c3)) = chars.peek() {
-                                match c3 {
-                                    'n' => s.push('\n'),
-                                    't' => s.push('\t'),
-                                    '\\' => s.push('\\'),
-                                    '\"' => s.push('\"'),
-                                    _ => (),
-                                }
+                            if let Some((col3, c3)) = chars.next() {
+                                s.push(Lexer::convert_slash_char(
+                                    &PositionInfo::new(line_number, col2),
+                                    c3,
+                                )?);
+                            } else {
+                                return Err(LexerError::ExpectedCharacter(PositionInfo::new(
+                                    line_number,
+                                    col2,
+                                )));
                             }
-                            chars.next();
                         } else {
                             s.push(c2);
-                            chars.next();
                         }
                     }
 
@@ -347,6 +391,20 @@ impl Lexer {
 
         Ok(tokens)
     }
+
+    fn convert_slash_char(pos: &PositionInfo, c: char) -> Result<char, LexerError> {
+        let converted = match c {
+            'n' => '\n',
+            't' => '\t',
+            '\\' => '\\',
+            '\"' => '\"',
+            '\'' => '\'',
+            '0' => '\0',
+            _ => return Err(LexerError::InvalidCharacter(pos.clone(), c)),
+        };
+
+        Ok(converted)
+    }
 }
 
 #[cfg(test)]
@@ -381,7 +439,7 @@ mod tests {
 
     #[test]
     fn lex_keywords() {
-        let input = "string i32 void bool print true false \"Hello, World!\"";
+        let input = "string i32 void bool print true false char '\\0' \"Hello, World!\"";
         let output = vec![
             Token::new(TokenType::String, 1, 1, "string"),
             Token::new(TokenType::I32, 1, 8, "i32"),
@@ -390,10 +448,12 @@ mod tests {
             Token::new(TokenType::Print, 1, 22, "print"),
             Token::new(TokenType::BoolValue(true), 1, 28, "true"),
             Token::new(TokenType::BoolValue(false), 1, 33, "false"),
+            Token::new(TokenType::Char, 1, 39, "char"),
+            Token::new(TokenType::CharValue('\0'), 1, 44, "'\0'"),
             Token::new(
                 TokenType::StringValue("Hello, World!".to_string()),
                 1,
-                39,
+                49,
                 "\"Hello, World!\"",
             ),
         ];
