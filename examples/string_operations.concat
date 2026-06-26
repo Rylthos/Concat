@@ -1,0 +1,66 @@
+func str_len char*const -> i32 {
+  0 assign str length {
+    true while dup {
+      str@ length@ + @
+
+      if '\0' == {
+        drop
+        false
+      } else {
+        length length @ 1 + =
+      }
+    }
+    drop
+
+    length @
+  }
+}
+
+func str_concat char*const char*const -> char* {
+  assign str1 str2 {
+    str1@ str_len str2@ str_len
+    assign str1_len str2_len {
+      char
+      str1_len@ str2_len@ + 1 +
+      mem
+
+      0
+      assign new_string index {
+        0 while dup str1_len@ < {
+          str1@ over + @
+          new_string@ index@ + swap =
+          index index @ 1 + =
+          1 +
+        }
+        drop
+
+        0 while dup str2_len @ < {
+          str2@ over + @
+          new_string@ index@ + swap =
+          index index @ 1 + =
+          1 +
+        }
+        drop
+
+        new_string @ index @ + '\0' =
+
+        new_string @
+      }
+    }
+  }
+}
+
+"1234" dup str_len swap
+print ": " print print '\n' print
+
+"Hello," " World!" assign str1 str2 {
+  '"' print str1@ print '"' print
+  " || " print
+  '"' print str2@ print '"' print
+
+  " = " print
+  str1@ str2@ str_concat
+  dup str_len
+  swap
+  '"' print print '"' print ": " print print '\n' print
+}
