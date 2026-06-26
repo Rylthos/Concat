@@ -90,7 +90,7 @@ impl Typing {
             }
             ParseTree::Assign(t, v, r) => {
                 Self::check_stack_length(&t.position_info, stack, v.len())?;
-                let mut stack_copy: Vec<StackType> = stack[(stack.len() - v.len())..(stack.len())]
+                let stack_copy: Vec<StackType> = stack[(stack.len() - v.len())..(stack.len())]
                     .iter()
                     .cloned()
                     .collect();
@@ -101,7 +101,9 @@ impl Typing {
                     new_variable_lookup.insert(v.to_string(), t.clone());
                 }
 
-                Self::type_check_stack(r, &mut stack_copy, functions, &new_variable_lookup)?;
+                let mut new_stack = Vec::new();
+                Self::type_check_stack(r, &mut new_stack, functions, &new_variable_lookup)?;
+                *stack = new_stack;
             }
             ParseTree::FuncDecl(func) => {
                 Self::type_check_function(func, functions, variable_lookup)?;
@@ -117,7 +119,15 @@ impl Typing {
     ) -> Result<(), ParserError> {
         let mut stack = func.inputs.clone();
         Self::type_check_stack(&func.region, &mut stack, functions, variable_lookup)?;
-        Self::check_stack_length(&func.position_info, &stack, func.outputs.len())?;
+
+        if stack.len() != func.outputs.len() {
+            return Err(ParserError::InvalidNumberOfArguments(
+                func.position_info.clone(),
+                func.outputs.len(),
+                stack.len(),
+            ));
+        }
+
         Self::check_stack_types(
             &func.position_info,
             &stack,
@@ -194,7 +204,7 @@ impl Typing {
     }
 
     fn check_stack_types_multi(
-        token: &Token,
+        position: &PositionInfo,
         stack: &Vec<StackType>,
         required_types: &Vec<HashSet<StackType>>,
     ) -> Result<(), ParserError> {
@@ -202,7 +212,7 @@ impl Typing {
             let index = stack.len() - 1 - i;
             if !t.contains(stack.get(index).unwrap()) {
                 return Err(ParserError::InvalidTypeSet(
-                    token.position_info.clone(),
+                    position.clone(),
                     t.clone(),
                     stack.get(index).unwrap().clone(),
                 ));
