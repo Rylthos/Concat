@@ -297,13 +297,29 @@ impl Typing {
             Intrinsic::Less
             | Intrinsic::Greater
             | Intrinsic::LessEqual
-            | Intrinsic::GreaterEqual
-            | Intrinsic::Equal
-            | Intrinsic::NotEqual => {
+            | Intrinsic::GreaterEqual => {
                 Self::check_stack_length(position, stack, 2)?;
                 Self::check_stack_types(position, stack, &vec![StackType::I32, StackType::I32])?;
                 stack.pop();
                 stack.pop();
+                stack.push(StackType::Bool);
+            }
+            Intrinsic::Equal | Intrinsic::NotEqual => {
+                Self::check_stack_length(position, stack, 2)?;
+                let t2 = stack.pop().unwrap();
+                let t1 = stack.pop().unwrap();
+
+                match (t2, t1.clone()) {
+                    (StackType::I32, StackType::I32) => (),
+                    (StackType::Char, StackType::Char) => (),
+                    _ => {
+                        return Err(ParserError::InvalidTypeSet(
+                            position.clone(),
+                            HashSet::from([StackType::I32, StackType::Char]),
+                            t1,
+                        ));
+                    }
+                }
                 stack.push(StackType::Bool);
             }
             Intrinsic::And | Intrinsic::Or => {

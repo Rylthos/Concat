@@ -119,6 +119,15 @@ pub fn interpret(instructions: &Vec<Instruction>, default_heap: &Vec<HeapValue>)
                         _ => unreachable!("Unhandled"),
                     };
                     stack.push(output);
+                } else if let StackValue::Char(v1) = v1
+                    && let StackValue::Char(v2) = v2
+                {
+                    let output = match instruction {
+                        Instruction::Equal => StackValue::Bool(v1 == v2),
+                        Instruction::NotEqual => StackValue::Bool(v1 != v2),
+                        _ => unreachable!("Unhandled"),
+                    };
+                    stack.push(output);
                 } else {
                     unreachable!("Unhandled type");
                 }
