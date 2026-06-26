@@ -13,7 +13,7 @@
       };
       rust = pkgs.rust-bin.stable.latest.default.override {
         extensions = [
-          "rust-src" # for rust-analyzer
+          "rust-src"
           "rust-analyzer"
         ];
       };
