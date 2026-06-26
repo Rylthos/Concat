@@ -1,4 +1,4 @@
-func print_value bool i32 string i32 -> bool {
+func print_value bool i32 char*const i32 -> bool {
   // b:print Index Text Modulo
   rot3
   rot3

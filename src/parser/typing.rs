@@ -240,15 +240,15 @@ impl Typing {
                     StackType::I32 => {
                         stack.push(StackType::I32);
                     }
-                    StackType::Ptr(t) => {
-                        stack.push(StackType::Ptr(t));
+                    StackType::Ptr(c, t) => {
+                        stack.push(StackType::Ptr(c, t));
                     }
                     _ => {
                         return Err(ParserError::InvalidTypeSet(
                             position.clone(),
                             HashSet::from([
                                 StackType::I32,
-                                StackType::Ptr(Box::new(StackType::I32)),
+                                StackType::Ptr(false, Box::new(StackType::I32)),
                             ]),
                             v1,
                         ));
@@ -320,10 +320,12 @@ impl Typing {
                 stack.push(StackType::Bool);
             }
             Intrinsic::StackType(t) => stack.push(t.clone()),
-            Intrinsic::StringValue(_) => stack.push(StackType::String),
             Intrinsic::I32Value(_) => stack.push(StackType::I32),
             Intrinsic::BoolValue(_) => stack.push(StackType::Bool),
             Intrinsic::CharValue(_) => stack.push(StackType::Char),
+            Intrinsic::StringValue(_) => {
+                stack.push(StackType::Ptr(true, Box::new(StackType::Char)))
+            }
 
             Intrinsic::Identifier(s) => {
                 if let Some(func) = functions.get(s) {
@@ -351,13 +353,13 @@ impl Typing {
                 let stack_value = stack.pop().unwrap();
                 let stack_type = match stack_value {
                     StackType::Var(t) => *t,
-                    StackType::Ptr(t) => *t,
+                    StackType::Ptr(_, t) => *t,
                     _ => {
                         return Err(ParserError::InvalidTypeSet(
                             position.clone(),
                             HashSet::from([
-                                StackType::Var(Box::new(StackType::String)),
-                                StackType::Ptr(Box::new(StackType::I32)),
+                                StackType::Var(Box::new(StackType::I32)),
+                                StackType::Ptr(false, Box::new(StackType::I32)),
                             ]),
                             stack_value,
                         ));
@@ -372,13 +374,13 @@ impl Typing {
                 let stack_value = stack.pop().unwrap();
                 let stack_type = match stack_value {
                     StackType::Var(t) => *t,
-                    StackType::Ptr(t) => *t,
+                    StackType::Ptr(false, t) => *t,
                     _ => {
                         return Err(ParserError::InvalidTypeSet(
                             position.clone(),
                             HashSet::from([
-                                StackType::Var(Box::new(StackType::String)),
-                                StackType::Ptr(Box::new(StackType::I32)),
+                                StackType::Var(Box::new(StackType::I32)),
+                                StackType::Ptr(false, Box::new(StackType::I32)),
                             ]),
                             stack_value,
                         ));
@@ -409,7 +411,7 @@ impl Typing {
                 }
 
                 let t = stack.pop().unwrap();
-                stack.push(StackType::Ptr(Box::new(t)));
+                stack.push(StackType::Ptr(false, Box::new(t)));
             }
             Intrinsic::DebugPrintStack => {}
 

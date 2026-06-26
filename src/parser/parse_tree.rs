@@ -92,7 +92,7 @@ impl ParseTree {
         let mut peekable = tokens.peekable();
 
         while let Some(&t) = peekable.peek() {
-            match t.token_type {
+            match &t.token_type {
                 TokenType::If => {
                     peekable.next();
                     let mut regions = Vec::new();
@@ -240,17 +240,29 @@ impl ParseTree {
                         Box::new(region_tree),
                     ));
                 }
-                TokenType::I32 | TokenType::String | TokenType::Bool => {
+                TokenType::I32 | TokenType::Bool | TokenType::Char => {
                     peekable.next();
                     if let Some(t2) = peekable.peek() {
                         match t2.token_type {
                             TokenType::Asterisk => {
                                 peekable.next();
+                                let is_const = match peekable.peek() {
+                                    Some(t) => match t.token_type {
+                                        TokenType::Const => {
+                                            peekable.next();
+                                            true
+                                        }
+                                        _ => false,
+                                    },
+                                    None => false,
+                                };
+
                                 region.push(ParseTree::Element(
                                     t.position_info.clone(),
-                                    Intrinsic::StackType(StackType::Ptr(Box::new(
-                                        StackType::convert_type(&t.token_type),
-                                    ))),
+                                    Intrinsic::StackType(StackType::Ptr(
+                                        is_const,
+                                        Box::new(StackType::convert_type(&t.token_type)),
+                                    )),
                                 ))
                             }
                             _ => region.push(ParseTree::Element(

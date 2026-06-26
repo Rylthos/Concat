@@ -69,6 +69,7 @@ impl Lexer {
             ("i32".to_string(), TokenType::I32),
             ("void".to_string(), TokenType::Void),
             ("char".to_string(), TokenType::Char),
+            ("const".to_string(), TokenType::Const),
             //
             ("rot3".to_string(), TokenType::Rotate3),
             ("dup".to_string(), TokenType::Duplicate),
@@ -250,7 +251,7 @@ impl Lexer {
                     }
                 }
                 '\'' => {
-                    let mut c: char;
+                    let c: char;
                     chars.next();
 
                     if let Some((col2, c2)) = chars.next() {

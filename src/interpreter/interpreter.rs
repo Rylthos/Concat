@@ -3,9 +3,9 @@ use crate::parser::instructions::Instruction;
 use crate::parser::stack_types::StackType;
 use crate::parser::stack_values::{PointerValue, StackValue};
 
-pub fn interpret(instructions: &Vec<Instruction>) {
+pub fn interpret(instructions: &Vec<Instruction>, default_heap: &Vec<HeapValue>) {
     let mut stack: Vec<StackValue> = Vec::new();
-    let mut heap: Vec<HeapValue> = Vec::new();
+    let mut heap: Vec<HeapValue> = default_heap.to_vec();
 
     let mut index = 0;
 
@@ -50,12 +50,34 @@ pub fn interpret(instructions: &Vec<Instruction>) {
             Instruction::Print => {
                 let value = stack.pop();
                 if let Some(v) = value {
-                    if let StackValue::String(s) = v {
-                        print!("{}", s);
-                    } else if let StackValue::I32(i) = v {
+                    if let StackValue::I32(i) = v {
                         print!("{}", i);
                     } else if let StackValue::Char(c) = v {
                         print!("{}", c);
+                    } else if let StackValue::Pointer(p) = v {
+                        let heap_value = heap.get(p.allocation).unwrap();
+                        match heap_value.r#type {
+                            StackType::Char => {
+                                let mut s: String = "".to_string();
+                                let mut i = p.offset;
+                                loop {
+                                    if i > heap_value.len {
+                                        panic!("Invalid print");
+                                    }
+
+                                    let c = heap_value.data[i];
+                                    if c == 0 {
+                                        break;
+                                    } else {
+                                        s.push(heap_value.data[i] as char);
+                                    }
+                                    i += 1;
+                                }
+
+                                print!("{}", s);
+                            }
+                            _ => unreachable!(),
+                        }
                     } else {
                         unreachable!("Expected printable Value");
                     }
@@ -146,6 +168,7 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                 } else if let StackValue::Pointer(p) = v1 {
                     stack.push(StackValue::Pointer(PointerValue {
                         allocation: p.allocation,
+                        constant: p.constant,
                         offset: p.offset + iv2 as usize,
                     }))
                 } else {
@@ -270,6 +293,9 @@ pub fn interpret(instructions: &Vec<Instruction>) {
                         };
                     }
                     StackValue::Pointer(ref p) => {
+                        if p.constant {
+                            unreachable!();
+                        }
                         store_value(&value, &mut heap.get_mut(p.allocation).unwrap(), p.offset);
                     }
                     _ => unreachable!(),
@@ -303,6 +329,7 @@ pub fn interpret(instructions: &Vec<Instruction>) {
 
                 stack.push(StackValue::Pointer(PointerValue {
                     allocation: handle,
+                    constant: false,
                     offset: 0,
                 }));
             }
@@ -368,6 +395,11 @@ fn load_value(heap_element: &HeapValue, offset: usize) -> StackValue {
             StackValue::I32(i32::from_le_bytes(
                 heap_element.data[start..(start + 4)].try_into().unwrap(),
             ))
+        }
+        StackType::Char => {
+            let start = offset * std::mem::size_of::<char>();
+
+            StackValue::Char(heap_element.data[start].try_into().unwrap())
         }
         _ => unreachable!(),
     }

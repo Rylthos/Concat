@@ -20,6 +20,7 @@ pub enum ParserError {
     ExpectedIntrinsic(PositionInfo, Intrinsic),
     ExpectedIntrinsicGot(PositionInfo, Intrinsic, Intrinsic),
     ExpectedTypeGot(PositionInfo, TokenType),
+    ExpectedPointerGot(PositionInfo, StackType),
     InvalidParseTree(),
     UnknownIdentifier(PositionInfo, String),
     InvalidNumberOfArguments(PositionInfo, usize, usize),
@@ -79,6 +80,9 @@ fn handle_parser_error(error: ParserError) {
         }
         ParserError::ExpectedTypeGot(pos, got) => {
             eprintln!("[PARSER] [{}] Expected type , got {}", pos, got);
+        }
+        ParserError::ExpectedPointerGot(pos, got) => {
+            eprintln!("[PARSER] [{}] Expected pointer , got {}", pos, got);
         }
         ParserError::InvalidParseTree() => {
             eprintln!("[PARSER]: Invalid parse tree");

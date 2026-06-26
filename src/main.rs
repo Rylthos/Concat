@@ -30,5 +30,5 @@ fn main() {
         }
     }
 
-    interpret(&parser.instructions)
+    interpret(&parser.instructions, &parser.default_heap)
 }

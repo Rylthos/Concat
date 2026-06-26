@@ -56,6 +56,7 @@ pub enum TokenType {
     Bool,
     Void,
     Char,
+    Const,
 
     StringValue(String),
     I32Value(i32),
@@ -150,6 +151,7 @@ impl fmt::Display for TokenType {
             TokenType::Bool => write!(f, "BOOL"),
             TokenType::Void => write!(f, "VOID"),
             TokenType::Char => write!(f, "CHAR"),
+            TokenType::Const => write!(f, "CONST"),
 
             TokenType::StringValue(s) => write!(f, "{:?}", s),
             TokenType::I32Value(i) => write!(f, "{}", i),

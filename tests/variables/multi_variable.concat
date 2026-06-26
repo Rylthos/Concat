@@ -1,4 +1,4 @@
-func print_value i32 string -> void {
+func print_value i32 char* const -> void {
   print print "\n" print
 }
 

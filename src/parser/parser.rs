@@ -1,15 +1,17 @@
 use crate::error::types::{ErrorType, ParserError};
 use crate::lexer::tokens::{Token, TokenType};
+use crate::parser::heap_value::HeapValue;
 use crate::parser::instructions::Instruction;
 use crate::parser::intrinsics::Intrinsic;
 use crate::parser::parse_tree::{FuncDecl, ParseTree};
 use crate::parser::stack_types::StackType;
-use crate::parser::stack_values::StackValue;
+use crate::parser::stack_values::{PointerValue, StackValue};
 use crate::parser::typing::Typing;
 
 use crate::config::config::Config;
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 pub struct Parser {
     config: Config,
@@ -20,6 +22,7 @@ pub struct Parser {
     functions: HashMap<String, FuncDecl>,
 
     pub instructions: Vec<Instruction>,
+    pub default_heap: Vec<HeapValue>,
 }
 
 impl Parser {
@@ -30,6 +33,7 @@ impl Parser {
             parse_tree: ParseTree::None,
             functions: HashMap::new(),
             instructions: Vec::new(),
+            default_heap: Vec::new(),
         }
     }
 
@@ -64,8 +68,8 @@ impl Parser {
         };
         list.append(&mut function_instructions);
 
-        self.instructions = match Self::generate_instructions(&list) {
-            Ok(i) => i,
+        (self.instructions, self.default_heap) = match Self::generate_instructions(&list) {
+            Ok(d) => d,
             Err(e) => return Err(ErrorType::Parser(e)),
         };
 
@@ -108,13 +112,15 @@ impl Parser {
             | TokenType::I32
             | TokenType::String
             | TokenType::Bool
-            | TokenType::Char => {
+            | TokenType::Char
+            | TokenType::Const => {
                 unreachable!("Unreachable: {:?}", token)
             }
-            TokenType::StringValue(s) => Intrinsic::StringValue(s.clone()),
             TokenType::I32Value(n) => Intrinsic::I32Value(n),
             TokenType::BoolValue(b) => Intrinsic::BoolValue(b),
             TokenType::CharValue(c) => Intrinsic::CharValue(c),
+            TokenType::StringValue(s) => Intrinsic::StringValue(s),
+            TokenType::StringValue(s) => Intrinsic::StringValue(s),
             TokenType::Identifier(s) => Intrinsic::Identifier(s),
             //
             TokenType::Add => Intrinsic::Add,
@@ -149,7 +155,11 @@ impl Parser {
         }
     }
 
-    fn convert_intrinsic(intrinsic: &Intrinsic, labels: &HashMap<String, usize>) -> Instruction {
+    fn convert_intrinsic(
+        intrinsic: &Intrinsic,
+        labels: &HashMap<String, usize>,
+        heap_mapping: &HashMap<String, usize>,
+    ) -> Instruction {
         match intrinsic {
             Intrinsic::Add => Instruction::Add,
             Intrinsic::Subtract => Instruction::Subtract,
@@ -188,15 +198,24 @@ impl Parser {
             Intrinsic::Call(_) => unreachable!(),
 
             Intrinsic::StackType(t) => Instruction::Push(StackValue::Type(t.clone())),
-            Intrinsic::StringValue(s) => Instruction::Push(StackValue::String(s.clone())),
             Intrinsic::I32Value(i) => Instruction::Push(StackValue::I32(*i)),
             Intrinsic::BoolValue(b) => Instruction::Push(StackValue::Bool(*b)),
             Intrinsic::CharValue(c) => Instruction::Push(StackValue::Char(*c)),
+            Intrinsic::StringValue(s) => {
+                let index = heap_mapping.get(s).unwrap();
+                Instruction::Push(StackValue::Pointer(PointerValue {
+                    allocation: *index,
+                    constant: true,
+                    offset: 0,
+                }))
+            }
 
             Intrinsic::FrameCreate => Instruction::FrameCreate,
             Intrinsic::FrameRemove => Instruction::FrameRemove,
 
-            Intrinsic::FuncLabelDecl(_, intrinsic) => Self::convert_intrinsic(intrinsic, labels),
+            Intrinsic::FuncLabelDecl(_, intrinsic) => {
+                Self::convert_intrinsic(intrinsic, labels, heap_mapping)
+            }
             Intrinsic::FuncLabelRef(func_name, intrinsic) => match **intrinsic {
                 Intrinsic::Call(_) => Instruction::Call(*labels.get(func_name).unwrap()),
                 _ => unreachable!(),
@@ -346,7 +365,9 @@ impl Parser {
         return Ok(parsed_expression);
     }
 
-    fn generate_instructions(list: &Vec<Intrinsic>) -> Result<Vec<Instruction>, ParserError> {
+    fn generate_instructions(
+        list: &Vec<Intrinsic>,
+    ) -> Result<(Vec<Instruction>, Vec<HeapValue>), ParserError> {
         let labels: HashMap<String, usize> = list
             .iter()
             .zip(0..)
@@ -360,13 +381,42 @@ impl Parser {
             })
             .collect();
 
+        let strings: HashSet<String> = list
+            .iter()
+            .filter(|instr| match instr {
+                Intrinsic::StringValue(_) => true,
+                _ => false,
+            })
+            .map(|instr| match instr {
+                Intrinsic::StringValue(s) => s,
+                _ => unreachable!(),
+            })
+            .cloned()
+            .collect();
+
+        let mut default_heap: Vec<HeapValue> = Vec::new();
+        let mut heap_mapping: HashMap<String, usize> = HashMap::new();
+
+        for s in strings.iter() {
+            heap_mapping.insert(s.to_string(), default_heap.len());
+
+            let mut modified_string = s.clone();
+            modified_string.push('\0');
+
+            default_heap.push(HeapValue {
+                r#type: StackType::Char,
+                len: modified_string.len(),
+                data: modified_string.into_boxed_str().into_boxed_bytes(),
+            });
+        }
+
         let mut instructions = Vec::new();
 
         for intrinsic in list.iter() {
-            instructions.push(Self::convert_intrinsic(intrinsic, &labels))
+            instructions.push(Self::convert_intrinsic(intrinsic, &labels, &heap_mapping))
         }
 
-        Ok(instructions)
+        Ok((instructions, default_heap))
     }
 
     fn parse_functions(&mut self) -> Result<Vec<Intrinsic>, ParserError> {
@@ -421,12 +471,30 @@ impl Parser {
         while let Some(&t) = tokens.peek() {
             let check_end = should_end_next;
             match &t.token_type {
-                TokenType::String | TokenType::I32 | TokenType::Bool => {
+                TokenType::I32 | TokenType::Bool | TokenType::Char => {
                     values.push(StackType::convert_type(&t.token_type));
                 }
                 TokenType::Asterisk => {
                     if let Some(top_value) = values.pop() {
-                        values.push(StackType::Ptr(Box::new(top_value)));
+                        values.push(StackType::Ptr(false, Box::new(top_value)));
+                    } else {
+                        return Err(ParserError::ExpectedTypeGot(
+                            t.position_info.clone(),
+                            t.token_type.clone(),
+                        ));
+                    }
+                }
+                TokenType::Const => {
+                    if let Some(top_value) = values.pop() {
+                        match top_value {
+                            StackType::Ptr(_, p) => values.push(StackType::Ptr(true, p)),
+                            _ => {
+                                return Err(ParserError::ExpectedPointerGot(
+                                    t.position_info.clone(),
+                                    top_value,
+                                ));
+                            }
+                        }
                     } else {
                         return Err(ParserError::ExpectedTypeGot(
                             t.position_info.clone(),
@@ -844,10 +912,13 @@ mod tests {
         let expected_tree = ParseTree::Region(vec![create_element(
             1,
             1,
-            Intrinsic::StackType(StackType::Ptr(Box::new(StackType::I32))),
+            Intrinsic::StackType(StackType::Ptr(false, Box::new(StackType::I32))),
         )]);
         let expected_instructions = vec![
-            Instruction::Push(StackValue::Type(StackType::Ptr(Box::new(StackType::I32)))),
+            Instruction::Push(StackValue::Type(StackType::Ptr(
+                false,
+                Box::new(StackType::I32),
+            ))),
             Instruction::Halt,
         ];
         test_non_function(input, expected_tree, expected_instructions);
