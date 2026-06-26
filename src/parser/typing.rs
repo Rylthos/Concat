@@ -142,6 +142,19 @@ impl Typing {
         Ok(())
     }
 
+    fn verify_types(type1: &StackType, type2: &StackType) -> bool {
+        match (type1, type2) {
+            (StackType::I32, StackType::I32) => true,
+            (StackType::Bool, StackType::Bool) => true,
+            (StackType::Char, StackType::Char) => true,
+            (StackType::Var(p1), StackType::Var(p2)) => Self::verify_types(&p1, &p2),
+            (StackType::Ptr(false, p1), StackType::Ptr(false, p2))
+            | (StackType::Ptr(false, p1), StackType::Ptr(true, p2))
+            | (StackType::Ptr(true, p1), StackType::Ptr(true, p2)) => Self::verify_types(&p1, &p2),
+            _ => false,
+        }
+    }
+
     fn verify_stack_equivalence(
         token: &Token,
         stack: &Vec<StackType>,
@@ -191,7 +204,8 @@ impl Typing {
     ) -> Result<(), ParserError> {
         for (i, t) in (0..).zip(required_types.iter()) {
             let index = stack.len() - 1 - i;
-            if stack.get(index).unwrap() != t {
+            if !Self::verify_types(stack.get(index).unwrap(), t) {
+                println!("{:?} {:?}", stack.get(index).unwrap(), t);
                 return Err(ParserError::InvalidType(
                     position.clone(),
                     t.clone(),
