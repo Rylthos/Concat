@@ -97,10 +97,7 @@ fn handle_parser_error(error: ParserError) {
             );
         }
         ParserError::InvalidType(pos, input, output) => {
-            eprintln!(
-                "[TYPE] [{}] Expected {} arguments, got {}",
-                pos, input, output
-            );
+            eprintln!("[TYPE] [{}] Expected {} type, got {}", pos, input, output);
         }
         ParserError::InvalidTypeSet(pos, inputs, output) => {
             eprintln!(

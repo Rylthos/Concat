@@ -1,10 +1,8 @@
 use crate::error::types::ParserError;
 use crate::lexer::tokens::{PositionInfo, Token};
-use crate::parser::instructions::Instruction;
 use crate::parser::intrinsics::Intrinsic;
 use crate::parser::parse_tree::{FuncDecl, ParseTree};
 use crate::parser::stack_types::StackType;
-use crate::parser::stack_values::StackValue;
 
 use std::collections::HashMap;
 use std::collections::HashSet;

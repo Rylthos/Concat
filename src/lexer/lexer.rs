@@ -304,7 +304,7 @@ impl Lexer {
                         if c2 == '"' {
                             break;
                         } else if c2 == '\\' {
-                            if let Some((col3, c3)) = chars.next() {
+                            if let Some((_, c3)) = chars.next() {
                                 s.push(Lexer::convert_slash_char(
                                     &PositionInfo::new(line_number, col2),
                                     c3,
