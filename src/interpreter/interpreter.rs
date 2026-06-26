@@ -325,6 +325,7 @@ pub fn interpret(instructions: &Vec<Instruction>, default_heap: &Vec<HeapValue>)
 
                 let elem_size = match r#type.clone() {
                     StackType::I32 => std::mem::size_of::<i32>(),
+                    StackType::Char => 1,
                     _ => unreachable!(),
                 };
 
@@ -424,6 +425,14 @@ fn store_value(value: &StackValue, heap_element: &mut HeapValue, offset: usize) 
             };
 
             heap_element.data[start..(start + 4)].copy_from_slice(&value.to_le_bytes());
+        }
+        StackType::Char => {
+            let value = match value {
+                StackValue::Char(c) => c,
+                _ => unreachable!(),
+            };
+
+            heap_element.data[offset] = *value as u8;
         }
         _ => unreachable!("{}", heap_element.r#type),
     }
