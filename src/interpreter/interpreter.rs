@@ -405,11 +405,7 @@ fn load_value(heap_element: &HeapValue, offset: usize) -> StackValue {
                 heap_element.data[start..(start + 4)].try_into().unwrap(),
             ))
         }
-        StackType::Char => {
-            let start = offset * std::mem::size_of::<char>();
-
-            StackValue::Char(heap_element.data[start].try_into().unwrap())
-        }
+        StackType::Char => StackValue::Char(heap_element.data[offset].try_into().unwrap()),
         _ => unreachable!(),
     }
 }
