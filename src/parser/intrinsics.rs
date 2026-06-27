@@ -100,7 +100,7 @@ impl fmt::Display for Intrinsic {
             Intrinsic::Ret => write!(f, "ret"),
             Intrinsic::Call(i) => write!(f, "call({i})"),
             Intrinsic::StackType(t) => write!(f, "{t}"),
-            Intrinsic::StringValue(s) => write!(f, "STRING {s}"),
+            Intrinsic::StringValue(s) => write!(f, "STRING {:?}", s),
             Intrinsic::I32Value(i) => write!(f, "I32 {i}"),
             Intrinsic::BoolValue(b) => write!(f, "BOOL {b}"),
             Intrinsic::CharValue(c) => write!(f, "CHAR '{c}'"),
