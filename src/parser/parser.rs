@@ -387,6 +387,10 @@ impl Parser {
 
         let strings: HashSet<String> = list
             .iter()
+            .map(|instr| match instr {
+                Intrinsic::FuncLabelDecl(_, i) => i,
+                _ => instr,
+            })
             .filter(|instr| match instr {
                 Intrinsic::StringValue(_) => true,
                 _ => false,
