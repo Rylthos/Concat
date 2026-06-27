@@ -257,28 +257,7 @@ impl Lexer {
                     let c: char;
                     chars.next();
 
-                    if let Some((col2, c2)) = chars.next() {
-                        if c2 == '\\' {
-                            if let Some((_, c3)) = chars.next() {
-                                c = Self::convert_slash_char(
-                                    &PositionInfo::new(line_number, col2),
-                                    c3,
-                                )?;
-                            } else {
-                                return Err(LexerError::ExpectedCharacter(PositionInfo::new(
-                                    line_number,
-                                    col2,
-                                )));
-                            }
-                        } else {
-                            c = c2;
-                        }
-                    } else {
-                        return Err(LexerError::ExpectedCharacter(PositionInfo::new(
-                            line_number,
-                            column_number,
-                        )));
-                    }
+                    c = Self::read_char(PositionInfo::new(line_number, column_number), &mut chars)?;
 
                     if let Some((_, c2)) = chars.next() {
                         if c2 == '\'' {
@@ -302,23 +281,16 @@ impl Lexer {
                     let mut s = String::new();
 
                     chars.next();
-                    while let Some((col2, c2)) = chars.next() {
-                        if c2 == '"' {
+                    while let Some((_, c2)) = chars.peek() {
+                        if *c2 == '"' {
+                            chars.next();
                             break;
-                        } else if c2 == '\\' {
-                            if let Some((_, c3)) = chars.next() {
-                                s.push(Lexer::convert_slash_char(
-                                    &PositionInfo::new(line_number, col2),
-                                    c3,
-                                )?);
-                            } else {
-                                return Err(LexerError::ExpectedCharacter(PositionInfo::new(
-                                    line_number,
-                                    col2,
-                                )));
-                            }
                         } else {
-                            s.push(c2);
+                            let c = Self::read_char(
+                                PositionInfo::new(line_number, column_number),
+                                &mut chars,
+                            )?;
+                            s.push(c);
                         }
                     }
 
@@ -396,18 +368,66 @@ impl Lexer {
         Ok(tokens)
     }
 
-    fn convert_slash_char(pos: &PositionInfo, c: char) -> Result<char, LexerError> {
-        let converted = match c {
-            'n' => '\n',
-            't' => '\t',
-            '\\' => '\\',
-            '\"' => '\"',
-            '\'' => '\'',
-            '0' => '\0',
-            _ => return Err(LexerError::InvalidCharacter(pos.clone(), c)),
-        };
-
-        Ok(converted)
+    fn read_char<I>(
+        base_position: PositionInfo,
+        characters: &mut std::iter::Peekable<I>,
+    ) -> Result<char, LexerError>
+    where
+        I: Iterator<Item = (usize, char)>,
+    {
+        if let Some((col1, char1)) = characters.next() {
+            match char1 {
+                '\\' => {
+                    if let Some((col2, char2)) = characters.next() {
+                        match char2 {
+                            '0' => return Ok('\0'),
+                            '\\' => return Ok('\\'),
+                            '\"' => return Ok('\"'),
+                            '\'' => return Ok('\''),
+                            'n' => return Ok('\n'),
+                            't' => return Ok('\t'),
+                            'x' => {
+                                if let Some((col3, char3)) = characters.next()
+                                    && let Some((col4, char4)) = characters.next()
+                                {
+                                    if char3.is_digit(16) && char4.is_digit(16) {
+                                        let value = char3.to_digit(16).unwrap() * 16
+                                            + char4.to_digit(16).unwrap();
+                                        return Ok(char::from_u32(value).unwrap());
+                                    } else {
+                                        return Err(LexerError::InvalidCharacter(
+                                            PositionInfo::new(base_position.line, col3),
+                                            char2,
+                                        ));
+                                    }
+                                } else {
+                                    return Err(LexerError::ExpectedCharacter(PositionInfo::new(
+                                        base_position.line,
+                                        col2,
+                                    )));
+                                }
+                            }
+                            _ => {
+                                return Err(LexerError::InvalidCharacter(
+                                    PositionInfo::new(base_position.line, col2),
+                                    char2,
+                                ));
+                            }
+                        }
+                    } else {
+                        return Err(LexerError::ExpectedCharacter(PositionInfo::new(
+                            base_position.line,
+                            col1,
+                        )));
+                    }
+                }
+                _ => {
+                    return Ok(char1.clone());
+                }
+            }
+        } else {
+            return Err(LexerError::ExpectedCharacter(base_position));
+        }
     }
 }
 
