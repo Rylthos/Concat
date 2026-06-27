@@ -1,0 +1,114 @@
+func print_bool bool -> void {
+  if { "##" print } else { "  " print }
+}
+
+func calculate_value i32 -> bool {
+  if dup 7 == {
+    false
+  } else if dup 6 == {
+    true
+  } else if dup 5 == {
+    true
+  } else if dup 4 == {
+    false
+  } else if dup 3 == {
+    true
+  } else if dup 2 == {
+    true
+  } else if dup 1 == {
+    true
+  } else {
+    false
+  }
+
+  swap drop
+}
+
+func next_generation bool bool bool -> bool {
+  if { 1 } else { 0 }
+  rot3
+  if { 2 } else { 0 }
+  rot3
+  if { 4 } else { 0 }
+  + +
+
+  calculate_value
+}
+
+func copy_buffer i32 bool*const bool* -> void {
+  assign length src dst {
+    0 while dup length @ < {
+      dup
+      src@ swap + @
+
+      over
+      dst@ swap + swap =
+
+      1+
+    }
+    drop
+  }
+}
+
+func calculate_iteration i32 bool* -> void {
+  assign length data {
+    bool length@ mem assign new_data {
+      length@ data@ new_data@ copy_buffer
+      1 while dup length @ 1- < {
+        dup 1- swap dup 1+ assign l c r {
+          new_data@ c@ +
+          data@ l@ + @
+          data@ c@ + @
+          data@ r@ + @
+          next_generation
+          =
+
+          c@
+        }
+
+        1+
+      }
+
+      length@ new_data@ data@ copy_buffer
+
+      drop
+    }
+  }
+}
+
+func reset_buffer i32 bool* -> void {
+  assign length data {
+    0 while dup length@ < {
+      data@ over + false =
+
+      1+
+    }
+    drop
+    data@ length@ 1- + true =
+  }
+}
+
+func print_data i32 bool* -> void {
+  assign length data {
+    0 while dup length@ < {
+      data@ over + @ print_bool
+      1+
+    }
+    drop
+    '\n' print
+  }
+}
+
+24 26 assign iterations length {
+  bool length@  mem assign data {
+    length@ data@ reset_buffer
+
+    length@ data@ print_data
+    0 while dup iterations@ < {
+      length@ data@ calculate_iteration
+      length@ data@ print_data
+
+      1+
+    }
+  }
+}
