@@ -8,5 +8,5 @@ fn input_echo() {
         .write_stdin("test\n")
         .assert()
         .success()
-        .stdout("test\n ");
+        .stdout(">>> test\n");
 }
