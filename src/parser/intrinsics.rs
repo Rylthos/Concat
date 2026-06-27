@@ -33,6 +33,8 @@ pub enum Intrinsic {
     Assign,
     Read,
 
+    Input,
+
     Lookup(usize, usize),
 
     Jump(isize),
@@ -89,6 +91,7 @@ impl fmt::Display for Intrinsic {
             Intrinsic::Not => write!(f, "!"),
             Intrinsic::Assign => write!(f, "="),
             Intrinsic::Read => write!(f, "@"),
+            Intrinsic::Input => write!(f, "input"),
             Intrinsic::Lookup(d, s) => write!(f, "lookup({d}, {s})"),
             Intrinsic::Jump(d) => write!(f, "jump({d})"),
             Intrinsic::CondJump(t, fa) => write!(f, "condJump({t}, {fa})"),

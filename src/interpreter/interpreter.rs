@@ -3,6 +3,8 @@ use crate::parser::instructions::Instruction;
 use crate::parser::stack_types::StackType;
 use crate::parser::stack_values::{PointerValue, StackValue};
 
+use std::io::{self, Write};
+
 pub fn interpret(instructions: &Vec<Instruction>, default_heap: &Vec<HeapValue>) {
     let mut stack: Vec<StackValue> = Vec::new();
     let mut heap: Vec<HeapValue> = default_heap.to_vec();
@@ -309,6 +311,34 @@ pub fn interpret(instructions: &Vec<Instruction>, default_heap: &Vec<HeapValue>)
                     }
                     _ => unreachable!(),
                 }
+            }
+            Instruction::Input => {
+                let mut buffer = String::new();
+                match io::stdout().flush() {
+                    Ok(_) => (),
+                    Err(_) => unreachable!(),
+                };
+
+                match io::stdin().read_line(&mut buffer) {
+                    Ok(_) => {
+                        let handle = heap.len();
+
+                        buffer.push('\0');
+
+                        heap.push(HeapValue {
+                            r#type: StackType::Char,
+                            len: buffer.len(),
+                            data: buffer.into_boxed_str().into_boxed_bytes(),
+                        });
+
+                        stack.push(StackValue::Pointer(PointerValue {
+                            allocation: handle,
+                            constant: false,
+                            offset: 0,
+                        }));
+                    }
+                    Err(_) => unreachable!(),
+                };
             }
             Instruction::Mem => {
                 let size = if let StackValue::I32(i) = stack.pop().unwrap() {

@@ -38,6 +38,8 @@ pub enum Instruction {
     Read,
     Assign,
 
+    Input,
+
     Mem,
 
     FrameCreate,

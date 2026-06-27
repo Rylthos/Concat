@@ -406,6 +406,10 @@ impl Typing {
                 stack.push(stack_type);
             }
 
+            Intrinsic::Input => {
+                stack.push(StackType::Ptr(false, Box::new(StackType::Char)));
+            }
+
             Intrinsic::Assign => {
                 Self::check_stack_length(&position, &stack, 2)?;
                 let write_value = stack.pop().unwrap();

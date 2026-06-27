@@ -147,6 +147,7 @@ impl Parser {
             //
             TokenType::Read => Intrinsic::Read,
             TokenType::Assign => Intrinsic::Assign,
+            TokenType::Input => Intrinsic::Input,
             //
             TokenType::Mem => Intrinsic::Mem,
             //
@@ -186,6 +187,8 @@ impl Parser {
 
             Intrinsic::Assign => Instruction::Assign,
             Intrinsic::Read => Instruction::Read,
+            Intrinsic::Input => Instruction::Input,
+
             Intrinsic::Lookup(d, s) => Instruction::Lookup(*d, *s),
 
             Intrinsic::Jump(j) => Instruction::Jump(*j),

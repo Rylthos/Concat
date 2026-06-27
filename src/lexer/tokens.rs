@@ -46,6 +46,8 @@ pub enum TokenType {
     Assign,
     Read,
 
+    Input,
+
     //
     Identifier(String),
 
@@ -142,6 +144,8 @@ impl fmt::Display for TokenType {
             TokenType::Assignment => write!(f, "assign"),
             TokenType::Assign => write!(f, "="),
             TokenType::Read => write!(f, "@"),
+
+            TokenType::Input => write!(f, "input"),
 
             TokenType::Mem => write!(f, "mem"),
 

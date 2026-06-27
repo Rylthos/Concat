@@ -82,6 +82,8 @@ impl Lexer {
             ("else".to_string(), TokenType::Else),
             ("while".to_string(), TokenType::While),
             //
+            ("input".to_string(), TokenType::Input),
+            //
             ("func".to_string(), TokenType::Func),
             //
             ("assign".to_string(), TokenType::Assignment),
