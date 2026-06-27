@@ -170,3 +170,38 @@ fn example_rule110() {
 "#,
         );
 }
+
+#[test]
+fn example_calculator() {
+    Command::cargo_bin("concat")
+        .unwrap()
+        .arg("examples/simple_calculator.concat")
+        .write_stdin("123\n456\n+\n")
+        .assert()
+        .success()
+        .stdout("Value 1:   Value 2:   Operation: Output:    579\n");
+
+    Command::cargo_bin("concat")
+        .unwrap()
+        .arg("examples/simple_calculator.concat")
+        .write_stdin("456\n123\n-\n")
+        .assert()
+        .success()
+        .stdout("Value 1:   Value 2:   Operation: Output:    333\n");
+
+    Command::cargo_bin("concat")
+        .unwrap()
+        .arg("examples/simple_calculator.concat")
+        .write_stdin("456\n2\n*\n")
+        .assert()
+        .success()
+        .stdout("Value 1:   Value 2:   Operation: Output:    912\n");
+
+    Command::cargo_bin("concat")
+        .unwrap()
+        .arg("examples/simple_calculator.concat")
+        .write_stdin("456\n2\n/\n")
+        .assert()
+        .success()
+        .stdout("Value 1:   Value 2:   Operation: Output:    228\n");
+}
