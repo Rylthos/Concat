@@ -1,0 +1,81 @@
+func digit_len i32 -> i32 {
+  if dup 0 == {
+    drop 1
+  } else {
+    0 while over 0 > {
+      1 +
+      swap 10 /
+      swap
+    }
+    swap
+    drop
+  }
+}
+
+func print_padded i32 -> void {
+  dup digit_len 3 swap -
+  while dup 0 > {
+    ' ' print
+    1 -
+  }
+  drop
+  print
+}
+
+func foreground void -> char*const {
+  "\x1b[38;5;"
+}
+
+func background void -> char*const {
+  "\x1b[48;5;"
+}
+
+func reset void -> char*const {
+  "\x1b[1;0m"
+}
+
+func set_colour char*const i32 -> void {
+  swap print print 'm' print
+}
+
+func print_colour char*const i32 -> void {
+  dup rot3
+  set_colour print_padded
+}
+
+"Foreground\n" print
+0 while dup 255 <= {
+  foreground over print_colour ' ' print
+  if dup 1 + 16 % 0 == {
+    reset print "\n" print
+  }
+  1 +
+}
+drop
+
+'\n' print
+"Background\n" print
+0 while dup 255 <= {
+  background over print_colour ' ' print
+  if dup 1 + 16 % 0 == {
+    reset print "\n" print
+  }
+  1 +
+}
+drop
+
+'\n' print
+"Inverse\n" print
+0 while dup 255 <= {
+
+  dup background swap set_colour
+  dup 255 swap - foreground swap set_colour
+
+  dup print_padded
+
+  if dup 1 + 16 % 0 == {
+    reset print "\n" print
+  }
+  1 +
+}
+drop
