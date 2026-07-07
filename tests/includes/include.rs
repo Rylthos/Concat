@@ -29,3 +29,14 @@ fn include_dir() {
         .success()
         .stdout("Hello, World!\nHello, World, Again!\n!dlroW ,olleH\n3\n");
 }
+
+#[test]
+fn include_circular() {
+    Command::cargo_bin("concat")
+        .unwrap()
+        .arg("tests/includes/circular_include1.concat")
+        .assert()
+        .success()
+        .stdout("")
+        .stderr("[LEXER] Previously included file \"circular_include1.concat\"\n");
+}

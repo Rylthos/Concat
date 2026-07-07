@@ -5,6 +5,7 @@ use crate::config::config::Config;
 use crate::error::types::{ErrorType, LexerError};
 use crate::input::read_file_path;
 
+use std::collections::HashSet;
 use std::path::{Component, PathBuf};
 
 use tokens::{Token, TokenType};
@@ -12,6 +13,8 @@ use tokens::{Token, TokenType};
 pub struct Lexer {
     config: Config,
     main_file: PathBuf,
+
+    processed_files: HashSet<String>,
 
     pub tokens: Vec<Token>,
 }
@@ -21,6 +24,7 @@ impl Lexer {
         Lexer {
             config,
             main_file: main_file,
+            processed_files: HashSet::new(),
             tokens: Vec::new(),
         }
     }
@@ -51,17 +55,25 @@ impl Lexer {
         return Ok(());
     }
 
-    pub fn scan_file(&self, file: std::path::PathBuf) -> Result<Vec<Token>, LexerError> {
+    pub fn scan_file(&mut self, file: std::path::PathBuf) -> Result<Vec<Token>, LexerError> {
         if !file.is_file() {
             return Err(LexerError::InvalidFile(self.get_filename(&file)));
         }
+
+        let filename = self.get_filename(&file);
+
+        if self.processed_files.contains(&filename) {
+            return Err(LexerError::CircularInclude(filename));
+        }
+
+        self.processed_files.insert(self.get_filename(&file));
 
         let input = read_file_path(&file);
         self.scan_string(file, &input)
     }
 
     pub fn scan_string(
-        &self,
+        &mut self,
         file: std::path::PathBuf,
         input: &str,
     ) -> Result<Vec<Token>, LexerError> {
@@ -438,7 +450,7 @@ impl Lexer {
     }
 
     fn read_file(
-        &self,
+        &mut self,
         current_file: &PathBuf,
         pos: &PositionInfo,
         previous_token: Option<&Token>,
@@ -578,7 +590,7 @@ mod tests {
     use super::*;
 
     fn test_input(input: &str, expected_output: &Vec<Token>) {
-        let lexer = Lexer::init(Config::blank(), PathBuf::new());
+        let mut lexer = Lexer::init(Config::blank(), PathBuf::new());
         let result = lexer.scan_string(PathBuf::new(), input);
         match result {
             Ok(t) => assert_eq!(format!("{:?}", expected_output), format!("{:?}", t)),

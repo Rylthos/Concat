@@ -13,6 +13,7 @@ pub enum LexerError {
     InvalidFile(String),
     ExpectedFilePath(PositionInfo),
     InvalidInclude(PositionInfo, Token),
+    CircularInclude(String),
 }
 
 #[derive(Debug)]
@@ -66,6 +67,9 @@ fn handle_lexer_error(error: LexerError) {
                 "[LEXER] [{}] Expected file path, got {}:{}",
                 pos, token.token_type, token.string
             );
+        }
+        LexerError::CircularInclude(include) => {
+            eprintln!("[LEXER] Previously included file \"{}\"", include)
         }
     }
 }
