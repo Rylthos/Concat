@@ -35,9 +35,7 @@ impl Lexer {
             }
         };
 
-        let input = read_file_path(&self.main_file);
-
-        self.tokens = match self.scan_tokens(self.main_file.clone(), &input) {
+        self.tokens = match self.scan_file(self.main_file.clone()) {
             Ok(t) => t,
             Err(err) => return Err(ErrorType::Lexer(err)),
         };
@@ -53,7 +51,16 @@ impl Lexer {
         return Ok(());
     }
 
-    pub fn scan_tokens(
+    pub fn scan_file(&self, file: std::path::PathBuf) -> Result<Vec<Token>, LexerError> {
+        if !file.is_file() {
+            return Err(LexerError::InvalidFile(self.get_filename(&file)));
+        }
+
+        let input = read_file_path(&file);
+        self.scan_string(file, &input)
+    }
+
+    pub fn scan_string(
         &self,
         file: std::path::PathBuf,
         input: &str,
@@ -79,6 +86,8 @@ impl Lexer {
         let mut line_number: usize = 1;
 
         let keywords = HashMap::from([
+            ("include".to_string(), TokenType::Include),
+            //
             ("true".to_string(), TokenType::BoolValue(true)),
             ("false".to_string(), TokenType::BoolValue(false)),
             //
@@ -383,13 +392,23 @@ impl Lexer {
                     }
 
                     match keywords.get(&s) {
-                        Some(t) => tokens.push(Token::new(
-                            t.clone(),
-                            line_number,
-                            column_number,
-                            &self.get_filename(&file),
-                            &s,
-                        )),
+                        Some(t) => match t {
+                            TokenType::Include => tokens.append(&mut self.read_file(
+                                &PositionInfo::new(
+                                    line_number,
+                                    column_number,
+                                    &self.get_filename(&file),
+                                ),
+                                tokens.last(),
+                            )?),
+                            _ => tokens.push(Token::new(
+                                t.clone(),
+                                line_number,
+                                column_number,
+                                &self.get_filename(&file),
+                                &s,
+                            )),
+                        },
                         None => {
                             tokens.push(Token::new(
                                 TokenType::Identifier(s.clone()),
@@ -415,6 +434,35 @@ impl Lexer {
         }
 
         Ok(tokens)
+    }
+
+    fn read_file(
+        &self,
+        pos: &PositionInfo,
+        previous_token: Option<&Token>,
+    ) -> Result<Vec<Token>, LexerError> {
+        let token = match previous_token {
+            Some(s) => s,
+            None => return Err(LexerError::ExpectedFilePath(pos.clone())),
+        };
+
+        let filepath = match &token.token_type {
+            TokenType::StringValue(s) => s,
+            _ => return Err(LexerError::InvalidInclude(pos.clone(), token.clone())),
+        };
+
+        let mut path = self.main_file.clone();
+        path.pop();
+        path.push(filepath);
+
+        let mut path = match path.canonicalize() {
+            Ok(f) => f,
+            Err(_) => {
+                return Err(LexerError::InvalidFile(filepath.to_string()));
+            }
+        };
+
+        Ok(self.scan_file(path)?)
     }
 
     fn read_char<I>(
@@ -529,7 +577,7 @@ mod tests {
 
     fn test_input(input: &str, expected_output: &Vec<Token>) {
         let lexer = Lexer::init(Config::blank(), PathBuf::new());
-        let result = lexer.scan_tokens(PathBuf::new(), input);
+        let result = lexer.scan_string(PathBuf::new(), input);
         match result {
             Ok(t) => assert_eq!(format!("{:?}", expected_output), format!("{:?}", t)),
             Err(e) => assert!(false, "{:?}", e),
@@ -740,7 +788,6 @@ mod tests {
 
     #[test]
     fn filename() {
-        let path = PathBuf::new();
         let lexer = Lexer::init(Config::blank(), PathBuf::from("test/test/test.concat"));
 
         assert_eq!(

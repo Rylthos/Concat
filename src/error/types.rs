@@ -1,4 +1,4 @@
-use crate::lexer::tokens::{PositionInfo, TokenType};
+use crate::lexer::tokens::{PositionInfo, Token, TokenType};
 use crate::parser::intrinsics::Intrinsic;
 use crate::parser::stack_types::StackType;
 
@@ -11,6 +11,8 @@ pub enum LexerError {
     ExpectedCharacterGot(PositionInfo, char, char),
     InvalidCharacter(PositionInfo, char),
     InvalidFile(String),
+    ExpectedFilePath(PositionInfo),
+    InvalidInclude(PositionInfo, Token),
 }
 
 #[derive(Debug)]
@@ -55,6 +57,15 @@ fn handle_lexer_error(error: LexerError) {
         }
         LexerError::InvalidFile(file) => {
             eprintln!("[LEXER] Invalid file \"{}\"", file);
+        }
+        LexerError::ExpectedFilePath(pos) => {
+            eprintln!("[LEXER] [{}] Expected file path", pos);
+        }
+        LexerError::InvalidInclude(pos, token) => {
+            eprintln!(
+                "[LEXER] [{}] Expected file path, got {}:{}",
+                pos, token.token_type, token.string
+            );
         }
     }
 }

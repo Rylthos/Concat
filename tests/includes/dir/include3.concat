@@ -1,0 +1,3 @@
+func print_hello_rev void -> void {
+  "!dlroW ,olleH\n" print
+}

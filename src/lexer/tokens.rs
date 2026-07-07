@@ -5,6 +5,8 @@ pub enum TokenType {
     LeftBrace,
     RightBrace,
 
+    Include,
+
     Asterisk,
 
     // Arithmetic Operations
@@ -140,6 +142,7 @@ impl fmt::Display for TokenType {
         match self {
             TokenType::LeftBrace => write!(f, "{{"),
             TokenType::RightBrace => write!(f, "}}"),
+            TokenType::Include => write!(f, "Include"),
             TokenType::Add => write!(f, "+"),
             TokenType::Subtract => write!(f, "-"),
             TokenType::Asterisk => write!(f, "*"),

@@ -102,6 +102,7 @@ impl Parser {
         match token.token_type.clone() {
             TokenType::LeftBrace
             | TokenType::RightBrace
+            | TokenType::Include
             | TokenType::If
             | TokenType::Else
             | TokenType::While

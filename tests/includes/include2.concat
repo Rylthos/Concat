@@ -1,0 +1,3 @@
+func print_hello2 void -> void {
+  "Hello, World, Again!\n" print
+}
