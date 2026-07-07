@@ -7,7 +7,7 @@ syn keyword concatConditional if else
 syn keyword concatLoop while
 syn keyword concatType char bool i32 void const
 syn keyword concatBoolean true false
-syn keyword concatKeyword rot3 dup drop over swap print cast func assign
+syn keyword concatKeyword rot3 dup drop over swap print cast func assign include
 
 hi def link concatLineComment Comment
 hi def link concatLoop        Repeat
