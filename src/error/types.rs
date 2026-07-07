@@ -10,6 +10,7 @@ pub enum LexerError {
     ExpectedCharacter(PositionInfo),
     ExpectedCharacterGot(PositionInfo, char, char),
     InvalidCharacter(PositionInfo, char),
+    InvalidFile(String),
 }
 
 #[derive(Debug)]
@@ -51,6 +52,9 @@ fn handle_lexer_error(error: LexerError) {
         }
         LexerError::InvalidCharacter(pos, c) => {
             eprintln!("[LEXER] [{}] Invalid character {}", pos, c);
+        }
+        LexerError::InvalidFile(file) => {
+            eprintln!("[LEXER] Invalid file \"{}\"", file);
         }
     }
 }

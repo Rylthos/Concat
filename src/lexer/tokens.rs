@@ -73,6 +73,7 @@ pub enum TokenType {
 pub struct PositionInfo {
     pub line: usize,
     pub column: usize,
+    pub file: String,
 }
 
 #[derive(Debug, Clone)]
@@ -83,18 +84,44 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn new(token_type: TokenType, line: usize, column: usize, string: &str) -> Token {
+    pub fn new(
+        token_type: TokenType,
+        line: usize,
+        column: usize,
+        file: &str,
+        string: &str,
+    ) -> Token {
         Token {
             token_type,
             string: string.to_string(),
-            position_info: PositionInfo { line, column },
+            position_info: PositionInfo {
+                line,
+                column,
+                file: file.to_string(),
+            },
+        }
+    }
+
+    pub fn new_no_file(token_type: TokenType, line: usize, column: usize, string: &str) -> Token {
+        Token {
+            token_type,
+            string: string.to_string(),
+            position_info: PositionInfo {
+                line,
+                column,
+                file: "".to_string(),
+            },
         }
     }
 }
 
 impl PositionInfo {
-    pub fn new(line: usize, column: usize) -> PositionInfo {
-        PositionInfo { line, column }
+    pub fn new(line: usize, column: usize, file: &str) -> PositionInfo {
+        PositionInfo {
+            line,
+            column,
+            file: file.to_string(),
+        }
     }
 }
 
@@ -171,6 +198,6 @@ impl fmt::Display for TokenType {
 
 impl fmt::Display for PositionInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:03}:{:03}", self.line, self.column)
+        write!(f, "[{}] {:03}:{:03}", self.file, self.line, self.column)
     }
 }

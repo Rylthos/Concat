@@ -657,19 +657,26 @@ mod tests {
     }
 
     fn create_element(line: usize, column: usize, intrinsic: Intrinsic) -> ParseTree {
-        ParseTree::Element(PositionInfo { line, column }, intrinsic)
+        ParseTree::Element(
+            PositionInfo {
+                line,
+                column,
+                file: "".to_string(),
+            },
+            intrinsic,
+        )
     }
 
     #[test]
     fn parse_tree_normal() {
         let input = vec![
-            Token::new(TokenType::I32Value(0), 1, 1, "0"),
-            Token::new(TokenType::I32Value(1), 1, 3, "1"),
-            Token::new(TokenType::Add, 1, 4, "+"),
-            Token::new(TokenType::I32Value(2), 1, 5, "2"),
-            Token::new(TokenType::I32Value(1), 1, 7, "1"),
-            Token::new(TokenType::Subtract, 1, 8, "-"),
-            Token::new(TokenType::Asterisk, 1, 9, "*"),
+            Token::new(TokenType::I32Value(0), 1, 1, "", "0"),
+            Token::new(TokenType::I32Value(1), 1, 3, "", "1"),
+            Token::new(TokenType::Add, 1, 4, "", "+"),
+            Token::new(TokenType::I32Value(2), 1, 5, "", "2"),
+            Token::new(TokenType::I32Value(1), 1, 7, "", "1"),
+            Token::new(TokenType::Subtract, 1, 8, "", "-"),
+            Token::new(TokenType::Asterisk, 1, 9, "", "*"),
         ];
         let expected_tree = ParseTree::Region(vec![
             create_element(1, 1, Intrinsic::I32Value(0)),
@@ -696,18 +703,18 @@ mod tests {
     #[test]
     fn parse_tree_if() {
         let input = vec![
-            Token::new(TokenType::I32Value(0), 1, 1, ""),
-            Token::new(TokenType::If, 1, 1, ""),
-            Token::new(TokenType::I32Value(10), 1, 1, ""),
-            Token::new(TokenType::Greater, 1, 1, ""),
-            Token::new(TokenType::LeftBrace, 1, 1, ""),
-            Token::new(TokenType::RightBrace, 1, 1, ""),
+            Token::new(TokenType::I32Value(0), 1, 1, "", ""),
+            Token::new(TokenType::If, 1, 1, "", ""),
+            Token::new(TokenType::I32Value(10), 1, 1, "", ""),
+            Token::new(TokenType::Greater, 1, 1, "", ""),
+            Token::new(TokenType::LeftBrace, 1, 1, "", ""),
+            Token::new(TokenType::RightBrace, 1, 1, "", ""),
         ];
         let expected_tree = ParseTree::Region(vec![
             create_element(1, 1, Intrinsic::I32Value(0)),
             ParseTree::If(
                 vec![(
-                    Token::new(TokenType::If, 1, 1, ""),
+                    Token::new(TokenType::If, 1, 1, "", ""),
                     Box::new(ParseTree::Region(vec![
                         create_element(1, 1, Intrinsic::I32Value(10)),
                         create_element(1, 1, Intrinsic::Greater),
@@ -715,7 +722,7 @@ mod tests {
                     Box::new(ParseTree::Region(vec![])),
                 )],
                 (
-                    Token::new(TokenType::If, 1, 1, ""),
+                    Token::new(TokenType::If, 1, 1, "", ""),
                     Box::new(ParseTree::Region(vec![])),
                 ),
             ),
@@ -733,23 +740,23 @@ mod tests {
     #[test]
     fn parse_tree_if_else() {
         let input = vec![
-            Token::new(TokenType::I32Value(0), 1, 1, ""),
-            Token::new(TokenType::If, 1, 1, ""),
-            Token::new(TokenType::I32Value(10), 1, 1, ""),
-            Token::new(TokenType::Greater, 1, 1, ""),
-            Token::new(TokenType::LeftBrace, 1, 1, ""),
-            Token::new(TokenType::I32Value(2), 1, 1, ""),
-            Token::new(TokenType::RightBrace, 1, 1, ""),
-            Token::new(TokenType::Else, 1, 1, ""),
-            Token::new(TokenType::LeftBrace, 1, 1, ""),
-            Token::new(TokenType::I32Value(3), 1, 1, ""),
-            Token::new(TokenType::RightBrace, 1, 1, ""),
+            Token::new(TokenType::I32Value(0), 1, 1, "", ""),
+            Token::new(TokenType::If, 1, 1, "", ""),
+            Token::new(TokenType::I32Value(10), 1, 1, "", ""),
+            Token::new(TokenType::Greater, 1, 1, "", ""),
+            Token::new(TokenType::LeftBrace, 1, 1, "", ""),
+            Token::new(TokenType::I32Value(2), 1, 1, "", ""),
+            Token::new(TokenType::RightBrace, 1, 1, "", ""),
+            Token::new(TokenType::Else, 1, 1, "", ""),
+            Token::new(TokenType::LeftBrace, 1, 1, "", ""),
+            Token::new(TokenType::I32Value(3), 1, 1, "", ""),
+            Token::new(TokenType::RightBrace, 1, 1, "", ""),
         ];
         let expected_tree = ParseTree::Region(vec![
             create_element(1, 1, Intrinsic::I32Value(0)),
             ParseTree::If(
                 vec![(
-                    Token::new(TokenType::If, 1, 1, ""),
+                    Token::new(TokenType::If, 1, 1, "", ""),
                     Box::new(ParseTree::Region(vec![
                         create_element(1, 1, Intrinsic::I32Value(10)),
                         create_element(1, 1, Intrinsic::Greater),
@@ -761,7 +768,7 @@ mod tests {
                     )])),
                 )],
                 (
-                    Token::new(TokenType::Else, 1, 1, ""),
+                    Token::new(TokenType::Else, 1, 1, "", ""),
                     Box::new(ParseTree::Region(vec![create_element(
                         1,
                         1,
@@ -786,34 +793,34 @@ mod tests {
     #[test]
     fn parse_tree_if_elseif_else() {
         let input = vec![
-            Token::new(TokenType::I32Value(0), 1, 1, ""),
-            Token::new(TokenType::If, 1, 1, ""),
-            Token::new(TokenType::Duplicate, 1, 1, ""),
-            Token::new(TokenType::I32Value(10), 1, 1, ""),
-            Token::new(TokenType::Greater, 1, 1, ""),
-            Token::new(TokenType::LeftBrace, 1, 1, ""),
-            Token::new(TokenType::I32Value(2), 1, 1, ""),
-            Token::new(TokenType::RightBrace, 1, 1, ""),
-            Token::new(TokenType::Else, 1, 1, ""),
-            Token::new(TokenType::If, 1, 1, ""),
-            Token::new(TokenType::Duplicate, 1, 1, ""),
-            Token::new(TokenType::I32Value(20), 1, 1, ""),
-            Token::new(TokenType::Greater, 1, 1, ""),
-            Token::new(TokenType::LeftBrace, 1, 1, ""),
-            Token::new(TokenType::I32Value(3), 1, 1, ""),
-            Token::new(TokenType::RightBrace, 1, 1, ""),
-            Token::new(TokenType::Else, 1, 1, ""),
-            Token::new(TokenType::LeftBrace, 1, 1, ""),
-            // Token::new(TokenType::Drop, 1, 1, ""),
-            Token::new(TokenType::I32Value(4), 1, 1, ""),
-            Token::new(TokenType::RightBrace, 1, 1, ""),
+            Token::new(TokenType::I32Value(0), 1, 1, "", ""),
+            Token::new(TokenType::If, 1, 1, "", ""),
+            Token::new(TokenType::Duplicate, 1, 1, "", ""),
+            Token::new(TokenType::I32Value(10), 1, 1, "", ""),
+            Token::new(TokenType::Greater, 1, 1, "", ""),
+            Token::new(TokenType::LeftBrace, 1, 1, "", ""),
+            Token::new(TokenType::I32Value(2), 1, 1, "", ""),
+            Token::new(TokenType::RightBrace, 1, 1, "", ""),
+            Token::new(TokenType::Else, 1, 1, "", ""),
+            Token::new(TokenType::If, 1, 1, "", ""),
+            Token::new(TokenType::Duplicate, 1, 1, "", ""),
+            Token::new(TokenType::I32Value(20), 1, 1, "", ""),
+            Token::new(TokenType::Greater, 1, 1, "", ""),
+            Token::new(TokenType::LeftBrace, 1, 1, "", ""),
+            Token::new(TokenType::I32Value(3), 1, 1, "", ""),
+            Token::new(TokenType::RightBrace, 1, 1, "", ""),
+            Token::new(TokenType::Else, 1, 1, "", ""),
+            Token::new(TokenType::LeftBrace, 1, 1, "", ""),
+            // Token::new(TokenType::Drop, 1, 1, "", ""),
+            Token::new(TokenType::I32Value(4), 1, 1, "", ""),
+            Token::new(TokenType::RightBrace, 1, 1, "", ""),
         ];
         let expected_tree = ParseTree::Region(vec![
             create_element(1, 1, Intrinsic::I32Value(0)),
             ParseTree::If(
                 vec![
                     (
-                        Token::new(TokenType::If, 1, 1, ""),
+                        Token::new(TokenType::If, 1, 1, "", ""),
                         Box::new(ParseTree::Region(vec![
                             create_element(1, 1, Intrinsic::Duplicate),
                             create_element(1, 1, Intrinsic::I32Value(10)),
@@ -826,7 +833,7 @@ mod tests {
                         )])),
                     ),
                     (
-                        Token::new(TokenType::If, 1, 1, ""),
+                        Token::new(TokenType::If, 1, 1, "", ""),
                         Box::new(ParseTree::Region(vec![
                             create_element(1, 1, Intrinsic::Duplicate),
                             create_element(1, 1, Intrinsic::I32Value(20)),
@@ -840,7 +847,7 @@ mod tests {
                     ),
                 ],
                 (
-                    Token::new(TokenType::Else, 1, 1, ""),
+                    Token::new(TokenType::Else, 1, 1, "", ""),
                     Box::new(ParseTree::Region(vec![create_element(
                         1,
                         1,
@@ -872,20 +879,20 @@ mod tests {
     #[test]
     fn parse_tree_while() {
         let input = vec![
-            Token::new(TokenType::I32Value(0), 1, 1, ""),
-            Token::new(TokenType::While, 1, 1, ""),
-            Token::new(TokenType::Duplicate, 1, 1, ""),
-            Token::new(TokenType::I32Value(10), 1, 1, ""),
-            Token::new(TokenType::Less, 1, 1, ""),
-            Token::new(TokenType::LeftBrace, 1, 1, ""),
-            Token::new(TokenType::I32Value(1), 1, 1, ""),
-            Token::new(TokenType::Add, 1, 1, ""),
-            Token::new(TokenType::RightBrace, 1, 1, ""),
+            Token::new(TokenType::I32Value(0), 1, 1, "", ""),
+            Token::new(TokenType::While, 1, 1, "", ""),
+            Token::new(TokenType::Duplicate, 1, 1, "", ""),
+            Token::new(TokenType::I32Value(10), 1, 1, "", ""),
+            Token::new(TokenType::Less, 1, 1, "", ""),
+            Token::new(TokenType::LeftBrace, 1, 1, "", ""),
+            Token::new(TokenType::I32Value(1), 1, 1, "", ""),
+            Token::new(TokenType::Add, 1, 1, "", ""),
+            Token::new(TokenType::RightBrace, 1, 1, "", ""),
         ];
         let expected_tree = ParseTree::Region(vec![
             create_element(1, 1, Intrinsic::I32Value(0)),
             ParseTree::While(
-                Token::new(TokenType::While, 1, 1, ""),
+                Token::new(TokenType::While, 1, 1, "", ""),
                 Box::new(ParseTree::Region(vec![
                     create_element(1, 1, Intrinsic::Duplicate),
                     create_element(1, 1, Intrinsic::I32Value(10)),
@@ -914,8 +921,8 @@ mod tests {
     #[test]
     fn parse_ptr() {
         let input = vec![
-            Token::new(TokenType::I32, 1, 1, "i32"),
-            Token::new(TokenType::Asterisk, 1, 2, "*"),
+            Token::new(TokenType::I32, 1, 1, "", "i32"),
+            Token::new(TokenType::Asterisk, 1, 2, "", "*"),
         ];
         let expected_tree = ParseTree::Region(vec![create_element(
             1,
@@ -935,25 +942,29 @@ mod tests {
     #[test]
     fn parse_tree_function() {
         let input = vec![
-            Token::new(TokenType::Func, 1, 1, ""),
-            Token::new(TokenType::Identifier("test".to_string()), 1, 1, ""),
-            Token::new(TokenType::I32, 1, 1, ""),
-            Token::new(TokenType::I32, 1, 1, ""),
-            Token::new(TokenType::Arrow, 1, 1, ""),
-            Token::new(TokenType::I32, 1, 1, ""),
-            Token::new(TokenType::LeftBrace, 1, 1, ""),
-            Token::new(TokenType::Add, 1, 1, ""),
-            Token::new(TokenType::RightBrace, 1, 1, ""),
-            Token::new(TokenType::I32Value(0), 1, 1, ""),
-            Token::new(TokenType::I32Value(1), 1, 1, ""),
-            Token::new(TokenType::Identifier("test".to_string()), 1, 1, ""),
-            Token::new(TokenType::Print, 1, 1, ""),
+            Token::new(TokenType::Func, 1, 1, "", ""),
+            Token::new(TokenType::Identifier("test".to_string()), 1, 1, "", ""),
+            Token::new(TokenType::I32, 1, 1, "", ""),
+            Token::new(TokenType::I32, 1, 1, "", ""),
+            Token::new(TokenType::Arrow, 1, 1, "", ""),
+            Token::new(TokenType::I32, 1, 1, "", ""),
+            Token::new(TokenType::LeftBrace, 1, 1, "", ""),
+            Token::new(TokenType::Add, 1, 1, "", ""),
+            Token::new(TokenType::RightBrace, 1, 1, "", ""),
+            Token::new(TokenType::I32Value(0), 1, 1, "", ""),
+            Token::new(TokenType::I32Value(1), 1, 1, "", ""),
+            Token::new(TokenType::Identifier("test".to_string()), 1, 1, "", ""),
+            Token::new(TokenType::Print, 1, 1, "", ""),
         ];
 
         let expected_function = HashMap::from([(
             "test".to_string(),
             FuncDecl {
-                position_info: PositionInfo { line: 1, column: 1 },
+                position_info: PositionInfo {
+                    line: 1,
+                    column: 1,
+                    file: "".to_string(),
+                },
                 name: "test".to_string(),
                 inputs: vec![StackType::I32, StackType::I32],
                 outputs: vec![StackType::I32],
