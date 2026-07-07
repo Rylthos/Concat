@@ -1,7 +1,9 @@
 "include1.concat" include
 "include2.concat" include
 "dir/include3.concat" include
+"dir/include4.concat" include
 
 print_hello
 print_hello2
 print_hello_rev
+2 add1 print "\n" print

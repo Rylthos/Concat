@@ -394,6 +394,7 @@ impl Lexer {
                     match keywords.get(&s) {
                         Some(t) => match t {
                             TokenType::Include => tokens.append(&mut self.read_file(
+                                &file,
                                 &PositionInfo::new(
                                     line_number,
                                     column_number,
@@ -438,6 +439,7 @@ impl Lexer {
 
     fn read_file(
         &self,
+        current_file: &PathBuf,
         pos: &PositionInfo,
         previous_token: Option<&Token>,
     ) -> Result<Vec<Token>, LexerError> {
@@ -451,11 +453,11 @@ impl Lexer {
             _ => return Err(LexerError::InvalidInclude(pos.clone(), token.clone())),
         };
 
-        let mut path = self.main_file.clone();
+        let mut path = current_file.clone();
         path.pop();
         path.push(filepath);
 
-        let mut path = match path.canonicalize() {
+        path = match path.canonicalize() {
             Ok(f) => f,
             Err(_) => {
                 return Err(LexerError::InvalidFile(filepath.to_string()));

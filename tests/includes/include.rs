@@ -27,5 +27,5 @@ fn include_dir() {
         .arg("tests/includes/dir_include.concat")
         .assert()
         .success()
-        .stdout("Hello, World!\nHello, World, Again!\n!dlroW ,olleH\n");
+        .stdout("Hello, World!\nHello, World, Again!\n!dlroW ,olleH\n3\n");
 }
