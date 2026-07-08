@@ -106,6 +106,7 @@ impl Typing {
             ParseTree::FuncDecl(func) => {
                 Self::type_check_function(func, functions, variable_lookup)?;
             }
+            ParseTree::RecordDecl(_) => {}
         };
         Ok(())
     }

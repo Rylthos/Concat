@@ -3,7 +3,7 @@ use crate::lexer::tokens::{Token, TokenType};
 use crate::parser::heap_value::HeapValue;
 use crate::parser::instructions::Instruction;
 use crate::parser::intrinsics::Intrinsic;
-use crate::parser::parse_tree::{FuncDecl, ParseTree};
+use crate::parser::parse_tree::{FuncDecl, ParseTree, RecordDecl};
 use crate::parser::stack_types::StackType;
 use crate::parser::stack_values::{PointerValue, StackValue};
 use crate::parser::typing::Typing;
@@ -20,6 +20,7 @@ pub struct Parser {
     parse_tree: ParseTree,
 
     functions: HashMap<String, FuncDecl>,
+    records: HashMap<String, RecordDecl>,
 
     pub instructions: Vec<Instruction>,
     pub default_heap: Vec<HeapValue>,
@@ -32,6 +33,7 @@ impl Parser {
             tokens,
             parse_tree: ParseTree::None,
             functions: HashMap::new(),
+            records: HashMap::new(),
             instructions: Vec::new(),
             default_heap: Vec::new(),
         }
@@ -39,11 +41,14 @@ impl Parser {
 
     pub fn parse(&mut self) -> Result<(), ErrorType> {
         let tokens = self.tokens.clone();
-        let tree =
-            match ParseTree::generate_parse_tree(tokens.iter().peekable(), &mut self.functions) {
-                Ok(t) => t,
-                Err(e) => return Err(ErrorType::Parser(e)),
-            };
+        let tree = match ParseTree::generate_parse_tree(
+            tokens.iter().peekable(),
+            &mut self.functions,
+            &mut self.records,
+        ) {
+            Ok(t) => t,
+            Err(e) => return Err(ErrorType::Parser(e)),
+        };
 
         self.parse_tree = tree;
 
@@ -86,6 +91,10 @@ impl Parser {
 
         for (_, func) in self.functions.iter() {
             println!("{}", func);
+        }
+
+        for (_, record) in self.records.iter() {
+            println!("{}", record);
         }
         println!("==== TREE ====");
     }
@@ -368,6 +377,7 @@ impl Parser {
 
                 parsed_expression.append(&mut region);
             }
+            ParseTree::RecordDecl(_) => {}
         }
 
         return Ok(parsed_expression);
@@ -470,6 +480,70 @@ impl Parser {
         return Ok(values);
     }
 
+    pub fn get_type<'a, I>(tokens: &mut std::iter::Peekable<I>) -> Result<StackType, ParserError>
+    where
+        I: Iterator<Item = &'a Token>,
+    {
+        let mut current_type = None;
+
+        while let Some(&t) = tokens.peek() {
+            match t.token_type {
+                TokenType::I32 | TokenType::Bool | TokenType::Char => {
+                    if let Some(_) = current_type {
+                        break;
+                    }
+
+                    current_type = Some(StackType::convert_type(&t.token_type));
+                }
+                TokenType::Asterisk => {
+                    if let Some(value) = current_type {
+                        current_type = Some(StackType::Ptr(false, Box::new(value)));
+                    } else {
+                        return Err(ParserError::ExpectedTypeGot(
+                            t.position_info.clone(),
+                            t.token_type.clone(),
+                        ));
+                    }
+                }
+                TokenType::Const => {
+                    if let Some(value) = current_type {
+                        match value {
+                            StackType::Ptr(_, p) => current_type = Some(StackType::Ptr(true, p)),
+                            _ => {
+                                return Err(ParserError::ExpectedPointerGot(
+                                    t.position_info.clone(),
+                                    value,
+                                ));
+                            }
+                        }
+                    } else {
+                        return Err(ParserError::ExpectedTypeGot(
+                            t.position_info.clone(),
+                            t.token_type.clone(),
+                        ));
+                    }
+                }
+                _ => {
+                    break;
+                }
+            }
+            tokens.next();
+        }
+
+        if let Some(v) = current_type {
+            Ok(v)
+        } else {
+            if let Some(v) = tokens.peek() {
+                Err(ParserError::ExpectedTypeGot(
+                    v.position_info.clone(),
+                    v.token_type.clone(),
+                ))
+            } else {
+                panic!();
+            }
+        }
+    }
+
     pub fn get_types<'a, I>(
         tokens: &mut std::iter::Peekable<I>,
     ) -> Result<Vec<StackType>, ParserError>
@@ -483,39 +557,9 @@ impl Parser {
         while let Some(&t) = tokens.peek() {
             let check_end = should_end_next;
             match &t.token_type {
-                TokenType::I32 | TokenType::Bool | TokenType::Char => {
-                    values.push(StackType::convert_type(&t.token_type));
-                }
-                TokenType::Asterisk => {
-                    if let Some(top_value) = values.pop() {
-                        values.push(StackType::Ptr(false, Box::new(top_value)));
-                    } else {
-                        return Err(ParserError::ExpectedTypeGot(
-                            t.position_info.clone(),
-                            t.token_type.clone(),
-                        ));
-                    }
-                }
-                TokenType::Const => {
-                    if let Some(top_value) = values.pop() {
-                        match top_value {
-                            StackType::Ptr(_, p) => values.push(StackType::Ptr(true, p)),
-                            _ => {
-                                return Err(ParserError::ExpectedPointerGot(
-                                    t.position_info.clone(),
-                                    top_value,
-                                ));
-                            }
-                        }
-                    } else {
-                        return Err(ParserError::ExpectedTypeGot(
-                            t.position_info.clone(),
-                            t.token_type.clone(),
-                        ));
-                    }
-                }
                 TokenType::Void => {
                     should_end_next = true;
+                    tokens.next();
                 }
                 TokenType::LeftBrace => {
                     break;
@@ -523,14 +567,8 @@ impl Parser {
                 TokenType::Arrow => {
                     break;
                 }
-                _ => {
-                    return Err(ParserError::ExpectedTypeGot(
-                        t.position_info.clone(),
-                        t.token_type.clone(),
-                    ));
-                }
+                _ => values.push(Self::get_type(tokens)?),
             }
-            tokens.next();
 
             if check_end {
                 todo!("Should not allow for more types after void");
@@ -624,6 +662,35 @@ mod tests {
                 assert_eq!(
                     format!("{:?}", parser.instructions),
                     format!("{:?}", expected_instructions)
+                );
+            }
+            Err(e) => {
+                assert!(false, "{:?}", e);
+            }
+        }
+    }
+
+    fn test_non_function_record(
+        input: Vec<Token>,
+        expected_record: HashMap<String, RecordDecl>,
+        expected_tree: ParseTree,
+        expected_instructions: Vec<Instruction>,
+    ) {
+        let mut parser = Parser::init(Config::blank(), input);
+        match parser.parse() {
+            Ok(_) => {
+                assert_eq!(format!("{:?}", parser.functions), "{}");
+                assert_eq!(
+                    format!("{:?}", parser.parse_tree),
+                    format!("{:?}", expected_tree)
+                );
+                assert_eq!(
+                    format!("{:?}", parser.instructions),
+                    format!("{:?}", expected_instructions)
+                );
+                assert_eq!(
+                    format!("{:?}", parser.records),
+                    format!("{:?}", expected_record)
                 );
             }
             Err(e) => {
@@ -1004,5 +1071,36 @@ mod tests {
             expected_tree,
             expected_instructions,
         );
+    }
+
+    #[test]
+    fn parse_tree_record_create() {
+        let input = vec![
+            Token::new(TokenType::Record, 1, 1, "", ""),
+            Token::new(TokenType::Identifier("test".to_string()), 1, 1, "", ""),
+            Token::new(TokenType::LeftBrace, 1, 1, "", ""),
+            Token::new(TokenType::I32, 1, 1, "", ""),
+            Token::new(TokenType::Identifier("v1".to_string()), 1, 1, "", ""),
+            Token::new(TokenType::RightBrace, 1, 1, "", ""),
+        ];
+
+        let expected_record = HashMap::from([(
+            "test".to_string(),
+            RecordDecl {
+                position_info: PositionInfo {
+                    line: 1,
+                    column: 1,
+                    file: "".to_string(),
+                },
+                name: "test".to_string(),
+                entries: vec![("v1".to_string(), StackType::I32)],
+            },
+        )]);
+
+        let expected_tree = ParseTree::Region(vec![]);
+
+        let expected_instructions = vec![Instruction::Halt];
+
+        test_non_function_record(input, expected_record, expected_tree, expected_instructions);
     }
 }

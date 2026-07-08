@@ -19,7 +19,9 @@ pub enum LexerError {
 #[derive(Debug)]
 pub enum ParserError {
     InvalidFunctionDef(PositionInfo, TokenType),
+    InvalidRecordDef(PositionInfo, TokenType),
     ExpectedToken(PositionInfo, TokenType),
+    ExpectedTokenGot(PositionInfo, TokenType, TokenType),
     ExpectedIdentifierGot(PositionInfo, TokenType),
     ExpectedIntrinsic(PositionInfo, Intrinsic),
     ExpectedIntrinsicGot(PositionInfo, Intrinsic, Intrinsic),
@@ -82,8 +84,17 @@ fn handle_parser_error(error: ParserError) {
                 pos, token
             )
         }
+        ParserError::InvalidRecordDef(pos, token) => {
+            eprintln!(
+                "[PARSER] [{}] Invalid record definition, expected identifier, got {}",
+                pos, token
+            )
+        }
         ParserError::ExpectedToken(pos, token) => {
             eprintln!("[PARSER] [{}] Expected token {}", pos, token);
+        }
+        ParserError::ExpectedTokenGot(pos, expected, got) => {
+            eprintln!("[PARSER] [{}] Expected token {} got {}", pos, expected, got);
         }
         ParserError::ExpectedIdentifierGot(pos, token) => {
             eprintln!("[PARSER] [{}] Expected identifier got {}", pos, token);
