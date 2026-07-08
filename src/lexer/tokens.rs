@@ -8,6 +8,7 @@ pub enum TokenType {
     Include,
 
     Asterisk,
+    Exclamation,
 
     // Arithmetic Operations
     Add,
@@ -32,7 +33,6 @@ pub enum TokenType {
     NotEqual,
     And,
     Or,
-    Not,
 
     // Loop
     If,
@@ -42,6 +42,9 @@ pub enum TokenType {
     // Func
     Func,
     Arrow,
+
+    Record,
+    RecordIdentifier(String),
 
     //
     Assignment,
@@ -143,9 +146,10 @@ impl fmt::Display for TokenType {
             TokenType::LeftBrace => write!(f, "{{"),
             TokenType::RightBrace => write!(f, "}}"),
             TokenType::Include => write!(f, "Include"),
+            TokenType::Asterisk => write!(f, "*"),
+            TokenType::Exclamation => write!(f, "!"),
             TokenType::Add => write!(f, "+"),
             TokenType::Subtract => write!(f, "-"),
-            TokenType::Asterisk => write!(f, "*"),
             TokenType::Divide => write!(f, "/"),
             TokenType::Modulo => write!(f, "%"),
             TokenType::Rotate3 => write!(f, "rot3"),
@@ -162,7 +166,6 @@ impl fmt::Display for TokenType {
             TokenType::NotEqual => write!(f, "!="),
             TokenType::And => write!(f, "&&"),
             TokenType::Or => write!(f, "||"),
-            TokenType::Not => write!(f, "!"),
 
             TokenType::If => write!(f, "if"),
             TokenType::Else => write!(f, "else"),
@@ -170,6 +173,9 @@ impl fmt::Display for TokenType {
 
             TokenType::Func => write!(f, "func"),
             TokenType::Arrow => write!(f, "=>"),
+
+            TokenType::Record => write!(f, "record"),
+            TokenType::RecordIdentifier(s) => write!(f, "RecordIden({:?})", s),
 
             TokenType::Assignment => write!(f, "assign"),
             TokenType::Assign => write!(f, "="),

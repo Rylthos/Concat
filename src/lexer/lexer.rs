@@ -125,6 +125,8 @@ impl Lexer {
             //
             ("func".to_string(), TokenType::Func),
             //
+            ("record".to_string(), TokenType::Record),
+            //
             ("assign".to_string(), TokenType::Assignment),
             //
             ("mem".to_string(), TokenType::Mem),
@@ -249,7 +251,7 @@ impl Lexer {
                             '<' => TokenType::Less,
                             '>' => TokenType::Greater,
                             '=' => TokenType::Assign,
-                            '!' => TokenType::Not,
+                            '!' => TokenType::Exclamation,
                             _ => unreachable!("Unhandled case"),
                         }
                     };
@@ -389,7 +391,7 @@ impl Lexer {
                         &s,
                     ))
                 }
-                '_' | 'A'..='Z' | 'a'..='z' => {
+                '_' | 'A'..='Z' | 'a'..='z' | '.' => {
                     let mut s = String::new();
                     s.push(c);
 
@@ -423,13 +425,23 @@ impl Lexer {
                             )),
                         },
                         None => {
-                            tokens.push(Token::new(
-                                TokenType::Identifier(s.clone()),
-                                line_number,
-                                column_number,
-                                &self.get_filename(&file),
-                                &s,
-                            ));
+                            if c == '.' {
+                                tokens.push(Token::new(
+                                    TokenType::RecordIdentifier(s.clone()),
+                                    line_number,
+                                    column_number,
+                                    &self.get_filename(&file),
+                                    &s,
+                                ));
+                            } else {
+                                tokens.push(Token::new(
+                                    TokenType::Identifier(s.clone()),
+                                    line_number,
+                                    column_number,
+                                    &self.get_filename(&file),
+                                    &s,
+                                ));
+                            }
                         }
                     }
                 }
@@ -796,6 +808,41 @@ mod tests {
             Token::new(TokenType::I32Value(1), 1, 26, "", "1"),
             Token::new(TokenType::Assign, 1, 28, "", "="),
             Token::new(TokenType::RightBrace, 1, 30, "", "}"),
+        ];
+        test_input(input, &output);
+    }
+
+    #[test]
+    fn lex_record() {
+        let input = r#"record temp { i32 v1 i32 v2 } temp dup .v1 swap 1 .v2!"#;
+        let output = vec![
+            Token::new(TokenType::Record, 1, 1, "", "record"),
+            Token::new(TokenType::Identifier("temp".to_string()), 1, 8, "", "temp"),
+            Token::new(TokenType::LeftBrace, 1, 13, "", "{"),
+            Token::new(TokenType::I32, 1, 15, "", "i32"),
+            Token::new(TokenType::Identifier("v1".to_string()), 1, 19, "", "v1"),
+            Token::new(TokenType::I32, 1, 22, "", "i32"),
+            Token::new(TokenType::Identifier("v2".to_string()), 1, 26, "", "v2"),
+            Token::new(TokenType::RightBrace, 1, 29, "", "}"),
+            Token::new(TokenType::Identifier("temp".to_string()), 1, 31, "", "temp"),
+            Token::new(TokenType::Duplicate, 1, 36, "", "dup"),
+            Token::new(
+                TokenType::RecordIdentifier(".v1".to_string()),
+                1,
+                40,
+                "",
+                ".v1",
+            ),
+            Token::new(TokenType::Swap, 1, 44, "", "swap"),
+            Token::new(TokenType::I32Value(1), 1, 49, "", "1"),
+            Token::new(
+                TokenType::RecordIdentifier(".v2".to_string()),
+                1,
+                51,
+                "",
+                ".v2",
+            ),
+            Token::new(TokenType::Exclamation, 1, 54, "", "!"),
         ];
         test_input(input, &output);
     }

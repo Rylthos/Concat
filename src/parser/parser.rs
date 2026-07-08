@@ -114,7 +114,10 @@ impl Parser {
             | TokenType::String
             | TokenType::Bool
             | TokenType::Char
-            | TokenType::Const => {
+            | TokenType::Const
+            | TokenType::Record
+            | TokenType::Exclamation
+            | TokenType::RecordIdentifier(_) => {
                 unreachable!("Unreachable: {:?}", token)
             }
             TokenType::I32Value(n) => Intrinsic::I32Value(n),
@@ -144,7 +147,7 @@ impl Parser {
             TokenType::NotEqual => Intrinsic::NotEqual,
             TokenType::And => Intrinsic::And,
             TokenType::Or => Intrinsic::Or,
-            TokenType::Not => Intrinsic::Not,
+            // TokenType::Not => Intrinsic::Not,
             //
             TokenType::Read => Intrinsic::Read,
             TokenType::Assign => Intrinsic::Assign,
