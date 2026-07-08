@@ -17,4 +17,5 @@ pub enum StackValue {
     Frame(isize),
     Call(usize),
     VarRef(usize, usize),
+    Record(Vec<Box<StackValue>>),
 }

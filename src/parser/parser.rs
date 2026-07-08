@@ -21,6 +21,7 @@ pub struct Parser {
 
     functions: HashMap<String, FuncDecl>,
     records: HashMap<String, RecordDecl>,
+    record_map: HashMap<String, StackType>,
 
     pub instructions: Vec<Instruction>,
     pub default_heap: Vec<HeapValue>,
@@ -34,6 +35,7 @@ impl Parser {
             parse_tree: ParseTree::None,
             functions: HashMap::new(),
             records: HashMap::new(),
+            record_map: HashMap::new(),
             instructions: Vec::new(),
             default_heap: Vec::new(),
         }
@@ -125,15 +127,15 @@ impl Parser {
             | TokenType::Char
             | TokenType::Const
             | TokenType::Record
-            | TokenType::Exclamation
-            | TokenType::RecordIdentifier(_) => {
+            | TokenType::Identifier(_)
+            | TokenType::RecordIdentifier(_)
+            | TokenType::Exclamation => {
                 unreachable!("Unreachable: {:?}", token)
             }
             TokenType::I32Value(n) => Intrinsic::I32Value(n),
             TokenType::BoolValue(b) => Intrinsic::BoolValue(b),
             TokenType::CharValue(c) => Intrinsic::CharValue(c),
             TokenType::StringValue(s) => Intrinsic::StringValue(s),
-            TokenType::Identifier(s) => Intrinsic::Identifier(s),
             //
             TokenType::Add => Intrinsic::Add,
             TokenType::Subtract => Intrinsic::Subtract,
@@ -207,8 +209,6 @@ impl Parser {
             Intrinsic::Jump(j) => Instruction::Jump(*j),
             Intrinsic::CondJump(t, f) => Instruction::CondJump(*t, *f),
 
-            Intrinsic::Identifier(_) => todo!(),
-
             Intrinsic::Mem => Instruction::Mem,
             Intrinsic::Ret => Instruction::Ret,
             Intrinsic::Call(_) => unreachable!(),
@@ -241,6 +241,13 @@ impl Parser {
             Intrinsic::DebugHeapStack => Instruction::DebugHeapStack,
 
             Intrinsic::Halt => Instruction::Halt,
+
+            Intrinsic::FuncIdentifier(_)
+            | Intrinsic::VariableIdentifier(_)
+            | Intrinsic::RecordIdentifier(_)
+            | Intrinsic::WriteRecordIdentifier(_) => unreachable!(),
+
+            Intrinsic::Record(_) => todo!(),
         }
     }
 
@@ -254,12 +261,17 @@ impl Parser {
         match tree {
             ParseTree::None => return Err(ParserError::InvalidParseTree()),
             ParseTree::Element(p, i) => match i {
-                Intrinsic::Identifier(iden) => {
+                Intrinsic::FuncIdentifier(iden) => {
                     if let Some(func) = self.functions.get(&iden) {
                         parsed_expression.push(Intrinsic::I32Value(func.inputs.len() as i32));
                         parsed_expression
                             .push(Intrinsic::FuncLabelRef(iden, Box::new(Intrinsic::Call(0))));
-                    } else if let Some((d, s)) = variable_lookup.get(&iden) {
+                    } else {
+                        return Err(ParserError::UnknownIdentifier(p, iden.to_string()));
+                    }
+                }
+                Intrinsic::VariableIdentifier(iden) => {
+                    if let Some((d, s)) = variable_lookup.get(&iden) {
                         parsed_expression.push(Intrinsic::Lookup(*d, *s));
                     } else {
                         return Err(ParserError::UnknownIdentifier(p, iden.to_string()));
@@ -480,14 +492,41 @@ impl Parser {
         return Ok(values);
     }
 
-    pub fn get_type<'a, I>(tokens: &mut std::iter::Peekable<I>) -> Result<StackType, ParserError>
+    pub fn create_record_type(record: &RecordDecl) -> StackType {
+        StackType::Record(
+            record
+                .entries
+                .iter()
+                .map(|(_, e)| Box::new(e.clone()))
+                .collect(),
+        )
+    }
+
+    pub fn get_type<'a, I>(
+        tokens: &mut std::iter::Peekable<I>,
+        records: &HashMap<String, RecordDecl>,
+    ) -> Result<StackType, ParserError>
     where
         I: Iterator<Item = &'a Token>,
     {
         let mut current_type = None;
 
         while let Some(&t) = tokens.peek() {
-            match t.token_type {
+            match &t.token_type {
+                TokenType::Identifier(s) => {
+                    if let Some(_) = current_type {
+                        break;
+                    }
+
+                    if records.contains_key(&s.clone()) {
+                        current_type = Some(Self::create_record_type(&records.get(s).unwrap()))
+                    } else {
+                        return Err(ParserError::ExpectedTypeGot(
+                            t.position_info.clone(),
+                            t.token_type.clone(),
+                        ));
+                    }
+                }
                 TokenType::I32 | TokenType::Bool | TokenType::Char => {
                     if let Some(_) = current_type {
                         break;
@@ -546,6 +585,7 @@ impl Parser {
 
     pub fn get_types<'a, I>(
         tokens: &mut std::iter::Peekable<I>,
+        records: &HashMap<String, RecordDecl>,
     ) -> Result<Vec<StackType>, ParserError>
     where
         I: Iterator<Item = &'a Token>,
@@ -567,7 +607,7 @@ impl Parser {
                 TokenType::Arrow => {
                     break;
                 }
-                _ => values.push(Self::get_type(tokens)?),
+                _ => values.push(Self::get_type(tokens, records)?),
             }
 
             if check_end {
@@ -1050,7 +1090,7 @@ mod tests {
         let expected_tree = ParseTree::Region(vec![
             create_element(1, 1, Intrinsic::I32Value(0)),
             create_element(1, 1, Intrinsic::I32Value(1)),
-            create_element(1, 1, Intrinsic::Identifier("test".to_string())),
+            create_element(1, 1, Intrinsic::FuncIdentifier("test".to_string())),
             create_element(1, 1, Intrinsic::Print),
         ]);
 

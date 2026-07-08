@@ -40,12 +40,17 @@ pub enum Intrinsic {
     Jump(isize),
     CondJump(usize, usize),
 
-    Identifier(String),
-
     Mem,
 
     Ret,
     Call(usize),
+
+    VariableIdentifier(String),
+    FuncIdentifier(String),
+    RecordIdentifier(String),
+    WriteRecordIdentifier(String),
+
+    Record(String),
 
     StackType(StackType),
 
@@ -95,7 +100,10 @@ impl fmt::Display for Intrinsic {
             Intrinsic::Lookup(d, s) => write!(f, "lookup({d}, {s})"),
             Intrinsic::Jump(d) => write!(f, "jump({d})"),
             Intrinsic::CondJump(t, fa) => write!(f, "condJump({t}, {fa})"),
-            Intrinsic::Identifier(s) => write!(f, "iden({s})"),
+            Intrinsic::VariableIdentifier(s) => write!(f, "var_iden({s})"),
+            Intrinsic::FuncIdentifier(s) => write!(f, "func_iden({s})"),
+            Intrinsic::RecordIdentifier(s) => write!(f, "rec_iden({s})"),
+            Intrinsic::WriteRecordIdentifier(s) => write!(f, "write_rec_iden({s})"),
             Intrinsic::Mem => write!(f, "mem"),
             Intrinsic::Ret => write!(f, "ret"),
             Intrinsic::Call(i) => write!(f, "call({i})"),
@@ -111,6 +119,7 @@ impl fmt::Display for Intrinsic {
             Intrinsic::DebugPrintStack => write!(f, "__print_stack__"),
             Intrinsic::DebugHeapStack => write!(f, "__print_heap__"),
             Intrinsic::Halt => write!(f, "halt"),
+            Intrinsic::Record(s) => write!(f, "rec({s})"),
         }
     }
 }

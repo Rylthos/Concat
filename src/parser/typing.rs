@@ -366,7 +366,7 @@ impl Typing {
                 stack.push(StackType::Ptr(true, Box::new(StackType::Char)))
             }
 
-            Intrinsic::Identifier(s) => {
+            Intrinsic::FuncIdentifier(s) => {
                 if let Some(func) = functions.get(s) {
                     Self::check_stack_length(&position, &stack, func.inputs.len())?;
                     Self::check_stack_types(
@@ -382,10 +382,16 @@ impl Typing {
                     for o in func.outputs.iter() {
                         stack.push(o.clone());
                     }
-                } else if let Some(t) = variable_lookup.get(s) {
+                }
+            }
+            Intrinsic::VariableIdentifier(s) => {
+                if let Some(t) = variable_lookup.get(s) {
                     stack.push(StackType::Var(Box::new(t.clone())));
                 }
             }
+            Intrinsic::Record(_) => todo!(),
+            Intrinsic::RecordIdentifier(_) => todo!(),
+            Intrinsic::WriteRecordIdentifier(_) => todo!(),
 
             Intrinsic::Read => {
                 Self::check_stack_length(&position, &stack, 1)?;

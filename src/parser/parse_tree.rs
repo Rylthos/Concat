@@ -198,7 +198,7 @@ impl ParseTree {
                         ));
                     };
 
-                    let input_types = Parser::get_types(&mut peekable)?;
+                    let input_types = Parser::get_types(&mut peekable, records)?;
 
                     if let Some(t) = peekable.next() {
                         match &t.token_type {
@@ -217,7 +217,7 @@ impl ParseTree {
                         ));
                     };
 
-                    let output_types = Parser::get_types(&mut peekable)?;
+                    let output_types = Parser::get_types(&mut peekable, records)?;
                     let region_tree = Self::generate_parse_tree(
                         Parser::get_region(&mut peekable)?.iter(),
                         functions,
@@ -278,7 +278,7 @@ impl ParseTree {
                         match &t.token_type {
                             TokenType::RightBrace => break,
                             _ => {
-                                let next_type = Parser::get_type(&mut peekable)?;
+                                let next_type = Parser::get_type(&mut peekable, records)?;
 
                                 if let Some(t) = peekable.next() {
                                     match &t.token_type {
@@ -352,37 +352,72 @@ impl ParseTree {
                         Box::new(region_tree),
                     ));
                 }
-                TokenType::I32 | TokenType::Bool | TokenType::Char => {
+                TokenType::RecordIdentifier(s) => {
                     peekable.next();
-                    if let Some(t2) = peekable.peek() {
-                        match t2.token_type {
-                            TokenType::Asterisk => {
-                                peekable.next();
-                                let is_const = match peekable.peek() {
-                                    Some(t) => match t.token_type {
-                                        TokenType::Const => {
-                                            peekable.next();
-                                            true
-                                        }
-                                        _ => false,
-                                    },
-                                    None => false,
-                                };
-
+                    if let Some(t) = peekable.peek() {
+                        match t.token_type {
+                            TokenType::Exclamation => {
                                 region.push(ParseTree::Element(
                                     t.position_info.clone(),
-                                    Intrinsic::StackType(StackType::Ptr(
-                                        is_const,
-                                        Box::new(StackType::convert_type(&t.token_type)),
-                                    )),
-                                ))
+                                    Intrinsic::WriteRecordIdentifier(s.clone()),
+                                ));
+
+                                peekable.next();
+
+                                continue;
                             }
-                            _ => region.push(ParseTree::Element(
-                                t.position_info.clone(),
-                                Intrinsic::StackType(StackType::convert_type(&t.token_type)),
-                            )),
+                            _ => {}
                         }
                     }
+
+                    region.push(ParseTree::Element(
+                        t.position_info.clone(),
+                        Intrinsic::RecordIdentifier(s.clone()),
+                    ))
+                }
+                TokenType::Identifier(s) => {
+                    peekable.next();
+                    if records.contains_key(&s.clone()) {
+                        if let Some(t) = peekable.peek() {
+                            match t.token_type {
+                                TokenType::Exclamation => {
+                                    region.push(ParseTree::Element(
+                                        t.position_info.clone(),
+                                        Intrinsic::Record(s.clone()),
+                                    ));
+
+                                    peekable.next();
+
+                                    continue;
+                                }
+                                _ => {}
+                            }
+                        }
+                        region.push(ParseTree::Element(
+                            t.position_info.clone(),
+                            Intrinsic::StackType(Parser::create_record_type(
+                                &records.get(s).unwrap(),
+                            )),
+                        ));
+                    } else if functions.contains_key(&s.clone()) {
+                        region.push(ParseTree::Element(
+                            t.position_info.clone(),
+                            Intrinsic::FuncIdentifier(s.clone()),
+                        ));
+                    } else {
+                        region.push(ParseTree::Element(
+                            t.position_info.clone(),
+                            Intrinsic::VariableIdentifier(s.clone()),
+                        ));
+                    }
+                }
+                TokenType::I32 | TokenType::Bool | TokenType::Char => {
+                    let parsed_type = Parser::get_type(&mut peekable, records)?;
+
+                    region.push(ParseTree::Element(
+                        t.position_info.clone(),
+                        Intrinsic::StackType(parsed_type),
+                    ));
                 }
                 _ => {
                     peekable.next();
