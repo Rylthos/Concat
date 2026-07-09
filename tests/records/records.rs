@@ -9,3 +9,13 @@ fn record_basic_typed() {
         .success()
         .stdout("10:20\n");
 }
+
+#[test]
+fn record_basic() {
+    Command::cargo_bin("concat")
+        .unwrap()
+        .arg("tests/records/basic.concat")
+        .assert()
+        .success()
+        .stdout("10:20\n");
+}

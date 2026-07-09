@@ -1,0 +1,12 @@
+func print_record [i32 i32] -> void {
+  dup 0 nth
+  swap 1 nth
+  swap
+  print ":" print print "\n" print
+}
+
+0 0 2 union
+10 0 nth!
+20 1 nth!
+
+print_record

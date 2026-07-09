@@ -1,0 +1,45 @@
+record equal {
+  i32 v1
+  i32 v2
+  bool equal
+}
+
+func reduced [i32 i32] -> [i32 i32 bool] {
+  assign v {
+    v@ 0 nth
+    v@ 1 nth
+    over over
+    ==
+    3 union
+  }
+}
+
+func union_to_record [i32 i32 bool] -> equal {
+  assign v {
+    equal!
+    v@ 0 nth .v1!
+    v@ 1 nth .v2!
+    v@ 2 nth .equal!
+  }
+}
+
+func print_equal equal -> void {
+  assign v {
+     v@ .v1 print
+     if v@ .equal {
+       "==" print
+     } else {
+       "!=" print
+     }
+     v@ .v2 print
+     '\n' print
+  }
+}
+
+
+0 1 2
+3 union
+
+reduced
+union_to_record
+print_equal
