@@ -13,6 +13,9 @@ Stack based programming language
 - fibonacci
 - fizzbuzz
 - fizzbuzzfuzz
+- bubble_sort
+- ansi_escape_codes
+- rule110
 
 ## Language syntax
 Arithmetic operations
@@ -22,7 +25,7 @@ Arithmetic operations
 
 Stack Operations
 ```text
-rot3 dup drop over swap cast print
+rot3 dup drop over swap cast print nth
 ```
 
 Boolean Operations
@@ -42,7 +45,25 @@ while
 
 Functions
 ```
-func <name> [<types>] -> [<types>] {
+func <name> <types>... -> <types>... {
 
 }
+```
+
+Variables
+```
+<type>... assign <name>... {
+
+}
+```
+
+Records and Unions
+```
+record <name> {
+    <type> <name>
+    ...
+}
+
+<value...> <n> union
+[<type>...]
 ```
