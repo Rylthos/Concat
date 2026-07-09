@@ -395,7 +395,7 @@ impl ParseTree {
                         }
                         region.push(ParseTree::Element(
                             t.position_info.clone(),
-                            Intrinsic::StackType(Parser::create_record_type(
+                            Intrinsic::StackType(Parser::create_union_type(
                                 &records.get(s).unwrap(),
                             )),
                         ));
@@ -410,6 +410,59 @@ impl ParseTree {
                             Intrinsic::VariableIdentifier(s.clone()),
                         ));
                     }
+                }
+                TokenType::Nth => {
+                    peekable.next();
+
+                    let previous: usize = if let Some(ParseTree::Element(_, i)) = region.pop() {
+                        if let Intrinsic::I32Value(v) = i {
+                            v as usize
+                        } else {
+                            todo!("Expected Int: {}", i)
+                        }
+                    } else {
+                        todo!("Expected Constant Int")
+                    };
+
+                    let intrinsic = if let Some(t) = peekable.peek() {
+                        match t.token_type {
+                            TokenType::Exclamation => {
+                                peekable.next();
+                                Intrinsic::NthWrite(previous)
+                            }
+                            _ => Intrinsic::Nth(previous),
+                        }
+                    } else {
+                        Intrinsic::Nth(previous)
+                    };
+
+                    region.push(ParseTree::Element(t.position_info.clone(), intrinsic));
+                }
+                TokenType::LeftSqBracket => {
+                    let parsed_type = Parser::get_type(&mut peekable, records)?;
+
+                    region.push(ParseTree::Element(
+                        t.position_info.clone(),
+                        Intrinsic::StackType(parsed_type),
+                    ));
+                }
+                TokenType::Union => {
+                    peekable.next();
+
+                    let previous: i32 = if let Some(ParseTree::Element(_, i)) = region.pop() {
+                        if let Intrinsic::I32Value(v) = i {
+                            v
+                        } else {
+                            todo!("Expected Int: {}", i)
+                        }
+                    } else {
+                        todo!("Expected Constant Int")
+                    };
+
+                    region.push(ParseTree::Element(
+                        t.position_info.clone(),
+                        Intrinsic::Union(previous as usize),
+                    ));
                 }
                 TokenType::I32 | TokenType::Bool | TokenType::Char => {
                     let parsed_type = Parser::get_type(&mut peekable, records)?;

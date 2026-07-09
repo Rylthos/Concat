@@ -117,6 +117,8 @@ impl Parser {
         match token.token_type.clone() {
             TokenType::LeftBrace
             | TokenType::RightBrace
+            | TokenType::LeftSqBracket
+            | TokenType::RightSqBracket
             | TokenType::Include
             | TokenType::If
             | TokenType::Else
@@ -133,6 +135,8 @@ impl Parser {
             | TokenType::Record
             | TokenType::Identifier(_)
             | TokenType::RecordIdentifier(_)
+            | TokenType::Union
+            | TokenType::Nth
             | TokenType::Exclamation => {
                 unreachable!("Unreachable: {:?}", token)
             }
@@ -191,7 +195,7 @@ impl Parser {
                     .map(|(_, i)| i)
                     .collect::<Vec<i32>>()[0];
 
-                vec![Intrinsic::I32Value(n), Intrinsic::Nth]
+                vec![Intrinsic::Nth(n as usize)]
             }
             Intrinsic::TypedWriteRecordIdentifier(record, iden) => {
                 let record_decl = records.get(record).unwrap();
@@ -204,7 +208,7 @@ impl Parser {
                     .map(|(_, i)| i)
                     .collect::<Vec<i32>>()[0];
 
-                vec![Intrinsic::I32Value(n), Intrinsic::NthWrite]
+                vec![Intrinsic::NthWrite(n as usize)]
             }
             _ => vec![intrinsic.clone()],
         }
@@ -266,8 +270,9 @@ impl Parser {
                 }))
             }
 
-            Intrinsic::Nth => Instruction::Nth,
-            Intrinsic::NthWrite => Instruction::NthWrite,
+            Intrinsic::Nth(n) => Instruction::Nth(*n),
+            Intrinsic::NthWrite(n) => Instruction::NthWrite(*n),
+            Intrinsic::Union(i) => Instruction::Union(*i),
 
             Intrinsic::FrameCreate => Instruction::FrameCreate,
             Intrinsic::FrameRemove => Instruction::FrameRemove,
@@ -545,8 +550,8 @@ impl Parser {
         return Ok(values);
     }
 
-    pub fn create_record_type(record: &RecordDecl) -> StackType {
-        StackType::Record(
+    pub fn create_union_type(record: &RecordDecl) -> StackType {
+        StackType::Union(
             record
                 .entries
                 .iter()
@@ -588,6 +593,22 @@ impl Parser {
                             t.position_info.clone(),
                             t.token_type.clone(),
                         ));
+                    }
+                }
+                TokenType::LeftSqBracket => {
+                    tokens.next();
+                    let mut types = Vec::new();
+
+                    while let Some(&t) = tokens.peek() {
+                        match t.token_type {
+                            TokenType::RightSqBracket => {
+                                current_type = Some(StackType::Union(types.clone()));
+                                break;
+                            }
+                            _ => {
+                                types.push(Box::new(Self::get_type(tokens, records)?));
+                            }
+                        }
                     }
                 }
                 TokenType::I32 | TokenType::Bool | TokenType::Char => {
@@ -1255,13 +1276,52 @@ mod tests {
         let expected_instructions = vec![
             Instruction::Push(StackValue::Union(vec![Box::new(StackValue::I32(0))])),
             Instruction::Push(StackValue::I32(1)),
-            Instruction::Push(StackValue::I32(0)),
-            Instruction::NthWrite,
-            Instruction::Push(StackValue::I32(0)),
-            Instruction::Nth,
+            Instruction::NthWrite(0),
+            Instruction::Nth(0),
             Instruction::Halt,
         ];
 
         test_non_function_record(input, expected_record, expected_tree, expected_instructions);
+    }
+
+    #[test]
+    fn parse_tree_union() {
+        let input = vec![
+            Token::new(TokenType::LeftSqBracket, 1, 1, "", ""),
+            Token::new(TokenType::I32, 1, 1, "", ""),
+            Token::new(TokenType::I32, 1, 1, "", ""),
+            Token::new(TokenType::RightSqBracket, 1, 1, "", ""),
+            Token::new(TokenType::I32Value(0), 1, 1, "", ""),
+            Token::new(TokenType::I32Value(1), 1, 1, "", ""),
+            Token::new(TokenType::I32Value(2), 1, 1, "", ""),
+            Token::new(TokenType::Union, 1, 1, "", ""),
+        ];
+
+        let expected_tree = ParseTree::Region(vec![
+            create_element(
+                1,
+                1,
+                Intrinsic::StackType(StackType::Union(vec![
+                    Box::new(StackType::I32),
+                    Box::new(StackType::I32),
+                ])),
+            ),
+            create_element(1, 1, Intrinsic::I32Value(0)),
+            create_element(1, 1, Intrinsic::I32Value(1)),
+            create_element(1, 1, Intrinsic::Union(2)),
+        ]);
+
+        let expected_instructions = vec![
+            Instruction::Push(StackValue::Type(StackType::Union(vec![
+                Box::new(StackType::I32),
+                Box::new(StackType::I32),
+            ]))),
+            Instruction::Push(StackValue::I32(0)),
+            Instruction::Push(StackValue::I32(1)),
+            Instruction::Union(2),
+            Instruction::Halt,
+        ];
+
+        test_non_function(input, expected_tree, expected_instructions);
     }
 }

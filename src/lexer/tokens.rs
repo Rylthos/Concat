@@ -5,6 +5,9 @@ pub enum TokenType {
     LeftBrace,
     RightBrace,
 
+    LeftSqBracket,
+    RightSqBracket,
+
     Include,
 
     Asterisk,
@@ -45,6 +48,9 @@ pub enum TokenType {
 
     Record,
     RecordIdentifier(String),
+
+    Union,
+    Nth,
 
     //
     Assignment,
@@ -145,6 +151,9 @@ impl fmt::Display for TokenType {
         match self {
             TokenType::LeftBrace => write!(f, "{{"),
             TokenType::RightBrace => write!(f, "}}"),
+            TokenType::LeftSqBracket => write!(f, "["),
+            TokenType::RightSqBracket => write!(f, "]"),
+
             TokenType::Include => write!(f, "Include"),
             TokenType::Asterisk => write!(f, "*"),
             TokenType::Exclamation => write!(f, "!"),
@@ -176,6 +185,8 @@ impl fmt::Display for TokenType {
 
             TokenType::Record => write!(f, "record"),
             TokenType::RecordIdentifier(s) => write!(f, "RecordIden({:?})", s),
+            TokenType::Union => write!(f, "union"),
+            TokenType::Nth => write!(f, "nth"),
 
             TokenType::Assignment => write!(f, "assign"),
             TokenType::Assign => write!(f, "="),

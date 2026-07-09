@@ -185,6 +185,16 @@ impl Typing {
             | (StackType::Ptr(false, p1), StackType::Ptr(true, p2))
             | (StackType::Ptr(true, p1), StackType::Ptr(true, p2)) => Self::verify_types(&p1, &p2),
             (StackType::RecordIden(s1), StackType::RecordIden(s2)) => s1 == s2,
+            (StackType::Union(u1), StackType::Union(u2)) => {
+                u1.len() >= u2.len()
+                    && u1
+                        .iter()
+                        .zip(u2.iter())
+                        .zip(0..)
+                        .filter(|(_, i)| *i < u2.len())
+                        .map(|((t1, t2), _)| Self::verify_types(t1, t2))
+                        .all(|a| a)
+            }
             _ => false,
         }
     }
@@ -393,12 +403,45 @@ impl Typing {
                 stack.pop();
                 stack.push(StackType::Bool);
             }
-            Intrinsic::Nth => {
-                todo!();
+            Intrinsic::Nth(n) => {
+                Self::check_stack_length(position, stack, 1)?;
+
+                if let StackType::Union(v) = stack.pop().unwrap() {
+                    if *n >= v.len() {
+                        todo!()
+                    }
+                    stack.push(*v[*n].clone());
+                }
             }
-            Intrinsic::NthWrite => {
-                todo!();
+            Intrinsic::NthWrite(n) => {
+                Self::check_stack_length(position, stack, 2)?;
+
+                let write = stack.pop().unwrap();
+
+                if let StackType::Union(v) = stack.pop().unwrap() {
+                    if *n >= v.len() {
+                        todo!()
+                    }
+
+                    if write != *v[*n] {
+                        todo!();
+                    }
+
+                    stack.push(StackType::Union(v));
+                }
             }
+            Intrinsic::Union(length) => {
+                Self::check_stack_length(position, stack, *length)?;
+
+                let mut types: Vec<Box<StackType>> = Vec::new();
+                for _ in 0..(*length) {
+                    types.push(Box::new(stack.pop().unwrap()));
+                }
+                types = types.iter().rev().cloned().collect();
+
+                stack.push(StackType::Union(types));
+            }
+
             Intrinsic::StackType(t) => stack.push(t.clone()),
             Intrinsic::I32Value(_) => stack.push(StackType::I32),
             Intrinsic::BoolValue(_) => stack.push(StackType::Bool),

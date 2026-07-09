@@ -32,7 +32,12 @@ impl StackValue {
                 constant: *is_const,
                 offset: 0,
             }),
-            StackType::Record(_) => todo!(),
+            StackType::Union(entries) => StackValue::Union(
+                entries
+                    .iter()
+                    .map(|e| Box::new(StackValue::from_type(e)))
+                    .collect(),
+            ),
             StackType::RecordIden(_) => todo!(),
         }
     }

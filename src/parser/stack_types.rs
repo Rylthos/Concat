@@ -8,7 +8,7 @@ pub enum StackType {
     Char,
     Var(Box<StackType>),
     Ptr(bool, Box<StackType>),
-    Record(Vec<Box<StackType>>),
+    Union(Vec<Box<StackType>>),
     RecordIden(String),
 }
 
@@ -31,8 +31,8 @@ impl fmt::Display for StackType {
             StackType::Char => write!(f, "CHAR"),
             StackType::Var(v) => write!(f, "Var({})", *v),
             StackType::Ptr(c, p) => write!(f, "Ptr({}, {})", *c, *p),
-            StackType::Record(records) => {
-                write!(f, "Record([")?;
+            StackType::Union(records) => {
+                write!(f, "Union([")?;
                 for i in 0..records.len() {
                     if i > 0 {
                         write!(f, ", ")?;

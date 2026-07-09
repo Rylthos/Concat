@@ -117,6 +117,9 @@ impl Lexer {
             ("swap".to_string(), TokenType::Swap),
             ("print".to_string(), TokenType::Print),
             //
+            ("union".to_string(), TokenType::Union),
+            ("nth".to_string(), TokenType::Nth),
+            //
             ("if".to_string(), TokenType::If),
             ("else".to_string(), TokenType::Else),
             ("while".to_string(), TokenType::While),
@@ -263,13 +266,15 @@ impl Lexer {
                         &lexed_string,
                     ));
                 }
-                '+' | '*' | '%' | '{' | '}' | '@' => {
+                '+' | '*' | '%' | '{' | '}' | '@' | '[' | ']' => {
                     let token = match c {
                         '+' => TokenType::Add,
                         '*' => TokenType::Asterisk,
                         '%' => TokenType::Modulo,
                         '{' => TokenType::LeftBrace,
                         '}' => TokenType::RightBrace,
+                        '[' => TokenType::LeftSqBracket,
+                        ']' => TokenType::RightSqBracket,
                         '@' => TokenType::Read,
                         _ => unreachable!("Unhandled case"),
                     };
@@ -612,7 +617,7 @@ mod tests {
 
     #[test]
     fn lex_single_characters() {
-        let input = "+ - {} *\t/";
+        let input = "+ - {} *\t/ []";
         let output = vec![
             Token::new(TokenType::Add, 1, 1, "", "+"),
             Token::new(TokenType::Subtract, 1, 3, "", "-"),
@@ -620,6 +625,8 @@ mod tests {
             Token::new(TokenType::RightBrace, 1, 6, "", "}"),
             Token::new(TokenType::Asterisk, 1, 8, "", "*"),
             Token::new(TokenType::Divide, 1, 10, "", "/"),
+            Token::new(TokenType::LeftSqBracket, 1, 12, "", "["),
+            Token::new(TokenType::RightSqBracket, 1, 13, "", "]"),
         ];
         test_input(input, &output);
     }

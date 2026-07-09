@@ -53,8 +53,9 @@ pub enum Intrinsic {
     TypedRecordIdentifier(String, String),
     TypedWriteRecordIdentifier(String, String),
 
-    Nth,
-    NthWrite,
+    Nth(usize),
+    NthWrite(usize),
+    Union(usize),
 
     Record(String),
 
@@ -100,8 +101,9 @@ impl fmt::Display for Intrinsic {
             Intrinsic::And => write!(f, "&&"),
             Intrinsic::Or => write!(f, "||"),
             Intrinsic::Not => write!(f, "!"),
-            Intrinsic::Nth => write!(f, "nth"),
-            Intrinsic::NthWrite => write!(f, "nth!"),
+            Intrinsic::Nth(n) => write!(f, "nth({n})"),
+            Intrinsic::NthWrite(n) => write!(f, "nth!({n})"),
+            Intrinsic::Union(i) => write!(f, "union({i})"),
             Intrinsic::Assign => write!(f, "="),
             Intrinsic::Read => write!(f, "@"),
             Intrinsic::Input => write!(f, "input"),

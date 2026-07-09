@@ -143,32 +143,35 @@ pub fn interpret(instructions: &Vec<Instruction>, default_heap: &Vec<HeapValue>)
                 }
             }
             //
-            Instruction::Nth => {
-                let n = stack.pop().unwrap();
+            Instruction::Nth(n) => {
                 let rec = stack.pop().unwrap();
 
-                if let StackValue::Union(entries) = rec
-                    && let StackValue::I32(n) = n
-                {
-                    stack.push(*entries.get(n as usize).unwrap().clone());
+                if let StackValue::Union(entries) = rec {
+                    stack.push(*entries.get(*n).unwrap().clone());
                 } else {
                     unreachable!("Unhandled nth type");
                 }
             }
-            Instruction::NthWrite => {
-                let n = stack.pop().unwrap();
+            Instruction::NthWrite(n) => {
                 let v = stack.pop().unwrap();
                 let rec = stack.pop().unwrap();
 
-                if let StackValue::Union(mut entries) = rec
-                    && let StackValue::I32(n) = n
-                {
-                    *entries.get_mut(n as usize).unwrap() = Box::new(v);
+                if let StackValue::Union(mut entries) = rec {
+                    *entries.get_mut(*n).unwrap() = Box::new(v);
 
                     stack.push(StackValue::Union(entries));
                 } else {
                     unreachable!("Unhandled nth type");
                 }
+            }
+            Instruction::Union(size) => {
+                let mut values = Vec::new();
+                for _ in 0..*size {
+                    values.push(Box::new(stack.pop().unwrap()));
+                }
+                values = values.iter().rev().cloned().collect();
+
+                stack.push(StackValue::Union(values));
             }
             //
             Instruction::Jump(offset) => {
