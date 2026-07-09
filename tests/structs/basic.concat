@@ -1,0 +1,17 @@
+record basic {
+  i32 val1
+  i32 val2
+}
+
+func print_record basic -> void {
+  dup .val1
+  swap .val2
+  swap
+  print ":" print print "\n" print
+}
+
+basic!
+10 .val1!
+20 .val2!
+
+print_record
