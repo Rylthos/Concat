@@ -30,6 +30,9 @@ pub enum Instruction {
     Or,
     Not,
 
+    Nth,
+    NthWrite,
+
     Halt,
 
     Call(usize),

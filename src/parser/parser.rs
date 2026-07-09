@@ -21,7 +21,6 @@ pub struct Parser {
 
     functions: HashMap<String, FuncDecl>,
     records: HashMap<String, RecordDecl>,
-    record_map: HashMap<String, StackType>,
 
     pub instructions: Vec<Instruction>,
     pub default_heap: Vec<HeapValue>,
@@ -35,7 +34,6 @@ impl Parser {
             parse_tree: ParseTree::None,
             functions: HashMap::new(),
             records: HashMap::new(),
-            record_map: HashMap::new(),
             instructions: Vec::new(),
             default_heap: Vec::new(),
         }
@@ -58,7 +56,7 @@ impl Parser {
             self.print_tree();
         }
 
-        match Typing::type_check(&self.parse_tree, &self.functions) {
+        match Typing::type_check(&mut self.parse_tree, &mut self.functions, &self.records) {
             Ok(_) => (),
             Err(e) => return Err(ErrorType::Parser(e)),
         };
@@ -75,10 +73,16 @@ impl Parser {
         };
         list.append(&mut function_instructions);
 
-        (self.instructions, self.default_heap) = match Self::generate_instructions(&list) {
-            Ok(d) => d,
-            Err(e) => return Err(ErrorType::Parser(e)),
-        };
+        let mut final_intrinsics = Vec::new();
+        for intrinsic in list.iter() {
+            final_intrinsics.append(&mut Self::expand_intrinsics(intrinsic, &self.records));
+        }
+
+        (self.instructions, self.default_heap) =
+            match Self::generate_instructions(&final_intrinsics, &self.records) {
+                Ok(d) => d,
+                Err(e) => return Err(ErrorType::Parser(e)),
+            };
 
         if self.config.expr_print {
             self.print_instr();
@@ -171,9 +175,45 @@ impl Parser {
         }
     }
 
+    fn expand_intrinsics(
+        intrinsic: &Intrinsic,
+        records: &HashMap<String, RecordDecl>,
+    ) -> Vec<Intrinsic> {
+        match intrinsic {
+            Intrinsic::TypedRecordIdentifier(record, iden) => {
+                let record_decl = records.get(record).unwrap();
+
+                let n = record_decl
+                    .entries
+                    .iter()
+                    .zip(0..)
+                    .filter(|((name, _), _)| name == iden)
+                    .map(|(_, i)| i)
+                    .collect::<Vec<i32>>()[0];
+
+                vec![Intrinsic::I32Value(n), Intrinsic::Nth]
+            }
+            Intrinsic::TypedWriteRecordIdentifier(record, iden) => {
+                let record_decl = records.get(record).unwrap();
+
+                let n = record_decl
+                    .entries
+                    .iter()
+                    .zip(0..)
+                    .filter(|((name, _), _)| name == iden)
+                    .map(|(_, i)| i)
+                    .collect::<Vec<i32>>()[0];
+
+                vec![Intrinsic::I32Value(n), Intrinsic::NthWrite]
+            }
+            _ => vec![intrinsic.clone()],
+        }
+    }
+
     fn convert_intrinsic(
         intrinsic: &Intrinsic,
         labels: &HashMap<String, usize>,
+        records: &HashMap<String, RecordDecl>,
         heap_mapping: &HashMap<String, usize>,
     ) -> Instruction {
         match intrinsic {
@@ -226,11 +266,14 @@ impl Parser {
                 }))
             }
 
+            Intrinsic::Nth => Instruction::Nth,
+            Intrinsic::NthWrite => Instruction::NthWrite,
+
             Intrinsic::FrameCreate => Instruction::FrameCreate,
             Intrinsic::FrameRemove => Instruction::FrameRemove,
 
             Intrinsic::FuncLabelDecl(_, intrinsic) => {
-                Self::convert_intrinsic(intrinsic, labels, heap_mapping)
+                Self::convert_intrinsic(intrinsic, labels, records, heap_mapping)
             }
             Intrinsic::FuncLabelRef(func_name, intrinsic) => match **intrinsic {
                 Intrinsic::Call(_) => Instruction::Call(*labels.get(func_name).unwrap()),
@@ -242,12 +285,16 @@ impl Parser {
 
             Intrinsic::Halt => Instruction::Halt,
 
-            Intrinsic::FuncIdentifier(_)
-            | Intrinsic::VariableIdentifier(_)
-            | Intrinsic::RecordIdentifier(_)
-            | Intrinsic::WriteRecordIdentifier(_) => unreachable!(),
+            Intrinsic::FuncIdentifier(_) | Intrinsic::VariableIdentifier(_) => unreachable!(),
 
-            Intrinsic::Record(_) => todo!(),
+            Intrinsic::RecordIdentifier(_)
+            | Intrinsic::WriteRecordIdentifier(_)
+            | Intrinsic::TypedRecordIdentifier(_, _)
+            | Intrinsic::TypedWriteRecordIdentifier(_, _) => unreachable!(),
+
+            Intrinsic::Record(name) => {
+                Instruction::Push(Self::create_union(records.get(name).unwrap()))
+            }
         }
     }
 
@@ -397,6 +444,7 @@ impl Parser {
 
     fn generate_instructions(
         list: &Vec<Intrinsic>,
+        records: &HashMap<String, RecordDecl>,
     ) -> Result<(Vec<Instruction>, Vec<HeapValue>), ParserError> {
         let labels: HashMap<String, usize> = list
             .iter()
@@ -447,7 +495,12 @@ impl Parser {
         let mut instructions = Vec::new();
 
         for intrinsic in list.iter() {
-            instructions.push(Self::convert_intrinsic(intrinsic, &labels, &heap_mapping))
+            instructions.push(Self::convert_intrinsic(
+                intrinsic,
+                &labels,
+                &records,
+                &heap_mapping,
+            ))
         }
 
         Ok((instructions, default_heap))
@@ -502,6 +555,16 @@ impl Parser {
         )
     }
 
+    pub fn create_union(record: &RecordDecl) -> StackValue {
+        StackValue::Union(
+            record
+                .entries
+                .iter()
+                .map(|(_, t)| Box::new(StackValue::from_type(t)))
+                .collect(),
+        )
+    }
+
     pub fn get_type<'a, I>(
         tokens: &mut std::iter::Peekable<I>,
         records: &HashMap<String, RecordDecl>,
@@ -519,7 +582,7 @@ impl Parser {
                     }
 
                     if records.contains_key(&s.clone()) {
-                        current_type = Some(Self::create_record_type(&records.get(s).unwrap()))
+                        current_type = Some(StackType::RecordIden(s.clone()));
                     } else {
                         return Err(ParserError::ExpectedTypeGot(
                             t.position_info.clone(),
@@ -1140,6 +1203,64 @@ mod tests {
         let expected_tree = ParseTree::Region(vec![]);
 
         let expected_instructions = vec![Instruction::Halt];
+
+        test_non_function_record(input, expected_record, expected_tree, expected_instructions);
+    }
+
+    #[test]
+    fn parse_tree_record_write_read() {
+        let input = vec![
+            Token::new(TokenType::Record, 1, 1, "", ""),
+            Token::new(TokenType::Identifier("test".to_string()), 1, 1, "", ""),
+            Token::new(TokenType::LeftBrace, 1, 1, "", ""),
+            Token::new(TokenType::I32, 1, 1, "", ""),
+            Token::new(TokenType::Identifier("v1".to_string()), 1, 1, "", ""),
+            Token::new(TokenType::RightBrace, 1, 1, "", ""),
+            Token::new(TokenType::Identifier("test".to_string()), 1, 1, "", ""),
+            Token::new(TokenType::Exclamation, 1, 1, "", ""),
+            Token::new(TokenType::I32Value(1), 1, 1, "", ""),
+            Token::new(TokenType::RecordIdentifier("v1".to_string()), 1, 1, "", ""),
+            Token::new(TokenType::Exclamation, 1, 1, "", ""),
+            Token::new(TokenType::RecordIdentifier("v1".to_string()), 1, 1, "", ""),
+        ];
+
+        let expected_record = HashMap::from([(
+            "test".to_string(),
+            RecordDecl {
+                position_info: PositionInfo {
+                    line: 1,
+                    column: 1,
+                    file: "".to_string(),
+                },
+                name: "test".to_string(),
+                entries: vec![("v1".to_string(), StackType::I32)],
+            },
+        )]);
+
+        let expected_tree = ParseTree::Region(vec![
+            create_element(1, 1, Intrinsic::Record("test".to_string())),
+            create_element(1, 1, Intrinsic::I32Value(1)),
+            create_element(
+                1,
+                1,
+                Intrinsic::TypedWriteRecordIdentifier("test".to_string(), "v1".to_string()),
+            ),
+            create_element(
+                1,
+                1,
+                Intrinsic::TypedRecordIdentifier("test".to_string(), "v1".to_string()),
+            ),
+        ]);
+
+        let expected_instructions = vec![
+            Instruction::Push(StackValue::Union(vec![Box::new(StackValue::I32(0))])),
+            Instruction::Push(StackValue::I32(1)),
+            Instruction::Push(StackValue::I32(0)),
+            Instruction::NthWrite,
+            Instruction::Push(StackValue::I32(0)),
+            Instruction::Nth,
+            Instruction::Halt,
+        ];
 
         test_non_function_record(input, expected_record, expected_tree, expected_instructions);
     }

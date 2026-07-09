@@ -17,5 +17,23 @@ pub enum StackValue {
     Frame(isize),
     Call(usize),
     VarRef(usize, usize),
-    Record(Vec<Box<StackValue>>),
+    Union(Vec<Box<StackValue>>),
+}
+
+impl StackValue {
+    pub fn from_type(stack_type: &StackType) -> StackValue {
+        match stack_type {
+            StackType::I32 => StackValue::I32(0),
+            StackType::Bool => StackValue::Bool(false),
+            StackType::Char => StackValue::Char(0 as char),
+            StackType::Var(_) => unreachable!(),
+            StackType::Ptr(is_const, _) => StackValue::Pointer(PointerValue {
+                allocation: 0,
+                constant: *is_const,
+                offset: 0,
+            }),
+            StackType::Record(_) => todo!(),
+            StackType::RecordIden(_) => todo!(),
+        }
+    }
 }

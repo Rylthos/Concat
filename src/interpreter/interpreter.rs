@@ -143,6 +143,34 @@ pub fn interpret(instructions: &Vec<Instruction>, default_heap: &Vec<HeapValue>)
                 }
             }
             //
+            Instruction::Nth => {
+                let n = stack.pop().unwrap();
+                let rec = stack.pop().unwrap();
+
+                if let StackValue::Union(entries) = rec
+                    && let StackValue::I32(n) = n
+                {
+                    stack.push(*entries.get(n as usize).unwrap().clone());
+                } else {
+                    unreachable!("Unhandled nth type");
+                }
+            }
+            Instruction::NthWrite => {
+                let n = stack.pop().unwrap();
+                let v = stack.pop().unwrap();
+                let rec = stack.pop().unwrap();
+
+                if let StackValue::Union(mut entries) = rec
+                    && let StackValue::I32(n) = n
+                {
+                    *entries.get_mut(n as usize).unwrap() = Box::new(v);
+
+                    stack.push(StackValue::Union(entries));
+                } else {
+                    unreachable!("Unhandled nth type");
+                }
+            }
+            //
             Instruction::Jump(offset) => {
                 if *offset > 0isize {
                     index += *offset as usize;

@@ -1,7 +1,7 @@
 use crate::error::types::ParserError;
 use crate::lexer::tokens::{PositionInfo, Token};
 use crate::parser::intrinsics::Intrinsic;
-use crate::parser::parse_tree::{FuncDecl, ParseTree};
+use crate::parser::parse_tree::{FuncDecl, ParseTree, RecordDecl};
 use crate::parser::stack_types::StackType;
 
 use std::collections::HashMap;
@@ -11,35 +11,38 @@ pub struct Typing {}
 
 impl Typing {
     pub fn type_check(
-        tree: &ParseTree,
-        functions: &HashMap<String, FuncDecl>,
+        tree: &mut ParseTree,
+        functions: &mut HashMap<String, FuncDecl>,
+        records: &HashMap<String, RecordDecl>,
     ) -> Result<(), ParserError> {
         let mut stack = Vec::new();
         let variable_lookup = HashMap::new();
-        Self::type_check_stack(tree, &mut stack, functions, &variable_lookup)?;
+        Self::type_check_stack(tree, &mut stack, functions, records, &variable_lookup)?;
 
         let variable_lookup = HashMap::new();
-        for (_, f) in functions.iter() {
-            Self::type_check_function(f, functions, &variable_lookup)?;
+        let functions_clone = functions.clone();
+        for (_, f) in functions.iter_mut() {
+            Self::type_check_function(&mut *f, &functions_clone, records, &variable_lookup)?;
         }
 
         Ok(())
     }
 
     fn type_check_stack(
-        tree: &ParseTree,
+        tree: &mut ParseTree,
         stack: &mut Vec<StackType>,
         functions: &HashMap<String, FuncDecl>,
+        records: &HashMap<String, RecordDecl>,
         variable_lookup: &HashMap<String, StackType>,
     ) -> Result<(), ParserError> {
         match tree {
             ParseTree::None => unreachable!("Invalid stack"),
             ParseTree::Element(p, i) => {
-                Self::type_check_intrinsic(i, &p, stack, functions, variable_lookup)?
+                Self::type_check_intrinsic(i, &p, stack, functions, records, variable_lookup)?;
             }
             ParseTree::Region(r) => {
                 for tree in r {
-                    Self::type_check_stack(tree, stack, functions, variable_lookup)?;
+                    Self::type_check_stack(tree, stack, functions, records, variable_lookup)?;
                 }
             }
             ParseTree::If(conds, (t_else, else_region)) => {
@@ -47,7 +50,13 @@ impl Typing {
                 let mut stack_cond = stack.clone();
                 for (t, c, r) in conds {
                     let mut stack_copy = stack_cond.clone();
-                    Self::type_check_stack(c, &mut stack_copy, functions, variable_lookup)?;
+                    Self::type_check_stack(
+                        c,
+                        &mut stack_copy,
+                        functions,
+                        records,
+                        variable_lookup,
+                    )?;
                     Self::check_stack_length(&t.position_info, &stack_copy, 1)?;
                     Self::check_stack_types(&t.position_info, &stack_copy, &vec![StackType::Bool])?;
                     stack_copy.pop();
@@ -55,7 +64,13 @@ impl Typing {
 
                     let mut stack_copy2 = stack_copy.clone();
 
-                    Self::type_check_stack(r, &mut stack_copy2, functions, variable_lookup)?;
+                    Self::type_check_stack(
+                        r,
+                        &mut stack_copy2,
+                        functions,
+                        records,
+                        variable_lookup,
+                    )?;
                     stacks.push((t, stack_copy, stack_copy2));
                 }
 
@@ -69,20 +84,26 @@ impl Typing {
                     }
                 }
 
-                let (_, mut stack1, stack2) = stacks[0].clone();
-                Self::type_check_stack(else_region, &mut stack1, functions, variable_lookup)?;
+                let &mut (_, ref mut stack1, ref stack2) = stacks.get_mut(0).unwrap();
+                Self::type_check_stack(else_region, stack1, functions, records, variable_lookup)?;
                 Self::verify_stack_equivalence(&t_else, &stack1, &stack2)?;
 
-                *stack = stack2;
+                *stack = stack2.to_vec();
             }
             ParseTree::While(t, cond, region) => {
                 let mut stack_copy = stack.clone();
-                Self::type_check_stack(cond, &mut stack_copy, functions, variable_lookup)?;
+                Self::type_check_stack(cond, &mut stack_copy, functions, records, variable_lookup)?;
                 Self::check_stack_length(&t.position_info, &stack_copy, 1)?;
                 Self::check_stack_types(&t.position_info, &stack_copy, &vec![StackType::Bool])?;
                 stack_copy.pop();
 
-                Self::type_check_stack(region, &mut stack_copy, functions, variable_lookup)?;
+                Self::type_check_stack(
+                    region,
+                    &mut stack_copy,
+                    functions,
+                    records,
+                    variable_lookup,
+                )?;
 
                 Self::verify_stack_equivalence(&t, stack, &stack_copy)?;
             }
@@ -100,11 +121,17 @@ impl Typing {
                 }
 
                 let mut new_stack = Vec::new();
-                Self::type_check_stack(r, &mut new_stack, functions, &new_variable_lookup)?;
+                Self::type_check_stack(
+                    r,
+                    &mut new_stack,
+                    functions,
+                    records,
+                    &new_variable_lookup,
+                )?;
                 *stack = new_stack;
             }
             ParseTree::FuncDecl(func) => {
-                Self::type_check_function(func, functions, variable_lookup)?;
+                Self::type_check_function(func, functions, records, variable_lookup)?;
             }
             ParseTree::RecordDecl(_) => {}
         };
@@ -112,12 +139,19 @@ impl Typing {
     }
 
     fn type_check_function(
-        func: &FuncDecl,
+        func: &mut FuncDecl,
         functions: &HashMap<String, FuncDecl>,
+        records: &HashMap<String, RecordDecl>,
         variable_lookup: &HashMap<String, StackType>,
     ) -> Result<(), ParserError> {
         let mut stack = func.inputs.clone();
-        Self::type_check_stack(&func.region, &mut stack, functions, variable_lookup)?;
+        Self::type_check_stack(
+            &mut func.region,
+            &mut stack,
+            functions,
+            records,
+            variable_lookup,
+        )?;
 
         if stack.len() != func.outputs.len() {
             return Err(ParserError::InvalidNumberOfArguments(
@@ -150,6 +184,7 @@ impl Typing {
             (StackType::Ptr(false, p1), StackType::Ptr(false, p2))
             | (StackType::Ptr(false, p1), StackType::Ptr(true, p2))
             | (StackType::Ptr(true, p1), StackType::Ptr(true, p2)) => Self::verify_types(&p1, &p2),
+            (StackType::RecordIden(s1), StackType::RecordIden(s2)) => s1 == s2,
             _ => false,
         }
     }
@@ -204,7 +239,6 @@ impl Typing {
         for (i, t) in (0..).zip(required_types.iter()) {
             let index = stack.len() - 1 - i;
             if !Self::verify_types(stack.get(index).unwrap(), t) {
-                println!("{:?} {:?}", stack.get(index).unwrap(), t);
                 return Err(ParserError::InvalidType(
                     position.clone(),
                     t.clone(),
@@ -236,10 +270,11 @@ impl Typing {
     }
 
     fn type_check_intrinsic(
-        intrinsic: &Intrinsic,
+        intrinsic: &mut Intrinsic,
         position: &PositionInfo,
         stack: &mut Vec<StackType>,
         functions: &HashMap<String, FuncDecl>,
+        records: &HashMap<String, RecordDecl>,
         variable_lookup: &HashMap<String, StackType>,
     ) -> Result<(), ParserError> {
         match intrinsic {
@@ -358,6 +393,12 @@ impl Typing {
                 stack.pop();
                 stack.push(StackType::Bool);
             }
+            Intrinsic::Nth => {
+                todo!();
+            }
+            Intrinsic::NthWrite => {
+                todo!();
+            }
             Intrinsic::StackType(t) => stack.push(t.clone()),
             Intrinsic::I32Value(_) => stack.push(StackType::I32),
             Intrinsic::BoolValue(_) => stack.push(StackType::Bool),
@@ -387,11 +428,96 @@ impl Typing {
             Intrinsic::VariableIdentifier(s) => {
                 if let Some(t) = variable_lookup.get(s) {
                     stack.push(StackType::Var(Box::new(t.clone())));
+                } else {
+                    todo!();
                 }
             }
-            Intrinsic::Record(_) => todo!(),
-            Intrinsic::RecordIdentifier(_) => todo!(),
-            Intrinsic::WriteRecordIdentifier(_) => todo!(),
+            Intrinsic::Record(name) => {
+                if let Some(_) = records.get(name) {
+                    stack.push(StackType::RecordIden(name.to_string()));
+                } else {
+                    todo!();
+                }
+            }
+            Intrinsic::RecordIdentifier(iden) => {
+                Self::check_stack_length(&position, &stack, 1)?;
+                let stack_value = stack.pop().unwrap();
+
+                let record_name = match stack_value {
+                    StackType::RecordIden(s) => s,
+                    _ => {
+                        return Err(ParserError::InvalidType(
+                            position.clone(),
+                            StackType::RecordIden("".to_string()),
+                            stack_value,
+                        ));
+                    }
+                };
+
+                if let Some(record) = records.get(&record_name) {
+                    let entries: Vec<&(String, StackType)> = record
+                        .entries
+                        .iter()
+                        .filter(|(name, _)| name == iden)
+                        .collect();
+
+                    if entries.len() == 0 {
+                        todo!("Error about non existant entry");
+                    }
+                    if entries.len() > 1 {
+                        todo!("Error about repeat entries");
+                    }
+
+                    let (_, stack_type) = entries[0];
+
+                    stack.push(stack_type.clone());
+                    *intrinsic =
+                        Intrinsic::TypedRecordIdentifier(record_name.clone(), iden.clone());
+                }
+            }
+            Intrinsic::WriteRecordIdentifier(iden) => {
+                Self::check_stack_length(&position, &stack, 2)?;
+                let write_value = stack.pop().unwrap();
+                let stack_value = stack.pop().unwrap();
+
+                let record_name = match &stack_value {
+                    StackType::RecordIden(s) => s,
+                    _ => {
+                        return Err(ParserError::InvalidType(
+                            position.clone(),
+                            StackType::RecordIden("".to_string()),
+                            stack_value,
+                        ));
+                    }
+                };
+
+                if let Some(record) = records.get(record_name) {
+                    let entries: Vec<&(String, StackType)> = record
+                        .entries
+                        .iter()
+                        .filter(|(name, _)| name == iden)
+                        .collect();
+
+                    if entries.len() == 0 {
+                        todo!("Error about non existant entry");
+                    }
+                    if entries.len() > 1 {
+                        todo!("Error about repeat entries");
+                    }
+
+                    let (_, stack_type) = entries[0];
+
+                    if *stack_type != write_value {
+                        todo!("Invalid Write");
+                    }
+
+                    stack.push(stack_value.clone());
+                    *intrinsic =
+                        Intrinsic::TypedWriteRecordIdentifier(record_name.clone(), iden.clone());
+                }
+            }
+            Intrinsic::TypedRecordIdentifier(_, _) => unreachable!(),
+            Intrinsic::TypedWriteRecordIdentifier(_, _) => unreachable!(),
 
             Intrinsic::Read => {
                 Self::check_stack_length(&position, &stack, 1)?;

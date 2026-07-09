@@ -50,6 +50,12 @@ pub enum Intrinsic {
     RecordIdentifier(String),
     WriteRecordIdentifier(String),
 
+    TypedRecordIdentifier(String, String),
+    TypedWriteRecordIdentifier(String, String),
+
+    Nth,
+    NthWrite,
+
     Record(String),
 
     StackType(StackType),
@@ -94,6 +100,8 @@ impl fmt::Display for Intrinsic {
             Intrinsic::And => write!(f, "&&"),
             Intrinsic::Or => write!(f, "||"),
             Intrinsic::Not => write!(f, "!"),
+            Intrinsic::Nth => write!(f, "nth"),
+            Intrinsic::NthWrite => write!(f, "nth!"),
             Intrinsic::Assign => write!(f, "="),
             Intrinsic::Read => write!(f, "@"),
             Intrinsic::Input => write!(f, "input"),
@@ -104,6 +112,10 @@ impl fmt::Display for Intrinsic {
             Intrinsic::FuncIdentifier(s) => write!(f, "func_iden({s})"),
             Intrinsic::RecordIdentifier(s) => write!(f, "rec_iden({s})"),
             Intrinsic::WriteRecordIdentifier(s) => write!(f, "write_rec_iden({s})"),
+            Intrinsic::TypedRecordIdentifier(record, s) => write!(f, "rec_iden({record}, {s})"),
+            Intrinsic::TypedWriteRecordIdentifier(record, s) => {
+                write!(f, "write_rec_iden({record}, {s})")
+            }
             Intrinsic::Mem => write!(f, "mem"),
             Intrinsic::Ret => write!(f, "ret"),
             Intrinsic::Call(i) => write!(f, "call({i})"),
