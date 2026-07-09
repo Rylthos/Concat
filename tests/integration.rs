@@ -6,5 +6,5 @@ mod functions;
 mod includes;
 mod input;
 mod loops;
-mod structs;
+mod records;
 mod variables;
