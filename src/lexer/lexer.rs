@@ -427,7 +427,7 @@ impl Lexer {
                         None => {
                             if c == '.' {
                                 tokens.push(Token::new(
-                                    TokenType::RecordIdentifier(s.clone()),
+                                    TokenType::RecordIdentifier(s[1..].to_string().clone()),
                                     line_number,
                                     column_number,
                                     &self.get_filename(&file),
@@ -827,7 +827,7 @@ mod tests {
             Token::new(TokenType::Identifier("temp".to_string()), 1, 31, "", "temp"),
             Token::new(TokenType::Duplicate, 1, 36, "", "dup"),
             Token::new(
-                TokenType::RecordIdentifier(".v1".to_string()),
+                TokenType::RecordIdentifier("v1".to_string()),
                 1,
                 40,
                 "",
@@ -836,7 +836,7 @@ mod tests {
             Token::new(TokenType::Swap, 1, 44, "", "swap"),
             Token::new(TokenType::I32Value(1), 1, 49, "", "1"),
             Token::new(
-                TokenType::RecordIdentifier(".v2".to_string()),
+                TokenType::RecordIdentifier("v2".to_string()),
                 1,
                 51,
                 "",
