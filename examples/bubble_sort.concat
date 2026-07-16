@@ -48,23 +48,23 @@ func bubble_sort i32 i32* -> i32* {
   }
 }
 
-20 assign length {
-  i32 length @ mem assign buffer {
-    0 while dup length @ < {
-      // i
-      dup length @ 1 - swap -
-      // i length-i-1
-      over buffer @ swap + swap =
+20 length define
 
-      1 +
-    }
+i32 length mem assign buffer {
+  0 while dup length < {
+    // i
+    dup length 1 - swap -
+    // i length-i-1
+    over buffer @ swap + swap =
 
-    "Before: " print
-    length @ buffer @ print_buffer "\n" print
-
-    length @ buffer @ bubble_sort
-
-    "After : " print
-    length @ buffer @ print_buffer "\n" print
+    1 +
   }
+
+  "Before: " print
+  length buffer @ print_buffer "\n" print
+
+  length buffer @ bubble_sort
+
+  "After : " print
+  length buffer @ print_buffer "\n" print
 }
