@@ -3,6 +3,7 @@ use crate::lexer::tokens::{Token, TokenType};
 use crate::parser::heap_value::HeapValue;
 use crate::parser::instructions::Instruction;
 use crate::parser::intrinsics::Intrinsic;
+use crate::parser::parse_info::ParseInfo;
 use crate::parser::parse_tree::{FuncDecl, ParseTree, RecordDecl};
 use crate::parser::stack_types::StackType;
 use crate::parser::stack_values::{PointerValue, StackValue};
@@ -19,9 +20,7 @@ pub struct Parser {
     tokens: Vec<Token>,
     parse_tree: ParseTree,
 
-    functions: HashMap<String, FuncDecl>,
-    records: HashMap<String, RecordDecl>,
-    constants: HashMap<String, StackValue>,
+    parse_info: ParseInfo,
 
     pub instructions: Vec<Instruction>,
     pub default_heap: Vec<HeapValue>,
@@ -33,9 +32,7 @@ impl Parser {
             config,
             tokens,
             parse_tree: ParseTree::None,
-            functions: HashMap::new(),
-            records: HashMap::new(),
-            constants: HashMap::new(),
+            parse_info: ParseInfo::new(),
             instructions: Vec::new(),
             default_heap: Vec::new(),
         }
@@ -43,15 +40,11 @@ impl Parser {
 
     pub fn parse(&mut self) -> Result<(), ErrorType> {
         let tokens = self.tokens.clone();
-        let tree = match ParseTree::generate_parse_tree(
-            tokens.iter().peekable(),
-            &mut self.functions,
-            &mut self.records,
-            &mut self.constants,
-        ) {
-            Ok(t) => t,
-            Err(e) => return Err(ErrorType::Parser(e)),
-        };
+        let tree =
+            match ParseTree::generate_parse_tree(tokens.iter().peekable(), &mut self.parse_info) {
+                Ok(t) => t,
+                Err(e) => return Err(ErrorType::Parser(e)),
+            };
 
         self.parse_tree = tree;
 
@@ -59,12 +52,7 @@ impl Parser {
             self.print_tree();
         }
 
-        match Typing::type_check(
-            &mut self.parse_tree,
-            &mut self.functions,
-            &self.records,
-            &self.constants,
-        ) {
+        match Typing::type_check(&mut self.parse_tree, &mut self.parse_info) {
             Ok(_) => (),
             Err(e) => return Err(ErrorType::Parser(e)),
         };
@@ -83,11 +71,14 @@ impl Parser {
 
         let mut final_intrinsics = Vec::new();
         for intrinsic in list.iter() {
-            final_intrinsics.append(&mut Self::expand_intrinsics(intrinsic, &self.records));
+            final_intrinsics.append(&mut Self::expand_intrinsics(
+                intrinsic,
+                &self.parse_info.records,
+            ));
         }
 
         (self.instructions, self.default_heap) =
-            match Self::generate_instructions(&final_intrinsics, &self.records) {
+            match Self::generate_instructions(&final_intrinsics, &self.parse_info.records) {
                 Ok(d) => d,
                 Err(e) => return Err(ErrorType::Parser(e)),
             };
@@ -103,11 +94,11 @@ impl Parser {
         println!("==== TREE ====");
         println!("{}", self.parse_tree);
 
-        for (_, func) in self.functions.iter() {
+        for (_, func) in self.parse_info.functions.iter() {
             println!("{}", func);
         }
 
-        for (_, record) in self.records.iter() {
+        for (_, record) in self.parse_info.records.iter() {
             println!("{}", record);
         }
         println!("==== TREE ====");
@@ -324,7 +315,7 @@ impl Parser {
             ParseTree::None => return Err(ParserError::InvalidParseTree()),
             ParseTree::Element(p, i) => match i {
                 Intrinsic::FuncIdentifier(iden) => {
-                    if let Some(func) = self.functions.get(&iden) {
+                    if let Some(func) = self.parse_info.functions.get(&iden) {
                         parsed_expression.push(Intrinsic::I32Value(func.inputs.len() as i32));
                         parsed_expression
                             .push(Intrinsic::FuncLabelRef(iden, Box::new(Intrinsic::Call(0))));
@@ -335,7 +326,7 @@ impl Parser {
                 Intrinsic::VariableIdentifier(iden) => {
                     if let Some((d, s)) = variable_lookup.get(&iden) {
                         parsed_expression.push(Intrinsic::Lookup(*d, *s));
-                    } else if let Some(v) = self.constants.get(&iden) {
+                    } else if let Some(v) = self.parse_info.constants.get(&iden) {
                         parsed_expression.push(Intrinsic::StackValue(v.clone()));
                     } else {
                         return Err(ParserError::UnknownIdentifier(p, iden.to_string()));
@@ -525,7 +516,7 @@ impl Parser {
 
     fn parse_functions(&mut self) -> Result<Vec<Intrinsic>, ParserError> {
         let mut parsed_instructions = Vec::new();
-        for (_, func) in self.functions.iter() {
+        for (_, func) in self.parse_info.functions.iter() {
             let mut instructions = self.parse_tree(*func.region.clone(), &HashMap::new())?;
 
             instructions.push(Intrinsic::Ret);
@@ -790,7 +781,7 @@ mod tests {
         let mut parser = Parser::init(Config::blank(), input);
         match parser.parse() {
             Ok(_) => {
-                assert_eq!(format!("{:?}", parser.functions), "{}");
+                assert_eq!(format!("{:?}", parser.parse_info.functions), "{}");
                 assert_eq!(
                     format!("{:?}", parser.parse_tree),
                     format!("{:?}", expected_tree)
@@ -815,7 +806,7 @@ mod tests {
         let mut parser = Parser::init(Config::blank(), input);
         match parser.parse() {
             Ok(_) => {
-                assert_eq!(format!("{:?}", parser.functions), "{}");
+                assert_eq!(format!("{:?}", parser.parse_info.functions), "{}");
                 assert_eq!(
                     format!("{:?}", parser.parse_tree),
                     format!("{:?}", expected_tree)
@@ -825,7 +816,7 @@ mod tests {
                     format!("{:?}", expected_instructions)
                 );
                 assert_eq!(
-                    format!("{:?}", parser.records),
+                    format!("{:?}", parser.parse_info.records),
                     format!("{:?}", expected_record)
                 );
             }
@@ -845,7 +836,7 @@ mod tests {
         match parser.parse() {
             Ok(_) => {
                 assert_eq!(
-                    format!("{:?}", parser.functions),
+                    format!("{:?}", parser.parse_info.functions),
                     format!("{:?}", expected_function)
                 );
                 assert_eq!(

@@ -7,6 +7,8 @@ use crate::parser::parser::Parser;
 use crate::parser::stack_types::StackType;
 use crate::parser::stack_values::StackValue;
 
+use crate::parser::parse_info::ParseInfo;
+
 use std::collections::HashMap;
 
 use std::fmt;
@@ -96,9 +98,7 @@ impl ParseTree {
 
     pub fn generate_parse_tree<'a>(
         tokens: impl Iterator<Item = &'a Token>,
-        functions: &mut HashMap<String, FuncDecl>,
-        records: &mut HashMap<String, RecordDecl>,
-        constants: &mut HashMap<String, StackValue>,
+        parse_info: &mut ParseInfo,
     ) -> Result<ParseTree, ParserError> {
         let mut region: Vec<ParseTree> = Vec::new();
 
@@ -114,15 +114,11 @@ impl ParseTree {
                     loop {
                         let conditional_tree = Self::generate_parse_tree(
                             Parser::get_condition(&mut peekable)?.iter(),
-                            functions,
-                            records,
-                            constants,
+                            parse_info,
                         )?;
                         let region_tree = Self::generate_parse_tree(
                             Parser::get_region(&mut peekable)?.iter(),
-                            functions,
-                            records,
-                            constants,
+                            parse_info,
                         )?;
 
                         regions.push((
@@ -149,9 +145,7 @@ impl ParseTree {
                                         t.clone(),
                                         Box::new(Self::generate_parse_tree(
                                             Parser::get_region(&mut peekable)?.iter(),
-                                            functions,
-                                            records,
-                                            constants,
+                                            parse_info,
                                         )?),
                                     );
 
@@ -170,15 +164,11 @@ impl ParseTree {
                     peekable.next();
                     let conditional_tree = Self::generate_parse_tree(
                         Parser::get_condition(&mut peekable)?.iter(),
-                        functions,
-                        records,
-                        constants,
+                        parse_info,
                     )?;
                     let region_tree = Self::generate_parse_tree(
                         Parser::get_region(&mut peekable)?.iter(),
-                        functions,
-                        records,
-                        constants,
+                        parse_info,
                     )?;
 
                     region.push(ParseTree::While(
@@ -206,7 +196,7 @@ impl ParseTree {
                         ));
                     };
 
-                    let input_types = Parser::get_types(&mut peekable, records)?;
+                    let input_types = Parser::get_types(&mut peekable, &mut parse_info.records)?;
 
                     if let Some(t) = peekable.next() {
                         match &t.token_type {
@@ -225,15 +215,13 @@ impl ParseTree {
                         ));
                     };
 
-                    let output_types = Parser::get_types(&mut peekable, records)?;
+                    let output_types = Parser::get_types(&mut peekable, &parse_info.records)?;
                     let region_tree = Self::generate_parse_tree(
                         Parser::get_region(&mut peekable)?.iter(),
-                        functions,
-                        records,
-                        constants,
+                        parse_info,
                     )?;
 
-                    functions.insert(
+                    parse_info.functions.insert(
                         function_name.clone(),
                         FuncDecl {
                             position_info: t.position_info.clone(),
@@ -287,7 +275,8 @@ impl ParseTree {
                         match &t.token_type {
                             TokenType::RightBrace => break,
                             _ => {
-                                let next_type = Parser::get_type(&mut peekable, records)?;
+                                let next_type =
+                                    Parser::get_type(&mut peekable, &parse_info.records)?;
 
                                 if let Some(t) = peekable.next() {
                                     match &t.token_type {
@@ -330,7 +319,7 @@ impl ParseTree {
                         ));
                     };
 
-                    records.insert(
+                    parse_info.records.insert(
                         record_name.clone(),
                         RecordDecl {
                             position_info: t.position_info.clone(),
@@ -351,9 +340,7 @@ impl ParseTree {
 
                     let region_tree = Self::generate_parse_tree(
                         Parser::get_region(&mut peekable)?.iter(),
-                        functions,
-                        records,
-                        constants,
+                        parse_info,
                     )?;
 
                     region.push(ParseTree::Assign(
@@ -387,7 +374,7 @@ impl ParseTree {
                 }
                 TokenType::Identifier(s) => {
                     peekable.next();
-                    if records.contains_key(&s.clone()) {
+                    if parse_info.records.contains_key(&s.clone()) {
                         if let Some(t) = peekable.peek() {
                             match t.token_type {
                                 TokenType::Exclamation => {
@@ -406,10 +393,10 @@ impl ParseTree {
                         region.push(ParseTree::Element(
                             t.position_info.clone(),
                             Intrinsic::StackType(Parser::create_union_type(
-                                &records.get(s).unwrap(),
+                                &parse_info.records.get(s).unwrap(),
                             )),
                         ));
-                    } else if functions.contains_key(&s.clone()) {
+                    } else if parse_info.functions.contains_key(&s.clone()) {
                         region.push(ParseTree::Element(
                             t.position_info.clone(),
                             Intrinsic::FuncIdentifier(s.clone()),
@@ -449,7 +436,7 @@ impl ParseTree {
                     region.push(ParseTree::Element(t.position_info.clone(), intrinsic));
                 }
                 TokenType::LeftSqBracket => {
-                    let parsed_type = Parser::get_type(&mut peekable, records)?;
+                    let parsed_type = Parser::get_type(&mut peekable, &parse_info.records)?;
 
                     region.push(ParseTree::Element(
                         t.position_info.clone(),
@@ -475,7 +462,7 @@ impl ParseTree {
                     ));
                 }
                 TokenType::I32 | TokenType::Bool | TokenType::Char => {
-                    let parsed_type = Parser::get_type(&mut peekable, records)?;
+                    let parsed_type = Parser::get_type(&mut peekable, &parse_info.records)?;
 
                     region.push(ParseTree::Element(
                         t.position_info.clone(),
@@ -507,7 +494,7 @@ impl ParseTree {
                         &HashMap::new(),
                         &HashMap::new(),
                     ) {
-                        constants.insert(name, v);
+                        parse_info.constants.insert(name, v);
                     } else {
                         return Err(ParserError::InvalidDefine(t.position_info.clone()));
                     }
