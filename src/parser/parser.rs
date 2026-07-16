@@ -21,6 +21,7 @@ pub struct Parser {
 
     functions: HashMap<String, FuncDecl>,
     records: HashMap<String, RecordDecl>,
+    constants: HashMap<String, StackValue>,
 
     pub instructions: Vec<Instruction>,
     pub default_heap: Vec<HeapValue>,
@@ -34,6 +35,7 @@ impl Parser {
             parse_tree: ParseTree::None,
             functions: HashMap::new(),
             records: HashMap::new(),
+            constants: HashMap::new(),
             instructions: Vec::new(),
             default_heap: Vec::new(),
         }
@@ -45,6 +47,7 @@ impl Parser {
             tokens.iter().peekable(),
             &mut self.functions,
             &mut self.records,
+            &mut self.constants,
         ) {
             Ok(t) => t,
             Err(e) => return Err(ErrorType::Parser(e)),
@@ -56,7 +59,12 @@ impl Parser {
             self.print_tree();
         }
 
-        match Typing::type_check(&mut self.parse_tree, &mut self.functions, &self.records) {
+        match Typing::type_check(
+            &mut self.parse_tree,
+            &mut self.functions,
+            &self.records,
+            &self.constants,
+        ) {
             Ok(_) => (),
             Err(e) => return Err(ErrorType::Parser(e)),
         };
@@ -137,6 +145,7 @@ impl Parser {
             | TokenType::RecordIdentifier(_)
             | TokenType::Union
             | TokenType::Nth
+            | TokenType::Define
             | TokenType::Exclamation => {
                 unreachable!("Unreachable: {:?}", token)
             }
@@ -214,7 +223,7 @@ impl Parser {
         }
     }
 
-    fn convert_intrinsic(
+    pub fn convert_intrinsic(
         intrinsic: &Intrinsic,
         labels: &HashMap<String, usize>,
         records: &HashMap<String, RecordDecl>,
@@ -258,6 +267,7 @@ impl Parser {
             Intrinsic::Call(_) => unreachable!(),
 
             Intrinsic::StackType(t) => Instruction::Push(StackValue::Type(t.clone())),
+            Intrinsic::StackValue(v) => Instruction::Push(v.clone()),
             Intrinsic::I32Value(i) => Instruction::Push(StackValue::I32(*i)),
             Intrinsic::BoolValue(b) => Instruction::Push(StackValue::Bool(*b)),
             Intrinsic::CharValue(c) => Instruction::Push(StackValue::Char(*c)),
@@ -325,6 +335,8 @@ impl Parser {
                 Intrinsic::VariableIdentifier(iden) => {
                     if let Some((d, s)) = variable_lookup.get(&iden) {
                         parsed_expression.push(Intrinsic::Lookup(*d, *s));
+                    } else if let Some(v) = self.constants.get(&iden) {
+                        parsed_expression.push(Intrinsic::StackValue(v.clone()));
                     } else {
                         return Err(ParserError::UnknownIdentifier(p, iden.to_string()));
                     }
@@ -1319,6 +1331,30 @@ mod tests {
             Instruction::Push(StackValue::I32(0)),
             Instruction::Push(StackValue::I32(1)),
             Instruction::Union(2),
+            Instruction::Halt,
+        ];
+
+        test_non_function(input, expected_tree, expected_instructions);
+    }
+
+    #[test]
+    fn parse_define() {
+        let input = vec![
+            Token::new(TokenType::I32Value(0), 1, 1, "", ""),
+            Token::new(TokenType::Identifier("temp".to_string()), 1, 1, "", ""),
+            Token::new(TokenType::Define, 1, 1, "", ""),
+            Token::new(TokenType::Identifier("temp".to_string()), 1, 1, "", ""),
+            Token::new(TokenType::Identifier("temp".to_string()), 1, 1, "", ""),
+        ];
+
+        let expected_tree = ParseTree::Region(vec![
+            create_element(1, 1, Intrinsic::VariableIdentifier("temp".to_string())),
+            create_element(1, 1, Intrinsic::VariableIdentifier("temp".to_string())),
+        ]);
+
+        let expected_instructions = vec![
+            Instruction::Push(StackValue::I32(0)),
+            Instruction::Push(StackValue::I32(0)),
             Instruction::Halt,
         ];
 

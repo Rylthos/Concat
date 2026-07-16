@@ -23,6 +23,7 @@ pub enum ParserError {
     ExpectedToken(PositionInfo, TokenType),
     ExpectedTokenGot(PositionInfo, TokenType, TokenType),
     ExpectedIdentifierGot(PositionInfo, TokenType),
+    InvalidDefine(PositionInfo),
     ExpectedIntrinsic(PositionInfo, Intrinsic),
     ExpectedIntrinsicGot(PositionInfo, Intrinsic, Intrinsic),
     ExpectedTypeGot(PositionInfo, TokenType),
@@ -98,6 +99,9 @@ fn handle_parser_error(error: ParserError) {
         }
         ParserError::ExpectedIdentifierGot(pos, token) => {
             eprintln!("[PARSER] [{}] Expected identifier got {}", pos, token);
+        }
+        ParserError::InvalidDefine(pos) => {
+            eprintln!("[PARSER] [{}] Invalid definition", pos);
         }
         ParserError::ExpectedIntrinsic(pos, token) => {
             eprintln!("[PARSER] [{}] Expected intrinsic {}", pos, token);

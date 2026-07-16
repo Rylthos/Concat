@@ -3,6 +3,7 @@ use crate::lexer::tokens::{PositionInfo, Token};
 use crate::parser::intrinsics::Intrinsic;
 use crate::parser::parse_tree::{FuncDecl, ParseTree, RecordDecl};
 use crate::parser::stack_types::StackType;
+use crate::parser::stack_values::StackValue;
 
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -14,15 +15,29 @@ impl Typing {
         tree: &mut ParseTree,
         functions: &mut HashMap<String, FuncDecl>,
         records: &HashMap<String, RecordDecl>,
+        constants: &HashMap<String, StackValue>,
     ) -> Result<(), ParserError> {
         let mut stack = Vec::new();
         let variable_lookup = HashMap::new();
-        Self::type_check_stack(tree, &mut stack, functions, records, &variable_lookup)?;
+        Self::type_check_stack(
+            tree,
+            &mut stack,
+            functions,
+            records,
+            constants,
+            &variable_lookup,
+        )?;
 
         let variable_lookup = HashMap::new();
         let functions_clone = functions.clone();
         for (_, f) in functions.iter_mut() {
-            Self::type_check_function(&mut *f, &functions_clone, records, &variable_lookup)?;
+            Self::type_check_function(
+                &mut *f,
+                &functions_clone,
+                records,
+                constants,
+                &variable_lookup,
+            )?;
         }
 
         Ok(())
@@ -33,16 +48,32 @@ impl Typing {
         stack: &mut Vec<StackType>,
         functions: &HashMap<String, FuncDecl>,
         records: &HashMap<String, RecordDecl>,
+        constants: &HashMap<String, StackValue>,
         variable_lookup: &HashMap<String, StackType>,
     ) -> Result<(), ParserError> {
         match tree {
             ParseTree::None => unreachable!("Invalid stack"),
             ParseTree::Element(p, i) => {
-                Self::type_check_intrinsic(i, &p, stack, functions, records, variable_lookup)?;
+                Self::type_check_intrinsic(
+                    i,
+                    &p,
+                    stack,
+                    functions,
+                    records,
+                    constants,
+                    variable_lookup,
+                )?;
             }
             ParseTree::Region(r) => {
                 for tree in r {
-                    Self::type_check_stack(tree, stack, functions, records, variable_lookup)?;
+                    Self::type_check_stack(
+                        tree,
+                        stack,
+                        functions,
+                        records,
+                        constants,
+                        variable_lookup,
+                    )?;
                 }
             }
             ParseTree::If(conds, (t_else, else_region)) => {
@@ -55,6 +86,7 @@ impl Typing {
                         &mut stack_copy,
                         functions,
                         records,
+                        constants,
                         variable_lookup,
                     )?;
                     Self::check_stack_length(&t.position_info, &stack_copy, 1)?;
@@ -69,6 +101,7 @@ impl Typing {
                         &mut stack_copy2,
                         functions,
                         records,
+                        constants,
                         variable_lookup,
                     )?;
                     stacks.push((t, stack_copy, stack_copy2));
@@ -85,14 +118,28 @@ impl Typing {
                 }
 
                 let &mut (_, ref mut stack1, ref stack2) = stacks.get_mut(0).unwrap();
-                Self::type_check_stack(else_region, stack1, functions, records, variable_lookup)?;
+                Self::type_check_stack(
+                    else_region,
+                    stack1,
+                    functions,
+                    records,
+                    constants,
+                    variable_lookup,
+                )?;
                 Self::verify_stack_equivalence(&t_else, &stack1, &stack2)?;
 
                 *stack = stack2.to_vec();
             }
             ParseTree::While(t, cond, region) => {
                 let mut stack_copy = stack.clone();
-                Self::type_check_stack(cond, &mut stack_copy, functions, records, variable_lookup)?;
+                Self::type_check_stack(
+                    cond,
+                    &mut stack_copy,
+                    functions,
+                    records,
+                    constants,
+                    variable_lookup,
+                )?;
                 Self::check_stack_length(&t.position_info, &stack_copy, 1)?;
                 Self::check_stack_types(&t.position_info, &stack_copy, &vec![StackType::Bool])?;
                 stack_copy.pop();
@@ -102,6 +149,7 @@ impl Typing {
                     &mut stack_copy,
                     functions,
                     records,
+                    constants,
                     variable_lookup,
                 )?;
 
@@ -126,12 +174,13 @@ impl Typing {
                     &mut new_stack,
                     functions,
                     records,
+                    constants,
                     &new_variable_lookup,
                 )?;
                 *stack = new_stack;
             }
             ParseTree::FuncDecl(func) => {
-                Self::type_check_function(func, functions, records, variable_lookup)?;
+                Self::type_check_function(func, functions, records, constants, variable_lookup)?;
             }
             ParseTree::RecordDecl(_) => {}
         };
@@ -142,6 +191,7 @@ impl Typing {
         func: &mut FuncDecl,
         functions: &HashMap<String, FuncDecl>,
         records: &HashMap<String, RecordDecl>,
+        constants: &HashMap<String, StackValue>,
         variable_lookup: &HashMap<String, StackType>,
     ) -> Result<(), ParserError> {
         let mut stack = func.inputs.clone();
@@ -150,6 +200,7 @@ impl Typing {
             &mut stack,
             functions,
             records,
+            constants,
             variable_lookup,
         )?;
 
@@ -285,6 +336,7 @@ impl Typing {
         stack: &mut Vec<StackType>,
         functions: &HashMap<String, FuncDecl>,
         records: &HashMap<String, RecordDecl>,
+        constants: &HashMap<String, StackValue>,
         variable_lookup: &HashMap<String, StackType>,
     ) -> Result<(), ParserError> {
         match intrinsic {
@@ -471,6 +523,8 @@ impl Typing {
             Intrinsic::VariableIdentifier(s) => {
                 if let Some(t) = variable_lookup.get(s) {
                     stack.push(StackType::Var(Box::new(t.clone())));
+                } else if let Some(t) = constants.get(s) {
+                    stack.push(StackValue::to_type(t));
                 } else {
                     todo!();
                 }
@@ -643,7 +697,8 @@ impl Typing {
             | Intrinsic::FrameRemove
             | Intrinsic::FuncLabelDecl(_, _)
             | Intrinsic::FuncLabelRef(_, _)
-            | Intrinsic::Lookup(_, _) => {
+            | Intrinsic::Lookup(_, _)
+            | Intrinsic::StackValue(_) => {
                 unreachable!("Intrinsics should be generated and not used defined");
             }
         }

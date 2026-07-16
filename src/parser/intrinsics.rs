@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::parser::stack_types::StackType;
+use crate::parser::{stack_types::StackType, stack_values::StackValue};
 
 #[derive(Debug, Clone)]
 pub enum Intrinsic {
@@ -60,6 +60,7 @@ pub enum Intrinsic {
     Record(String),
 
     StackType(StackType),
+    StackValue(StackValue),
 
     StringValue(String),
     I32Value(i32),
@@ -122,6 +123,7 @@ impl fmt::Display for Intrinsic {
             Intrinsic::Ret => write!(f, "ret"),
             Intrinsic::Call(i) => write!(f, "call({i})"),
             Intrinsic::StackType(t) => write!(f, "{t}"),
+            Intrinsic::StackValue(v) => write!(f, "{:?}", v),
             Intrinsic::StringValue(s) => write!(f, "STRING {:?}", s),
             Intrinsic::I32Value(i) => write!(f, "I32 {i}"),
             Intrinsic::BoolValue(b) => write!(f, "BOOL {b}"),

@@ -41,4 +41,23 @@ impl StackValue {
             StackType::RecordIden(_) => todo!(),
         }
     }
+
+    pub fn to_type(stack_value: &StackValue) -> StackType {
+        match stack_value {
+            StackValue::I32(_) => StackType::I32,
+            StackValue::Bool(_) => StackType::Bool,
+            StackValue::Char(_) => StackType::Char,
+            StackValue::Type(t) => t.clone(),
+            StackValue::Union(values) => StackType::Union(
+                values
+                    .iter()
+                    .map(|i| Box::new(Self::to_type(&(*i))))
+                    .collect(),
+            ),
+            StackValue::Pointer(_)
+            | StackValue::Frame(_)
+            | StackValue::Call(_)
+            | StackValue::VarRef(_, _) => panic!(),
+        }
+    }
 }

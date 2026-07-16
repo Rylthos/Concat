@@ -64,6 +64,8 @@ pub enum TokenType {
 
     Mem,
 
+    Define,
+
     String,
     I32,
     Bool,
@@ -195,6 +197,8 @@ impl fmt::Display for TokenType {
             TokenType::Input => write!(f, "input"),
 
             TokenType::Mem => write!(f, "mem"),
+
+            TokenType::Define => write!(f, "define"),
 
             TokenType::Identifier(s) => write!(f, "Iden({:?})", s),
 

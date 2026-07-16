@@ -1,9 +1,11 @@
 use crate::error::types::ParserError;
 use crate::lexer::tokens::{PositionInfo, Token, TokenType};
 
+use crate::parser::instructions::Instruction;
 use crate::parser::intrinsics::Intrinsic;
 use crate::parser::parser::Parser;
 use crate::parser::stack_types::StackType;
+use crate::parser::stack_values::StackValue;
 
 use std::collections::HashMap;
 
@@ -96,6 +98,7 @@ impl ParseTree {
         tokens: impl Iterator<Item = &'a Token>,
         functions: &mut HashMap<String, FuncDecl>,
         records: &mut HashMap<String, RecordDecl>,
+        constants: &mut HashMap<String, StackValue>,
     ) -> Result<ParseTree, ParserError> {
         let mut region: Vec<ParseTree> = Vec::new();
 
@@ -113,11 +116,13 @@ impl ParseTree {
                             Parser::get_condition(&mut peekable)?.iter(),
                             functions,
                             records,
+                            constants,
                         )?;
                         let region_tree = Self::generate_parse_tree(
                             Parser::get_region(&mut peekable)?.iter(),
                             functions,
                             records,
+                            constants,
                         )?;
 
                         regions.push((
@@ -146,6 +151,7 @@ impl ParseTree {
                                             Parser::get_region(&mut peekable)?.iter(),
                                             functions,
                                             records,
+                                            constants,
                                         )?),
                                     );
 
@@ -166,11 +172,13 @@ impl ParseTree {
                         Parser::get_condition(&mut peekable)?.iter(),
                         functions,
                         records,
+                        constants,
                     )?;
                     let region_tree = Self::generate_parse_tree(
                         Parser::get_region(&mut peekable)?.iter(),
                         functions,
                         records,
+                        constants,
                     )?;
 
                     region.push(ParseTree::While(
@@ -222,6 +230,7 @@ impl ParseTree {
                         Parser::get_region(&mut peekable)?.iter(),
                         functions,
                         records,
+                        constants,
                     )?;
 
                     functions.insert(
@@ -344,6 +353,7 @@ impl ParseTree {
                         Parser::get_region(&mut peekable)?.iter(),
                         functions,
                         records,
+                        constants,
                     )?;
 
                     region.push(ParseTree::Assign(
@@ -471,6 +481,38 @@ impl ParseTree {
                         t.position_info.clone(),
                         Intrinsic::StackType(parsed_type),
                     ));
+                }
+                TokenType::Define => {
+                    let raw_name = region.pop();
+                    let raw_value = region.pop();
+
+                    let name =
+                        if let Some(ParseTree::Element(_, Intrinsic::VariableIdentifier(s))) =
+                            raw_name
+                        {
+                            s
+                        } else {
+                            return Err(ParserError::InvalidDefine(t.position_info.clone()));
+                        };
+
+                    let value = if let Some(ParseTree::Element(_, i)) = raw_value {
+                        i
+                    } else {
+                        return Err(ParserError::InvalidDefine(t.position_info.clone()));
+                    };
+
+                    if let Instruction::Push(v) = Parser::convert_intrinsic(
+                        &value,
+                        &HashMap::new(),
+                        &HashMap::new(),
+                        &HashMap::new(),
+                    ) {
+                        constants.insert(name, v);
+                    } else {
+                        return Err(ParserError::InvalidDefine(t.position_info.clone()));
+                    }
+
+                    peekable.next();
                 }
                 _ => {
                     peekable.next();
