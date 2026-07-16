@@ -1,6 +1,7 @@
 mod arrays;
 mod basics;
 mod conditionals;
+mod defines;
 mod examples;
 mod functions;
 mod includes;
