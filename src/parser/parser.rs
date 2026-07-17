@@ -94,13 +94,24 @@ impl Parser {
         println!("==== TREE ====");
         println!("{}", self.parse_tree);
 
+        println!("==== FUNCTIONS ====");
         for (_, func) in self.parse_info.functions.iter() {
             println!("{}", func);
         }
+        println!("==== FUNCTIONS ====\n");
 
+        println!("==== RECORDS ====");
         for (_, record) in self.parse_info.records.iter() {
             println!("{}", record);
         }
+        println!("==== RECORDS ====\n");
+
+        println!("==== DEFINES ====");
+        for (_, defines) in self.parse_info.defines.iter() {
+            println!("{}", defines);
+        }
+        println!("==== DEFINES ====");
+
         println!("==== TREE ====");
     }
 
