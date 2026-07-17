@@ -32,7 +32,7 @@ pub struct DefineDecl {
 pub struct ParseInfo {
     pub functions: HashMap<String, FuncDecl>,
     pub records: HashMap<String, RecordDecl>,
-    pub constants: HashMap<String, DefineDecl>,
+    pub defines: HashMap<String, DefineDecl>,
 }
 
 impl ParseInfo {
@@ -40,7 +40,7 @@ impl ParseInfo {
         ParseInfo {
             functions: HashMap::new(),
             records: HashMap::new(),
-            constants: HashMap::new(),
+            defines: HashMap::new(),
         }
     }
 }

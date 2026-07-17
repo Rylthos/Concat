@@ -517,20 +517,15 @@ impl ParseTree {
                         &HashMap::new(),
                         &HashMap::new(),
                     ) {
-                        if parse_info.constants.contains_key(&name) {
+                        if parse_info.defines.contains_key(&name) {
                             return Err(ParserError::DuplicateDefine(
                                 t.position_info.clone(),
-                                parse_info
-                                    .constants
-                                    .get(&name)
-                                    .unwrap()
-                                    .position_info
-                                    .clone(),
+                                parse_info.defines.get(&name).unwrap().position_info.clone(),
                                 name.clone(),
                             ));
                         }
 
-                        parse_info.constants.insert(
+                        parse_info.defines.insert(
                             name.clone(),
                             DefineDecl {
                                 position_info: t.position_info.clone(),

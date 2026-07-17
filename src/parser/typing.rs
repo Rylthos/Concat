@@ -25,7 +25,7 @@ impl Typing {
                 &ParseInfo {
                     functions: functions_clone.clone(),
                     records: parse_info.records.clone(),
-                    constants: parse_info.constants.clone(),
+                    defines: parse_info.defines.clone(),
                 },
                 &variable_lookup,
             )?;
@@ -452,7 +452,7 @@ impl Typing {
             Intrinsic::VariableIdentifier(s) => {
                 if let Some(t) = variable_lookup.get(s) {
                     stack.push(StackType::Var(Box::new(t.clone())));
-                } else if let Some(t) = parse_info.constants.get(s) {
+                } else if let Some(t) = parse_info.defines.get(s) {
                     stack.push(StackValue::to_type(&t.value));
                 } else {
                     return Err(TypeError::InvalidIdentifier(position.clone(), s.clone()));

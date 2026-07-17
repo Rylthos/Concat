@@ -326,7 +326,7 @@ impl Parser {
                 Intrinsic::VariableIdentifier(iden) => {
                     if let Some((d, s)) = variable_lookup.get(&iden) {
                         parsed_expression.push(Intrinsic::Lookup(*d, *s));
-                    } else if let Some(v) = self.parse_info.constants.get(&iden) {
+                    } else if let Some(v) = self.parse_info.defines.get(&iden) {
                         parsed_expression.push(Intrinsic::StackValue(v.value.clone()));
                     } else {
                         return Err(ParserError::UnknownIdentifier(p, iden.to_string()));
