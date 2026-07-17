@@ -1,4 +1,4 @@
-use crate::error::types::{ErrorType, ParserError};
+use crate::error::types::{ErrorType, ParserError, TypeError};
 use crate::lexer::tokens::{Token, TokenType};
 use crate::parser::heap_value::HeapValue;
 use crate::parser::instructions::Instruction;
@@ -54,7 +54,7 @@ impl Parser {
 
         match Typing::type_check(&mut self.parse_tree, &mut self.parse_info) {
             Ok(_) => (),
-            Err(e) => return Err(ErrorType::Parser(e)),
+            Err(e) => return Err(ErrorType::Type(e)),
         };
 
         let mut list = match self.parse_tree(self.parse_tree.clone(), &HashMap::new()) {

@@ -30,16 +30,27 @@ pub enum ParserError {
     ExpectedPointerGot(PositionInfo, StackType),
     InvalidParseTree(),
     UnknownIdentifier(PositionInfo, String),
-    InvalidNumberOfArguments(PositionInfo, usize, usize),
+}
+
+#[derive(Debug)]
+pub enum TypeError {
     InvalidType(PositionInfo, StackType, StackType),
+    InvalidNumberOfArguments(PositionInfo, usize, usize),
     InvalidTypeSet(PositionInfo, HashSet<StackType>, StackType),
     InvalidShape(PositionInfo, Vec<StackType>, Vec<StackType>),
+    InvalidIndex(PositionInfo, usize, usize),
+    InvalidRecordWriteType(PositionInfo, StackType, StackType),
+    InvalidIdentifier(PositionInfo, String),
+    InvalidRecordName(PositionInfo, String),
+    InvalidRecordEntry(PositionInfo, String, String),
+    DuplicateRecordEntry(PositionInfo, String, String),
 }
 
 #[derive(Debug)]
 pub enum ErrorType {
     Lexer(LexerError),
     Parser(ParserError),
+    Type(TypeError),
 }
 
 fn handle_lexer_error(error: LexerError) {
@@ -124,25 +135,56 @@ fn handle_parser_error(error: ParserError) {
         ParserError::UnknownIdentifier(pos, name) => {
             eprintln!("[PARSER] [{}] Unknown identifier {}", pos, name);
         }
-        ParserError::InvalidNumberOfArguments(pos, expected, got) => {
+    }
+}
+
+fn handle_type_error(error: TypeError) {
+    match error {
+        TypeError::InvalidNumberOfArguments(pos, expected, got) => {
             eprintln!(
                 "[TYPE] [{}] Expected {} arguments, got {}",
                 pos, expected, got
             );
         }
-        ParserError::InvalidType(pos, input, output) => {
+        TypeError::InvalidType(pos, input, output) => {
             eprintln!("[TYPE] [{}] Expected {} type, got {}", pos, input, output);
         }
-        ParserError::InvalidTypeSet(pos, inputs, output) => {
+        TypeError::InvalidTypeSet(pos, inputs, output) => {
             eprintln!(
                 "[TYPE] [{}] Expected one of {:?}, got {}",
                 pos, inputs, output
             );
         }
-        ParserError::InvalidShape(pos, stack1, stack2) => {
+        TypeError::InvalidShape(pos, stack1, stack2) => {
             eprintln!(
                 "[TYPE] [{}] Stack shapes differ {:?} {:?}",
                 pos, stack1, stack2
+            );
+        }
+
+        TypeError::InvalidIndex(pos, index, size) => {
+            eprintln!("[TYPE] [{}] Invalid index {}/{}", pos, index, size);
+        }
+        TypeError::InvalidRecordWriteType(pos, expected, got) => {
+            eprintln!(
+                "[TYPE] [{}] Invalid record write type, got {} expected {}",
+                pos, got, expected
+            );
+        }
+
+        TypeError::InvalidIdentifier(pos, identifier) => {
+            eprintln!("[TYPE] [{}] Invalid Identifier {}", pos, identifier);
+        }
+        TypeError::InvalidRecordName(pos, record) => {
+            eprintln!("[TYPE] [{}] Invalid record name {}", pos, record);
+        }
+        TypeError::InvalidRecordEntry(pos, record, entry) => {
+            eprintln!("[TYPE] [{}] Invalid record entry {}.{}", pos, record, entry);
+        }
+        TypeError::DuplicateRecordEntry(pos, record, entry) => {
+            eprintln!(
+                "[TYPE] [{}] Duplicate record entry {}.{}",
+                pos, record, entry
             );
         }
     }
@@ -152,5 +194,6 @@ pub fn print_error(error: ErrorType) {
     match error {
         ErrorType::Lexer(err) => handle_lexer_error(err),
         ErrorType::Parser(err) => handle_parser_error(err),
+        ErrorType::Type(err) => handle_type_error(err),
     }
 }

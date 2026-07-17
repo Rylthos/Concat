@@ -1,4 +1,4 @@
-use crate::error::types::ParserError;
+use crate::error::types::TypeError;
 use crate::lexer::tokens::{PositionInfo, Token};
 use crate::parser::intrinsics::Intrinsic;
 use crate::parser::parse_info::ParseInfo;
@@ -12,7 +12,9 @@ use std::collections::HashSet;
 pub struct Typing {}
 
 impl Typing {
-    pub fn type_check(tree: &mut ParseTree, parse_info: &mut ParseInfo) -> Result<(), ParserError> {
+    pub fn type_check(tree: &mut ParseTree, parse_info: &mut ParseInfo) -> Result<(), TypeError> {
+        // TODO: Validate function names/records/constants
+
         let mut stack = Vec::new();
         let variable_lookup = HashMap::new();
         Self::type_check_stack(tree, &mut stack, parse_info, &variable_lookup)?;
@@ -39,7 +41,7 @@ impl Typing {
         stack: &mut Vec<StackType>,
         parse_info: &ParseInfo,
         variable_lookup: &HashMap<String, StackType>,
-    ) -> Result<(), ParserError> {
+    ) -> Result<(), TypeError> {
         match tree {
             ParseTree::None => unreachable!("Invalid stack"),
             ParseTree::Element(p, i) => {
@@ -123,12 +125,12 @@ impl Typing {
         func: &mut FuncDecl,
         parse_info: &ParseInfo,
         variable_lookup: &HashMap<String, StackType>,
-    ) -> Result<(), ParserError> {
+    ) -> Result<(), TypeError> {
         let mut stack = func.inputs.clone();
         Self::type_check_stack(&mut func.region, &mut stack, parse_info, variable_lookup)?;
 
         if stack.len() != func.outputs.len() {
-            return Err(ParserError::InvalidNumberOfArguments(
+            return Err(TypeError::InvalidNumberOfArguments(
                 func.position_info.clone(),
                 func.outputs.len(),
                 stack.len(),
@@ -177,9 +179,9 @@ impl Typing {
         token: &Token,
         stack: &Vec<StackType>,
         stack_2: &Vec<StackType>,
-    ) -> Result<(), ParserError> {
+    ) -> Result<(), TypeError> {
         if stack.len() != stack_2.len() {
-            return Err(ParserError::InvalidShape(
+            return Err(TypeError::InvalidShape(
                 token.position_info.clone(),
                 stack.to_vec(),
                 stack_2.to_vec(),
@@ -188,7 +190,7 @@ impl Typing {
 
         for (t1, t2) in stack.iter().zip(stack_2.iter()) {
             if t1 != t2 {
-                return Err(ParserError::InvalidShape(
+                return Err(TypeError::InvalidShape(
                     token.position_info.clone(),
                     stack.to_vec(),
                     stack_2.to_vec(),
@@ -203,9 +205,9 @@ impl Typing {
         position: &PositionInfo,
         stack: &Vec<StackType>,
         required_length: usize,
-    ) -> Result<(), ParserError> {
+    ) -> Result<(), TypeError> {
         if stack.len() < required_length {
-            return Err(ParserError::InvalidNumberOfArguments(
+            return Err(TypeError::InvalidNumberOfArguments(
                 position.clone(),
                 required_length,
                 stack.len(),
@@ -219,11 +221,11 @@ impl Typing {
         position: &PositionInfo,
         stack: &Vec<StackType>,
         required_types: &Vec<StackType>,
-    ) -> Result<(), ParserError> {
+    ) -> Result<(), TypeError> {
         for (i, t) in (0..).zip(required_types.iter()) {
             let index = stack.len() - 1 - i;
             if !Self::verify_types(stack.get(index).unwrap(), t) {
-                return Err(ParserError::InvalidType(
+                return Err(TypeError::InvalidType(
                     position.clone(),
                     t.clone(),
                     stack.get(index).unwrap().clone(),
@@ -238,11 +240,11 @@ impl Typing {
         position: &PositionInfo,
         stack: &Vec<StackType>,
         required_types: &Vec<HashSet<StackType>>,
-    ) -> Result<(), ParserError> {
+    ) -> Result<(), TypeError> {
         for (i, t) in (0..).zip(required_types.iter()) {
             let index = stack.len() - 1 - i;
             if !t.contains(stack.get(index).unwrap()) {
-                return Err(ParserError::InvalidTypeSet(
+                return Err(TypeError::InvalidTypeSet(
                     position.clone(),
                     t.clone(),
                     stack.get(index).unwrap().clone(),
@@ -259,7 +261,7 @@ impl Typing {
         stack: &mut Vec<StackType>,
         parse_info: &ParseInfo,
         variable_lookup: &HashMap<String, StackType>,
-    ) -> Result<(), ParserError> {
+    ) -> Result<(), TypeError> {
         match intrinsic {
             Intrinsic::Add => {
                 Self::check_stack_length(position, stack, 2)?;
@@ -269,11 +271,7 @@ impl Typing {
                 match v2 {
                     StackType::I32 => (),
                     _ => {
-                        return Err(ParserError::InvalidType(
-                            position.clone(),
-                            StackType::I32,
-                            v2,
-                        ));
+                        return Err(TypeError::InvalidType(position.clone(), StackType::I32, v2));
                     }
                 }
 
@@ -285,7 +283,7 @@ impl Typing {
                         stack.push(StackType::Ptr(c, t));
                     }
                     _ => {
-                        return Err(ParserError::InvalidTypeSet(
+                        return Err(TypeError::InvalidTypeSet(
                             position.clone(),
                             HashSet::from([
                                 StackType::I32,
@@ -354,7 +352,7 @@ impl Typing {
                     (StackType::I32, StackType::I32) => (),
                     (StackType::Char, StackType::Char) => (),
                     _ => {
-                        return Err(ParserError::InvalidTypeSet(
+                        return Err(TypeError::InvalidTypeSet(
                             position.clone(),
                             HashSet::from([StackType::I32, StackType::Char]),
                             t1,
@@ -381,7 +379,11 @@ impl Typing {
 
                 if let StackType::Union(v) = stack.pop().unwrap() {
                     if *n >= v.len() {
-                        todo!()
+                        return Err(TypeError::InvalidIndex(
+                            position.clone(),
+                            *n as usize,
+                            v.len(),
+                        ));
                     }
                     stack.push(*v[*n].clone());
                 }
@@ -393,11 +395,19 @@ impl Typing {
 
                 if let StackType::Union(v) = stack.pop().unwrap() {
                     if *n >= v.len() {
-                        todo!()
+                        return Err(TypeError::InvalidIndex(
+                            position.clone(),
+                            *n as usize,
+                            v.len(),
+                        ));
                     }
 
                     if write != *v[*n] {
-                        todo!();
+                        return Err(TypeError::InvalidRecordWriteType(
+                            position.clone(),
+                            write,
+                            *v[*n].clone(),
+                        ));
                     }
 
                     stack.push(StackType::Union(v));
@@ -447,14 +457,14 @@ impl Typing {
                 } else if let Some(t) = parse_info.constants.get(s) {
                     stack.push(StackValue::to_type(t));
                 } else {
-                    todo!();
+                    return Err(TypeError::InvalidIdentifier(position.clone(), s.clone()));
                 }
             }
             Intrinsic::Record(name) => {
                 if let Some(_) = parse_info.records.get(name) {
                     stack.push(StackType::RecordIden(name.to_string()));
                 } else {
-                    todo!();
+                    return Err(TypeError::InvalidRecordName(position.clone(), name.clone()));
                 }
             }
             Intrinsic::RecordIdentifier(iden) => {
@@ -464,7 +474,7 @@ impl Typing {
                 let record_name = match stack_value {
                     StackType::RecordIden(s) => s,
                     _ => {
-                        return Err(ParserError::InvalidType(
+                        return Err(TypeError::InvalidType(
                             position.clone(),
                             StackType::RecordIden("".to_string()),
                             stack_value,
@@ -480,10 +490,18 @@ impl Typing {
                         .collect();
 
                     if entries.len() == 0 {
-                        todo!("Error about non existant entry");
+                        return Err(TypeError::InvalidRecordEntry(
+                            position.clone(),
+                            record.name.clone(),
+                            iden.clone(),
+                        ));
                     }
                     if entries.len() > 1 {
-                        todo!("Error about repeat entries");
+                        return Err(TypeError::DuplicateRecordEntry(
+                            position.clone(),
+                            record.name.clone(),
+                            iden.clone(),
+                        ));
                     }
 
                     let (_, stack_type) = entries[0];
@@ -501,7 +519,7 @@ impl Typing {
                 let record_name = match &stack_value {
                     StackType::RecordIden(s) => s,
                     _ => {
-                        return Err(ParserError::InvalidType(
+                        return Err(TypeError::InvalidType(
                             position.clone(),
                             StackType::RecordIden("".to_string()),
                             stack_value,
@@ -517,16 +535,28 @@ impl Typing {
                         .collect();
 
                     if entries.len() == 0 {
-                        todo!("Error about non existant entry");
+                        return Err(TypeError::InvalidRecordEntry(
+                            position.clone(),
+                            record.name.clone(),
+                            iden.clone(),
+                        ));
                     }
                     if entries.len() > 1 {
-                        todo!("Error about repeat entries");
+                        return Err(TypeError::DuplicateRecordEntry(
+                            position.clone(),
+                            record.name.clone(),
+                            iden.clone(),
+                        ));
                     }
 
                     let (_, stack_type) = entries[0];
 
                     if *stack_type != write_value {
-                        todo!("Invalid Write");
+                        return Err(TypeError::InvalidRecordWriteType(
+                            position.clone(),
+                            stack_type.clone(),
+                            write_value.clone(),
+                        ));
                     }
 
                     stack.push(stack_value.clone());
@@ -544,7 +574,7 @@ impl Typing {
                     StackType::Var(t) => *t,
                     StackType::Ptr(_, t) => *t,
                     _ => {
-                        return Err(ParserError::InvalidTypeSet(
+                        return Err(TypeError::InvalidTypeSet(
                             position.clone(),
                             HashSet::from([
                                 StackType::Var(Box::new(StackType::I32)),
@@ -569,7 +599,7 @@ impl Typing {
                     StackType::Var(t) => *t,
                     StackType::Ptr(false, t) => *t,
                     _ => {
-                        return Err(ParserError::InvalidTypeSet(
+                        return Err(TypeError::InvalidTypeSet(
                             position.clone(),
                             HashSet::from([
                                 StackType::Var(Box::new(StackType::I32)),
@@ -580,7 +610,7 @@ impl Typing {
                     }
                 };
                 if write_value != stack_type {
-                    return Err(ParserError::InvalidType(
+                    return Err(TypeError::InvalidType(
                         position.clone(),
                         stack_type,
                         write_value,
@@ -594,7 +624,7 @@ impl Typing {
                     match t {
                         StackType::I32 => (),
                         _ => {
-                            return Err(ParserError::InvalidType(
+                            return Err(TypeError::InvalidType(
                                 position.clone(),
                                 StackType::I32,
                                 t,
@@ -620,7 +650,7 @@ impl Typing {
             | Intrinsic::FuncLabelRef(_, _)
             | Intrinsic::Lookup(_, _)
             | Intrinsic::StackValue(_) => {
-                unreachable!("Intrinsics should be generated and not used defined");
+                unreachable!("Intrinsics should be generated and not user defined");
             }
         }
 
