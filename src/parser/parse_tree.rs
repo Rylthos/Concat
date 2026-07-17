@@ -5,29 +5,13 @@ use crate::parser::instructions::Instruction;
 use crate::parser::intrinsics::Intrinsic;
 use crate::parser::parser::Parser;
 use crate::parser::stack_types::StackType;
-use crate::parser::stack_values::StackValue;
 
-use crate::parser::parse_info::ParseInfo;
+use crate::parser::parse_info::{DefineDecl, FuncDecl, ParseInfo, RecordDecl};
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 use std::fmt;
-
-#[derive(Debug, Clone)]
-pub struct FuncDecl {
-    pub position_info: PositionInfo,
-    pub name: String,
-    pub inputs: Vec<StackType>,
-    pub outputs: Vec<StackType>,
-    pub region: Box<ParseTree>,
-}
-
-#[derive(Debug, Clone)]
-pub struct RecordDecl {
-    pub position_info: PositionInfo,
-    pub name: String,
-    pub entries: Vec<(String, StackType)>,
-}
 
 #[derive(Debug, Clone)]
 pub enum ParseTree {
@@ -45,7 +29,7 @@ pub enum ParseTree {
 }
 
 impl ParseTree {
-    fn fmt_indent(&self, f: &mut fmt::Formatter, indent: usize) -> fmt::Result {
+    pub fn fmt_indent(&self, f: &mut fmt::Formatter, indent: usize) -> fmt::Result {
         let padding = |indent| "  ".repeat(indent);
 
         match self {
@@ -221,6 +205,19 @@ impl ParseTree {
                         parse_info,
                     )?;
 
+                    if parse_info.functions.contains_key(&function_name) {
+                        return Err(ParserError::DuplicateFunction(
+                            t.position_info.clone(),
+                            parse_info
+                                .functions
+                                .get(&function_name)
+                                .unwrap()
+                                .position_info
+                                .clone(),
+                            function_name,
+                        ));
+                    }
+
                     parse_info.functions.insert(
                         function_name.clone(),
                         FuncDecl {
@@ -319,6 +316,32 @@ impl ParseTree {
                         ));
                     };
 
+                    if parse_info.records.contains_key(&record_name) {
+                        return Err(ParserError::DuplicateRecord(
+                            t.position_info.clone(),
+                            parse_info
+                                .records
+                                .get(&record_name)
+                                .unwrap()
+                                .position_info
+                                .clone(),
+                            record_name,
+                        ));
+                    }
+
+                    let mut hash_set: HashSet<String> = HashSet::new();
+
+                    for (e, _) in elements.iter() {
+                        if hash_set.contains(e) {
+                            return Err(ParserError::DuplicateRecordEntry(
+                                t.position_info.clone(),
+                                record_name,
+                                e.to_string(),
+                            ));
+                        }
+                        hash_set.insert(e.to_string());
+                    }
+
                     parse_info.records.insert(
                         record_name.clone(),
                         RecordDecl {
@@ -415,10 +438,10 @@ impl ParseTree {
                         if let Intrinsic::I32Value(v) = i {
                             v as usize
                         } else {
-                            todo!("Expected Int: {}", i)
+                            return Err(ParserError::ExpectedIntConstant(t.position_info.clone()));
                         }
                     } else {
-                        todo!("Expected Constant Int")
+                        return Err(ParserError::ExpectedIntConstant(t.position_info.clone()));
                     };
 
                     let intrinsic = if let Some(t) = peekable.peek() {
@@ -450,10 +473,10 @@ impl ParseTree {
                         if let Intrinsic::I32Value(v) = i {
                             v
                         } else {
-                            todo!("Expected Int: {}", i)
+                            return Err(ParserError::ExpectedIntConstant(t.position_info.clone()));
                         }
                     } else {
-                        todo!("Expected Constant Int")
+                        return Err(ParserError::ExpectedIntConstant(t.position_info.clone()));
                     };
 
                     region.push(ParseTree::Element(
@@ -494,7 +517,27 @@ impl ParseTree {
                         &HashMap::new(),
                         &HashMap::new(),
                     ) {
-                        parse_info.constants.insert(name, v);
+                        if parse_info.constants.contains_key(&name) {
+                            return Err(ParserError::DuplicateDefine(
+                                t.position_info.clone(),
+                                parse_info
+                                    .constants
+                                    .get(&name)
+                                    .unwrap()
+                                    .position_info
+                                    .clone(),
+                                name.clone(),
+                            ));
+                        }
+
+                        parse_info.constants.insert(
+                            name.clone(),
+                            DefineDecl {
+                                position_info: t.position_info.clone(),
+                                name: name.clone(),
+                                value: v,
+                            },
+                        );
                     } else {
                         return Err(ParserError::InvalidDefine(t.position_info.clone()));
                     }
@@ -516,61 +559,6 @@ impl ParseTree {
 }
 
 impl fmt::Display for ParseTree {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.fmt_indent(f, 0)
-    }
-}
-
-impl FuncDecl {
-    pub fn fmt_indent(&self, f: &mut fmt::Formatter, indent: usize) -> fmt::Result {
-        let padding = |indent| "  ".repeat(indent);
-
-        write!(
-            f,
-            "{}{}: {} {{\n",
-            padding(indent),
-            self.name,
-            self.position_info
-        )?;
-        write!(f, "{}INPUT: ", padding(indent + 1))?;
-        for input in self.inputs.iter() {
-            write!(f, "{} ", input)?;
-        }
-        write!(f, "\n{}OUTPUT: ", padding(indent + 1))?;
-        for output in self.outputs.iter() {
-            write!(f, "{} ", output)?;
-        }
-        write!(f, "\n{}REGION\n", padding(indent + 1))?;
-        self.region.fmt_indent(f, indent + 1)?;
-        write!(f, "\n{}}}", padding(indent))
-    }
-}
-
-impl fmt::Display for FuncDecl {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.fmt_indent(f, 0)
-    }
-}
-
-impl RecordDecl {
-    pub fn fmt_indent(&self, f: &mut fmt::Formatter, indent: usize) -> fmt::Result {
-        let padding = |indent| "  ".repeat(indent);
-
-        write!(
-            f,
-            "{}{}: {} {{\n",
-            padding(indent),
-            self.name,
-            self.position_info
-        )?;
-        for (name, stack_type) in self.entries.iter() {
-            write!(f, "{}{}: {}\n", padding(indent + 1), name, stack_type)?;
-        }
-        write!(f, "{}}}", padding(indent))
-    }
-}
-
-impl fmt::Display for RecordDecl {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.fmt_indent(f, 0)
     }

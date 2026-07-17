@@ -1,10 +1,10 @@
-use crate::error::types::{ErrorType, ParserError, TypeError};
+use crate::error::types::{ErrorType, ParserError};
 use crate::lexer::tokens::{Token, TokenType};
 use crate::parser::heap_value::HeapValue;
 use crate::parser::instructions::Instruction;
 use crate::parser::intrinsics::Intrinsic;
-use crate::parser::parse_info::ParseInfo;
-use crate::parser::parse_tree::{FuncDecl, ParseTree, RecordDecl};
+use crate::parser::parse_info::{FuncDecl, ParseInfo, RecordDecl};
+use crate::parser::parse_tree::ParseTree;
 use crate::parser::stack_types::StackType;
 use crate::parser::stack_values::{PointerValue, StackValue};
 use crate::parser::typing::Typing;
@@ -327,7 +327,7 @@ impl Parser {
                     if let Some((d, s)) = variable_lookup.get(&iden) {
                         parsed_expression.push(Intrinsic::Lookup(*d, *s));
                     } else if let Some(v) = self.parse_info.constants.get(&iden) {
-                        parsed_expression.push(Intrinsic::StackValue(v.clone()));
+                        parsed_expression.push(Intrinsic::StackValue(v.value.clone()));
                     } else {
                         return Err(ParserError::UnknownIdentifier(p, iden.to_string()));
                     }

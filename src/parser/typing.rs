@@ -1,8 +1,8 @@
 use crate::error::types::TypeError;
 use crate::lexer::tokens::{PositionInfo, Token};
 use crate::parser::intrinsics::Intrinsic;
-use crate::parser::parse_info::ParseInfo;
-use crate::parser::parse_tree::{FuncDecl, ParseTree, RecordDecl};
+use crate::parser::parse_info::{FuncDecl, ParseInfo};
+use crate::parser::parse_tree::ParseTree;
 use crate::parser::stack_types::StackType;
 use crate::parser::stack_values::StackValue;
 
@@ -13,8 +13,6 @@ pub struct Typing {}
 
 impl Typing {
     pub fn type_check(tree: &mut ParseTree, parse_info: &mut ParseInfo) -> Result<(), TypeError> {
-        // TODO: Validate function names/records/constants
-
         let mut stack = Vec::new();
         let variable_lookup = HashMap::new();
         Self::type_check_stack(tree, &mut stack, parse_info, &variable_lookup)?;
@@ -455,7 +453,7 @@ impl Typing {
                 if let Some(t) = variable_lookup.get(s) {
                     stack.push(StackType::Var(Box::new(t.clone())));
                 } else if let Some(t) = parse_info.constants.get(s) {
-                    stack.push(StackValue::to_type(t));
+                    stack.push(StackValue::to_type(&t.value));
                 } else {
                     return Err(TypeError::InvalidIdentifier(position.clone(), s.clone()));
                 }

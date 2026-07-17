@@ -30,6 +30,11 @@ pub enum ParserError {
     ExpectedPointerGot(PositionInfo, StackType),
     InvalidParseTree(),
     UnknownIdentifier(PositionInfo, String),
+    DuplicateFunction(PositionInfo, PositionInfo, String),
+    DuplicateDefine(PositionInfo, PositionInfo, String),
+    DuplicateRecord(PositionInfo, PositionInfo, String),
+    DuplicateRecordEntry(PositionInfo, String, String),
+    ExpectedIntConstant(PositionInfo),
 }
 
 #[derive(Debug)]
@@ -134,6 +139,33 @@ fn handle_parser_error(error: ParserError) {
         }
         ParserError::UnknownIdentifier(pos, name) => {
             eprintln!("[PARSER] [{}] Unknown identifier {}", pos, name);
+        }
+        ParserError::DuplicateFunction(pos, previous, name) => {
+            eprintln!(
+                "[PARSER] [{}] Duplicate function definition {}, previously defined at {}",
+                pos, name, previous
+            );
+        }
+        ParserError::DuplicateDefine(pos, previous, name) => {
+            eprintln!(
+                "[PARSER] [{}] Duplicate define {}, previously defined at {}",
+                pos, name, previous
+            );
+        }
+        ParserError::DuplicateRecord(pos, previous, name) => {
+            eprintln!(
+                "[PARSER] [{}] Duplicate record {}, previously defined at {}",
+                pos, name, previous
+            );
+        }
+        ParserError::DuplicateRecordEntry(pos, record, entry) => {
+            eprintln!(
+                "[PARSER] [{}] Duplicate record entry {}.{}",
+                pos, record, entry
+            );
+        }
+        ParserError::ExpectedIntConstant(pos) => {
+            eprintln!("[PARSER] [{}] Expected Int constant", pos);
         }
     }
 }
