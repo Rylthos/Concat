@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
     LeftBrace,
     RightBrace,
@@ -20,9 +20,9 @@ pub enum TokenType {
     Modulo,
 
     // Stack Operations
-    Rotate3,
-    Duplicate,
     Drop,
+    Duplicate,
+    Rotate3,
     Over,
     Swap,
     Print,
@@ -66,7 +66,6 @@ pub enum TokenType {
 
     Define,
 
-    String,
     I32,
     Bool,
     Void,
@@ -202,7 +201,6 @@ impl fmt::Display for TokenType {
 
             TokenType::Identifier(s) => write!(f, "Iden({:?})", s),
 
-            TokenType::String => write!(f, "STRING"),
             TokenType::I32 => write!(f, "I32"),
             TokenType::Bool => write!(f, "BOOL"),
             TokenType::Void => write!(f, "VOID"),

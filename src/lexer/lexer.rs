@@ -2,7 +2,7 @@ use crate::lexer::tokens::{self, PositionInfo};
 use std::collections::HashMap;
 
 use crate::config::config::Config;
-use crate::error::types::{ErrorType, LexerError};
+use crate::error::lexer_error::LexerError;
 use crate::input::read_file_path;
 
 use std::collections::HashSet;
@@ -29,19 +29,17 @@ impl Lexer {
         }
     }
 
-    pub fn lex_input(&mut self) -> Result<(), ErrorType> {
+    pub fn lex_input(&mut self) -> Result<(), LexerError> {
         self.main_file = match self.main_file.canonicalize() {
             Ok(f) => f,
             Err(_) => {
-                return Err(ErrorType::Lexer(LexerError::InvalidFile(
-                    self.get_filename(&self.main_file),
-                )));
+                return Err(LexerError::InvalidFile(self.get_filename(&self.main_file)));
             }
         };
 
         self.tokens = match self.scan_file(self.main_file.clone()) {
             Ok(t) => t,
-            Err(err) => return Err(ErrorType::Lexer(err)),
+            Err(err) => return Err(err),
         };
 
         if self.config.token_print {
@@ -103,7 +101,6 @@ impl Lexer {
             ("true".to_string(), TokenType::BoolValue(true)),
             ("false".to_string(), TokenType::BoolValue(false)),
             //
-            ("string".to_string(), TokenType::String),
             ("bool".to_string(), TokenType::Bool),
             ("i32".to_string(), TokenType::I32),
             ("void".to_string(), TokenType::Void),
@@ -635,21 +632,20 @@ mod tests {
 
     #[test]
     fn lex_keywords() {
-        let input = "string i32 void bool print true false char '\\0' \"Hello, World!\"";
+        let input = "i32 void bool print true false char '\\0' \"Hello, World!\"";
         let output = vec![
-            Token::new(TokenType::String, 1, 1, "", "string"),
-            Token::new(TokenType::I32, 1, 8, "", "i32"),
-            Token::new(TokenType::Void, 1, 12, "", "void"),
-            Token::new(TokenType::Bool, 1, 17, "", "bool"),
-            Token::new(TokenType::Print, 1, 22, "", "print"),
-            Token::new(TokenType::BoolValue(true), 1, 28, "", "true"),
-            Token::new(TokenType::BoolValue(false), 1, 33, "", "false"),
-            Token::new(TokenType::Char, 1, 39, "", "char"),
-            Token::new(TokenType::CharValue('\0'), 1, 44, "", "'\0'"),
+            Token::new(TokenType::I32, 1, 1, "", "i32"),
+            Token::new(TokenType::Void, 1, 5, "", "void"),
+            Token::new(TokenType::Bool, 1, 10, "", "bool"),
+            Token::new(TokenType::Print, 1, 15, "", "print"),
+            Token::new(TokenType::BoolValue(true), 1, 21, "", "true"),
+            Token::new(TokenType::BoolValue(false), 1, 26, "", "false"),
+            Token::new(TokenType::Char, 1, 32, "", "char"),
+            Token::new(TokenType::CharValue('\0'), 1, 37, "", "'\0'"),
             Token::new(
                 TokenType::StringValue("Hello, World!".to_string()),
                 1,
-                49,
+                42,
                 "",
                 "\"Hello, World!\"",
             ),

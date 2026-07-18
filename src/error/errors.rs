@@ -1,6 +1,6 @@
 use crate::lexer::tokens::{PositionInfo, Token, TokenType};
-use crate::parser::intrinsics::Intrinsic;
-use crate::parser::stack_types::StackType;
+// use crate::parser::intrinsics::Intrinsic;
+// use crate::parser::stack_types::StackType;
 
 use std::collections::HashSet;
 
@@ -18,23 +18,25 @@ pub enum LexerError {
 
 #[derive(Debug)]
 pub enum ParserError {
-    InvalidFunctionDef(PositionInfo, TokenType),
-    InvalidRecordDef(PositionInfo, TokenType),
-    ExpectedToken(PositionInfo, TokenType),
-    ExpectedTokenGot(PositionInfo, TokenType, TokenType),
-    ExpectedIdentifierGot(PositionInfo, TokenType),
-    InvalidDefine(PositionInfo),
-    ExpectedIntrinsic(PositionInfo, Intrinsic),
-    ExpectedIntrinsicGot(PositionInfo, Intrinsic, Intrinsic),
-    ExpectedTypeGot(PositionInfo, TokenType),
-    ExpectedPointerGot(PositionInfo, StackType),
-    InvalidParseTree(),
-    UnknownIdentifier(PositionInfo, String),
-    DuplicateFunction(PositionInfo, PositionInfo, String),
-    DuplicateDefine(PositionInfo, PositionInfo, String),
-    DuplicateRecord(PositionInfo, PositionInfo, String),
-    DuplicateRecordEntry(PositionInfo, String, String),
-    ExpectedIntConstant(PositionInfo),
+    // InvalidFunctionDef(PositionInfo, TokenType),
+    // InvalidRecordDef(PositionInfo, TokenType),
+    // ExpectedToken(PositionInfo, TokenType),
+    // ExpectedTokenGot(PositionInfo, TokenType, TokenType),
+    // ExpectedIdentifierGot(PositionInfo, TokenType),
+    // InvalidDefine(PositionInfo),
+    // ExpectedIntrinsic(PositionInfo, Intrinsic),
+    // ExpectedIntrinsicGot(PositionInfo, Intrinsic, Intrinsic),
+    // ExpectedTypeGot(PositionInfo, TokenType),
+    // ExpectedPointerGot(PositionInfo, StackType),
+    // InvalidParseTree(),
+    // UnknownIdentifier(PositionInfo, String),
+    // DuplicateFunction(PositionInfo, PositionInfo, String),
+    // DuplicateDefine(PositionInfo, PositionInfo, String),
+    // DuplicateRecord(PositionInfo, PositionInfo, String),
+    // DuplicateRecordEntry(PositionInfo, String, String),
+    // ExpectedIntConstant(PositionInfo),
+    //
+    UnexpectedToken(Token),
 }
 
 #[derive(Debug)]
@@ -166,6 +168,9 @@ fn handle_parser_error(error: ParserError) {
         }
         ParserError::ExpectedIntConstant(pos) => {
             eprintln!("[PARSER] [{}] Expected Int constant", pos);
+        }
+        ParserError::UnexpectedToken(token) => {
+            eprintln!("[PARSER] [{}] Unexpected token {}", token.pos, token);
         }
     }
 }

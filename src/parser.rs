@@ -1,9 +1,7 @@
-pub mod heap_value;
-pub mod instructions;
-pub mod intrinsics;
-pub mod parse_info;
-pub mod parse_tree;
+pub mod assigns;
+pub mod funcs;
+pub mod ifs;
 pub mod parser;
-pub mod stack_types;
-pub mod stack_values;
-pub mod typing;
+pub mod records;
+mod tests;
+pub mod whiles;

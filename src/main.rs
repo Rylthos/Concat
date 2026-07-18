@@ -1,8 +1,8 @@
 use clap::Parser;
 use concat::config::config::Config;
 
-use concat::error::types::print_error;
-use concat::interpreter::interpreter::interpret;
+use concat::error::lexer_error::LexerError;
+use concat::error::parser_error::ParserError;
 use concat::lexer::lexer::Lexer;
 use concat::parser::parser::Parser as ConcatParser;
 
@@ -13,7 +13,7 @@ fn main() {
     match lexer.lex_input() {
         Ok(_) => (),
         Err(e) => {
-            print_error(e);
+            e.print();
             return;
         }
     }
@@ -22,10 +22,11 @@ fn main() {
     match parser.parse() {
         Ok(_) => (),
         Err(e) => {
-            print_error(e);
+            e.print();
             return;
         }
     }
 
-    interpret(&parser.instructions, &parser.default_heap)
+    // interpret(&parser.instructions, &parser.default_heap)
+    //
 }
