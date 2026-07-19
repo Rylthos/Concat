@@ -1,7 +1,4 @@
-use crate::{
-    builtins::{basic_types::BasicType, builtins::Builtin},
-    lexer::tokens::{PositionInfo, Token},
-};
+use crate::lexer::tokens::PositionInfo;
 
 #[derive(Debug)]
 pub enum ReducerError {

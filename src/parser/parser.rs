@@ -48,8 +48,11 @@ impl Parser {
         if self.peek().token_type == token {
             Ok(self.advance())
         } else {
-            panic!();
-            Err(todo!())
+            Err(ParserError::ExpectedTokenGot(
+                self.peek().position_info.clone(),
+                token,
+                self.peek().token_type,
+            ))
         }
     }
 

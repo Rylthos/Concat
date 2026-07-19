@@ -1,6 +1,6 @@
 use crate::{
     builtins::{basic_types::BasicType, builtins::Builtin},
-    lexer::tokens::{PositionInfo, Token},
+    lexer::tokens::{PositionInfo, Token, TokenType},
 };
 
 #[derive(Debug)]
@@ -12,6 +12,7 @@ pub enum ParserError {
     ExpectedPointerGotType(PositionInfo, BasicType),
     ExpectedIdentifier(PositionInfo),
     InvalidTypeListVoid(PositionInfo),
+    ExpectedTokenGot(PositionInfo, TokenType, TokenType),
 }
 
 impl ParserError {
@@ -39,6 +40,9 @@ impl ParserError {
             }
             ParserError::InvalidTypeListVoid(pos) => {
                 eprintln!("[PARSER] [{}] Invalid type list after VOID", pos)
+            }
+            ParserError::ExpectedTokenGot(pos, expected, got) => {
+                eprintln!("[PARSER] [{}] Expected token {} got {}", pos, expected, got)
             }
         }
     }

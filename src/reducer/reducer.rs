@@ -2,7 +2,6 @@ use clap::error::Result;
 
 use crate::ast::raw_node::{AstNode, Literal, Region};
 use crate::ast::reduced_node::*;
-use crate::builtins::basic_stack_values::BasicStackValue;
 use crate::builtins::builtins::Builtin;
 use crate::builtins::reduced_builtins::ReducedBuiltin;
 use crate::config::config::Config;
