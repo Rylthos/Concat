@@ -13,8 +13,6 @@ pub struct Parser {
 
     index: usize,
 
-    tree: Region,
-
     pub(crate) record_names: HashSet<String>,
 }
 
@@ -24,7 +22,6 @@ impl Parser {
             config,
             tokens,
             index: 0,
-            tree: Region::new(),
             record_names: HashSet::new(),
         }
     }

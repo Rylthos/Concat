@@ -3,6 +3,7 @@ use concat::config::config::Config;
 
 use concat::lexer::lexer::Lexer;
 use concat::parser::parser::Parser as ConcatParser;
+use concat::reducer::reducer::Reducer;
 
 fn main() {
     let config = Config::parse();
@@ -17,13 +18,22 @@ fn main() {
     }
 
     let mut parser = ConcatParser::init(config.clone(), lexer.tokens);
-    match parser.parse() {
-        Ok(_) => (),
+    let ast = match parser.parse() {
+        Ok(t) => t,
         Err(e) => {
             e.print();
             return;
         }
-    }
+    };
+
+    let mut reducer = Reducer::init(config.clone(), ast);
+    let reduced_ast = match reducer.reduce() {
+        Ok(t) => t,
+        Err(e) => {
+            e.print();
+            return;
+        }
+    };
 
     // interpret(&parser.instructions, &parser.default_heap)
     //
