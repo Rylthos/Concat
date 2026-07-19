@@ -1,4 +1,4 @@
-use crate::ast::node::{AstNode, Literal, Region};
+use crate::ast::raw_node::{AstNode, Literal, Region};
 use crate::builtins::basic_types::{BasicType, PtrType, UnionType};
 use crate::builtins::builtins::Builtin;
 use crate::config::config::Config;
@@ -247,12 +247,12 @@ impl Parser {
             TokenType::Nth => {
                 if self.compare_next(TokenType::Exclamation) {
                     self.consume(TokenType::Exclamation)?;
-                    Ok(AstNode::Builtin(pos, Builtin::NthWrite))
+                    Ok(AstNode::Builtin(pos, Builtin::RawNthWrite))
                 } else {
-                    Ok(AstNode::Builtin(pos, Builtin::Nth))
+                    Ok(AstNode::Builtin(pos, Builtin::RawNth))
                 }
             }
-            TokenType::Union => Ok(AstNode::Builtin(pos, Builtin::Union)),
+            TokenType::Union => Ok(AstNode::Builtin(pos, Builtin::RawUnion)),
 
             TokenType::Define => Ok(AstNode::Builtin(pos, Builtin::Define)),
 

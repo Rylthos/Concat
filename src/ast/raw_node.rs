@@ -24,6 +24,16 @@ pub struct Region {
     pub region: Vec<AstNode>,
 }
 
+impl Region {
+    pub fn new() -> Region {
+        Region { region: Vec::new() }
+    }
+
+    pub fn from_vec(value: Vec<AstNode>) -> Region {
+        Region { region: value }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Literal {
     pub position: PositionInfo,
@@ -65,14 +75,4 @@ pub struct RecordDeclNode {
     pub position: PositionInfo,
     pub name: String,
     pub entries: Vec<(String, BasicType)>,
-}
-
-impl Region {
-    pub fn new() -> Region {
-        Region { region: Vec::new() }
-    }
-
-    pub fn from_vec(value: Vec<AstNode>) -> Region {
-        Region { region: value }
-    }
 }

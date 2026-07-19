@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::ast::node::*;
+    use crate::ast::raw_node::*;
     use crate::builtins::basic_types::{BasicType, PtrType, UnionType};
     use crate::builtins::builtins::Builtin;
     use crate::config::config::Config;
@@ -366,7 +366,7 @@ mod tests {
             create_node(1, 1, Builtin::I32Value(0)),
             create_node(1, 1, Builtin::I32Value(1)),
             create_node(1, 1, Builtin::I32Value(2)),
-            create_node(1, 1, Builtin::Union),
+            create_node(1, 1, Builtin::RawUnion),
         ]);
         test(input, expected_tree);
     }

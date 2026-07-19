@@ -1,7 +1,6 @@
-use crate::ast::node::{AstNode, FuncDeclNode, IfNode, RecordDeclNode, Region};
-use crate::builtins::basic_types::BasicType;
+use crate::ast::raw_node::{AstNode, RecordDeclNode, Region};
 use crate::error::parser_error::ParserError;
-use crate::lexer::tokens::{Token, TokenType};
+use crate::lexer::tokens::TokenType;
 
 use super::parser::Parser;
 

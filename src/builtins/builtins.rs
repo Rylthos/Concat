@@ -3,8 +3,6 @@ use std::fmt;
 
 #[derive(Debug, Clone)]
 pub enum Builtin {
-    Exclamation,
-
     Add,
     Divide,
     Modulo,
@@ -34,9 +32,9 @@ pub enum Builtin {
 
     Mem,
 
-    Nth,
-    NthWrite,
-    Union,
+    RawNth,
+    RawNthWrite,
+    RawUnion,
 
     Define,
 
@@ -57,8 +55,6 @@ pub enum Builtin {
 impl fmt::Display for Builtin {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Builtin::Exclamation => write!(f, "!"),
-
             Builtin::Add => write!(f, "+"),
             Builtin::Subtract => write!(f, "-"),
             Builtin::Multiply => write!(f, "*"),
@@ -89,9 +85,9 @@ impl fmt::Display for Builtin {
 
             Builtin::Mem => write!(f, "mem"),
 
-            Builtin::Nth => write!(f, "nth"),
-            Builtin::NthWrite => write!(f, "nth!"),
-            Builtin::Union => write!(f, "union"),
+            Builtin::RawNth => write!(f, "nth"),
+            Builtin::RawNthWrite => write!(f, "nth!"),
+            Builtin::RawUnion => write!(f, "union"),
 
             Builtin::Define => write!(f, "define"),
 

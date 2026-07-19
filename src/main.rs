@@ -1,8 +1,6 @@
 use clap::Parser;
 use concat::config::config::Config;
 
-use concat::error::lexer_error::LexerError;
-use concat::error::parser_error::ParserError;
 use concat::lexer::lexer::Lexer;
 use concat::parser::parser::Parser as ConcatParser;
 
