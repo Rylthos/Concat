@@ -1,5 +1,5 @@
 use crate::ast::raw_node::{AstNode, Literal, Region};
-use crate::builtins::basic_types::{BasicType, PtrType, UnionType};
+use crate::builtins::basic_types::{BasicPtrType, BasicType, BasicUnionType};
 use crate::builtins::builtins::Builtin;
 use crate::config::config::Config;
 use crate::error::parser_error::ParserError;
@@ -145,7 +145,7 @@ impl Parser {
                     let types = self.parse_until(&[TokenType::RightSqBracket])?;
                     let types = self.valid_type_list(types)?;
 
-                    current_type = Some(BasicType::Union(Box::new(UnionType { types })));
+                    current_type = Some(BasicType::Union(Box::new(BasicUnionType { types })));
                 }
                 TokenType::I32 | TokenType::Bool | TokenType::Char => {
                     if let Some(_) = current_type {
@@ -161,7 +161,7 @@ impl Parser {
                 }
                 TokenType::Asterisk => {
                     if let Some(value) = current_type {
-                        current_type = Some(BasicType::Ptr(Box::new(PtrType {
+                        current_type = Some(BasicType::Ptr(Box::new(BasicPtrType {
                             is_const: false,
                             r#type: value,
                         })));
@@ -176,7 +176,7 @@ impl Parser {
                     if let Some(value) = current_type {
                         match value {
                             BasicType::Ptr(p) => {
-                                current_type = Some(BasicType::Ptr(Box::new(PtrType {
+                                current_type = Some(BasicType::Ptr(Box::new(BasicPtrType {
                                     is_const: true,
                                     r#type: p.r#type,
                                 })))

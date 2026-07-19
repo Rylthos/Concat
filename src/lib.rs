@@ -8,5 +8,6 @@ pub mod builtins;
 pub mod lexer;
 pub mod parser;
 pub mod reducer;
+pub mod type_checker;
 
 // pub mod interpreter;

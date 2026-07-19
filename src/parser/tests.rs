@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::ast::raw_node::*;
-    use crate::builtins::basic_types::{BasicType, PtrType, UnionType};
+    use crate::builtins::basic_types::{BasicPtrType, BasicType, BasicUnionType};
     use crate::builtins::builtins::Builtin;
     use crate::config::config::Config;
     use crate::lexer::tokens::{PositionInfo, Token, TokenType};
@@ -216,7 +216,7 @@ mod tests {
         let expected_tree = Region::from_vec(vec![create_node(
             1,
             1,
-            Builtin::BasicType(BasicType::Ptr(Box::new(PtrType {
+            Builtin::BasicType(BasicType::Ptr(Box::new(BasicPtrType {
                 is_const: false,
                 r#type: BasicType::I32,
             }))),
@@ -359,7 +359,7 @@ mod tests {
             create_node(
                 1,
                 1,
-                Builtin::BasicType(BasicType::Union(Box::new(UnionType {
+                Builtin::BasicType(BasicType::Union(Box::new(BasicUnionType {
                     types: vec![BasicType::I32, BasicType::I32],
                 }))),
             ),

@@ -2,8 +2,7 @@
 mod tests {
     use crate::ast::raw_node::{Literal, Region};
     use crate::ast::reduced_node::*;
-    use crate::builtins::basic_types::{BasicType, PtrType, UnionType};
-    use crate::builtins::builtins::Builtin;
+    use crate::builtins::basic_types::{BasicType, BasicUnionType};
     use crate::builtins::reduced_builtins::ReducedBuiltin;
     use crate::config::config::Config;
     use crate::lexer::tokens::{PositionInfo, Token, TokenType};
@@ -165,7 +164,7 @@ mod tests {
             create_node(
                 1,
                 1,
-                ReducedBuiltin::BasicType(BasicType::Union(Box::new(UnionType {
+                ReducedBuiltin::BasicType(BasicType::Union(Box::new(BasicUnionType {
                     types: vec![BasicType::I32, BasicType::I32],
                 }))),
             ),
