@@ -25,7 +25,23 @@ impl TypeError {
             TypeError::CannotConvertTypeTo(pos, t1, t2) => {
                 eprintln!("[TYPE] [{}] Cannot convert from {} to {}", pos, t1, t2)
             }
-            TypeError::FunctionOutputInvalid(pos, stack, target) => {}
+            TypeError::FunctionOutputInvalid(pos, stack, target) => {
+                eprint!("[TYPE] [{}] Function output does not align [", pos);
+                for (i, v) in (0..).zip(stack.iter()) {
+                    eprint!("{}", v);
+                    if i < stack.len() - 1 {
+                        eprint!(" ")
+                    }
+                }
+                eprint!("] / [");
+                for (i, v) in (0..).zip(target.iter()) {
+                    eprint!("{}", v);
+                    if i < stack.len() - 1 {
+                        eprint!(" ")
+                    }
+                }
+                eprintln!("]")
+            }
             TypeError::UnknownLiteral(pos, s) => {
                 eprintln!("[TYPE] [{}] Unknown literal {:?}", pos, s)
             }
