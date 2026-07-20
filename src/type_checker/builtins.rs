@@ -5,6 +5,7 @@ use crate::{
         types::{PtrType, Type, UnionType},
     },
     error::type_error::TypeError,
+    lexer::tokens::PositionInfo,
     type_checker::type_checker::TaggedType,
 };
 
@@ -13,18 +14,20 @@ use super::type_checker::TypeChecker;
 impl TypeChecker {
     pub(crate) fn type_check_builtin(
         &mut self,
+        position: &PositionInfo,
         builtin: &ReducedBuiltin,
         stack: &mut Vec<Type>,
     ) -> Result<TypedBuiltin, TypeError> {
+        self.previous_position = position.clone();
         match builtin {
             ReducedBuiltin::Add => {
-                Self::stack_size(stack, 2);
+                Self::stack_size(position, stack, 2)?;
                 let v1 = stack.pop().unwrap();
                 let v2 = stack.pop().unwrap();
 
                 if let Type::I32 = v1 {
                 } else {
-                    todo!();
+                    return Err(TypeError::ExpectedTypeGot(position.clone(), v1, Type::I32));
                 }
 
                 if let Type::Ptr(p) = v2 {
@@ -32,13 +35,14 @@ impl TypeChecker {
                 } else if let Type::I32 = v2 {
                     stack.push(Type::I32)
                 } else {
-                    todo!();
+                    return Err(TypeError::InvalidAdd(position.clone(), v2));
                 }
 
                 Ok(TypedBuiltin::Add)
             }
             ReducedBuiltin::Divide => {
                 Self::stack_operation(
+                    position,
                     stack,
                     &[TaggedType::Type(Type::I32), TaggedType::Type(Type::I32)],
                     &[TaggedType::Type(Type::I32)],
@@ -48,6 +52,7 @@ impl TypeChecker {
             }
             ReducedBuiltin::Modulo => {
                 Self::stack_operation(
+                    position,
                     stack,
                     &[TaggedType::Type(Type::I32), TaggedType::Type(Type::I32)],
                     &[TaggedType::Type(Type::I32)],
@@ -57,6 +62,7 @@ impl TypeChecker {
             }
             ReducedBuiltin::Multiply => {
                 Self::stack_operation(
+                    position,
                     stack,
                     &[TaggedType::Type(Type::I32), TaggedType::Type(Type::I32)],
                     &[TaggedType::Type(Type::I32)],
@@ -66,6 +72,7 @@ impl TypeChecker {
             }
             ReducedBuiltin::Subtract => {
                 Self::stack_operation(
+                    position,
                     stack,
                     &[TaggedType::Type(Type::I32), TaggedType::Type(Type::I32)],
                     &[TaggedType::Type(Type::I32)],
@@ -75,13 +82,13 @@ impl TypeChecker {
             }
 
             ReducedBuiltin::Drop => {
-                Self::stack_size(stack, 1)?;
-                stack.pop();
+                Self::stack_operation(position, stack, &[TaggedType::Ref(0)], &[])?;
 
                 Ok(TypedBuiltin::Drop)
             }
             ReducedBuiltin::Duplicate => {
                 Self::stack_operation(
+                    position,
                     stack,
                     &[TaggedType::Ref(0)],
                     &[TaggedType::Ref(0), TaggedType::Ref(0)],
@@ -91,6 +98,7 @@ impl TypeChecker {
             }
             ReducedBuiltin::Over => {
                 Self::stack_operation(
+                    position,
                     stack,
                     &[TaggedType::Ref(0), TaggedType::Ref(1)],
                     &[TaggedType::Ref(0), TaggedType::Ref(1), TaggedType::Ref(0)],
@@ -100,6 +108,7 @@ impl TypeChecker {
             }
             ReducedBuiltin::Swap => {
                 Self::stack_operation(
+                    position,
                     stack,
                     &[TaggedType::Ref(0), TaggedType::Ref(1)],
                     &[TaggedType::Ref(1), TaggedType::Ref(0)],
@@ -109,6 +118,7 @@ impl TypeChecker {
             }
             ReducedBuiltin::Rotate3 => {
                 Self::stack_operation(
+                    position,
                     stack,
                     &[TaggedType::Ref(0), TaggedType::Ref(1), TaggedType::Ref(2)],
                     &[TaggedType::Ref(2), TaggedType::Ref(0), TaggedType::Ref(1)],
@@ -117,7 +127,7 @@ impl TypeChecker {
                 Ok(TypedBuiltin::Rotate3)
             }
             ReducedBuiltin::Print => {
-                Self::stack_size(stack, 1)?;
+                Self::stack_size(position, stack, 1)?;
                 stack.pop();
 
                 Ok(TypedBuiltin::Print)
@@ -125,6 +135,7 @@ impl TypeChecker {
 
             ReducedBuiltin::Less => {
                 Self::stack_operation(
+                    position,
                     stack,
                     &[TaggedType::Type(Type::I32), TaggedType::Type(Type::I32)],
                     &[TaggedType::Type(Type::Bool)],
@@ -133,6 +144,7 @@ impl TypeChecker {
             }
             ReducedBuiltin::Greater => {
                 Self::stack_operation(
+                    position,
                     stack,
                     &[TaggedType::Type(Type::I32), TaggedType::Type(Type::I32)],
                     &[TaggedType::Type(Type::Bool)],
@@ -141,6 +153,7 @@ impl TypeChecker {
             }
             ReducedBuiltin::LessEqual => {
                 Self::stack_operation(
+                    position,
                     stack,
                     &[TaggedType::Type(Type::I32), TaggedType::Type(Type::I32)],
                     &[TaggedType::Type(Type::Bool)],
@@ -149,6 +162,7 @@ impl TypeChecker {
             }
             ReducedBuiltin::GreaterEqual => {
                 Self::stack_operation(
+                    position,
                     stack,
                     &[TaggedType::Type(Type::I32), TaggedType::Type(Type::I32)],
                     &[TaggedType::Type(Type::Bool)],
@@ -157,6 +171,7 @@ impl TypeChecker {
             }
             ReducedBuiltin::Equal => {
                 Self::stack_operation(
+                    position,
                     stack,
                     &[TaggedType::Ref(0), TaggedType::Ref(0)],
                     &[TaggedType::Type(Type::Bool)],
@@ -165,6 +180,7 @@ impl TypeChecker {
             }
             ReducedBuiltin::NotEqual => {
                 Self::stack_operation(
+                    position,
                     stack,
                     &[TaggedType::Ref(0), TaggedType::Ref(0)],
                     &[TaggedType::Type(Type::Bool)],
@@ -173,6 +189,7 @@ impl TypeChecker {
             }
             ReducedBuiltin::And => {
                 Self::stack_operation(
+                    position,
                     stack,
                     &[TaggedType::Type(Type::Bool), TaggedType::Type(Type::Bool)],
                     &[TaggedType::Type(Type::Bool)],
@@ -181,6 +198,7 @@ impl TypeChecker {
             }
             ReducedBuiltin::Or => {
                 Self::stack_operation(
+                    position,
                     stack,
                     &[TaggedType::Type(Type::Bool), TaggedType::Type(Type::Bool)],
                     &[TaggedType::Type(Type::Bool)],
@@ -189,31 +207,34 @@ impl TypeChecker {
             }
 
             ReducedBuiltin::Assign => {
-                Self::stack_size(stack, 2)?;
+                Self::stack_size(position, stack, 2)?;
                 let write_value = stack.pop().unwrap();
                 let stack_value = stack.pop().unwrap();
                 let stack_type = match stack_value {
                     Type::Var(t) => *t,
                     Type::Ptr(p) => p.r#type,
                     _ => {
-                        return Err(todo!());
+                        return Err(TypeError::InvalidReadWrite(position.clone(), stack_value));
                     }
                 };
 
                 if !write_value.can_become(&stack_type) {
-                    todo!("{} -/> {}", write_value, stack_type.clone());
-                    // return Err();
+                    return Err(TypeError::CannotConvertTypeTo(
+                        position.clone(),
+                        write_value,
+                        stack_type,
+                    ));
                 }
 
                 Ok(TypedBuiltin::Assign)
             }
             ReducedBuiltin::Read => {
-                Self::stack_size(stack, 1);
+                Self::stack_size(position, stack, 1)?;
                 let stack_value = stack.pop().unwrap();
                 let stack_type = match stack_value {
                     Type::Var(t) => *t,
                     Type::Ptr(p) => p.r#type,
-                    _ => todo!(),
+                    _ => return Err(TypeError::InvalidReadWrite(position.clone(), stack_value)),
                 };
                 stack.push(stack_type);
                 Ok(TypedBuiltin::Read)
@@ -226,13 +247,14 @@ impl TypeChecker {
                 Ok(TypedBuiltin::Input)
             }
             ReducedBuiltin::Mem => {
-                Self::stack_size(stack, 2)?;
+                Self::stack_size(position, stack, 2)?;
 
-                Self::stack_operation(stack, &[TaggedType::Type(Type::I32)], &[]);
+                Self::stack_operation(position, stack, &[TaggedType::Type(Type::I32)], &[])?;
 
-                let t = match stack.pop().unwrap() {
+                let value = stack.pop().unwrap();
+                let t = match value {
                     Type::Type(a) => a,
-                    _ => todo!("Expected Type"),
+                    _ => return Err(TypeError::ExpectedTypeTypeGot(position.clone(), value)),
                 };
                 stack.push(Type::Ptr(Box::new(PtrType {
                     is_const: false,
@@ -242,11 +264,11 @@ impl TypeChecker {
             }
 
             ReducedBuiltin::Nth(n) => {
-                Self::stack_size(stack, 1)?;
+                Self::stack_size(position, stack, 1)?;
 
                 if let Type::Union(v) = stack.pop().unwrap() {
                     if *n >= v.types.len() {
-                        return Err(todo!());
+                        return Err(TypeError::InvalidSize(position.clone(), *n, v.types.len()));
                     }
                     stack.push(v.types[*n].clone());
                 }
@@ -254,17 +276,21 @@ impl TypeChecker {
                 Ok(TypedBuiltin::Nth(*n))
             }
             ReducedBuiltin::NthWrite(n) => {
-                Self::stack_size(stack, 2)?;
+                Self::stack_size(position, stack, 2)?;
 
                 let write = stack.pop().unwrap();
 
                 if let Type::Union(v) = stack.pop().unwrap() {
                     if *n >= v.types.len() {
-                        return Err(todo!());
+                        return Err(TypeError::InvalidSize(position.clone(), *n, v.types.len()));
                     }
 
                     if !write.can_become(&v.types[*n]) {
-                        return Err(todo!());
+                        return Err(TypeError::CannotConvertTypeTo(
+                            position.clone(),
+                            write,
+                            v.types[*n].clone(),
+                        ));
                     }
 
                     stack.push(Type::Union(v));
@@ -273,7 +299,7 @@ impl TypeChecker {
                 Ok(TypedBuiltin::NthWrite(*n))
             }
             ReducedBuiltin::Union(n) => {
-                Self::stack_size(stack, *n)?;
+                Self::stack_size(position, stack, *n)?;
 
                 let mut types: Vec<Type> = Vec::new();
                 for _ in 0..*n {

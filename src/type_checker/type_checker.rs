@@ -8,6 +8,7 @@ use crate::{
     builtins::types::Type,
     config::config::Config,
     error::type_error::TypeError,
+    lexer::tokens::PositionInfo,
 };
 
 use std::collections::HashMap;
@@ -18,6 +19,7 @@ pub struct TypeChecker {
 
     functions: HashMap<String, TypedFuncDeclNode>,
     pub(crate) records: HashMap<String, TypedRecordDeclNode>,
+    pub(crate) previous_position: PositionInfo,
 }
 
 pub struct TypedData {
@@ -40,6 +42,12 @@ impl TypeChecker {
 
             functions: HashMap::new(),
             records: HashMap::new(),
+
+            previous_position: PositionInfo {
+                line: 0,
+                column: 0,
+                file: "".to_string(),
+            },
         }
     }
 
@@ -58,21 +66,33 @@ impl TypeChecker {
         })
     }
 
-    pub(crate) fn stack_size(stack: &Vec<Type>, len: usize) -> Result<(), TypeError> {
+    pub(crate) fn stack_size(
+        pos: &PositionInfo,
+        stack: &Vec<Type>,
+        len: usize,
+    ) -> Result<(), TypeError> {
         if stack.len() < len {
-            todo!()
+            return Err(TypeError::InvalidStackSize(pos.clone(), stack.len(), len));
         }
         Ok(())
     }
 
-    fn stack_shape(stack: &Vec<Type>, target: &[Type]) -> Result<(), TypeError> {
+    fn stack_shape(
+        pos: &PositionInfo,
+        stack: &Vec<Type>,
+        target: &[Type],
+    ) -> Result<(), TypeError> {
         let target_stack = Vec::from(target);
-        Self::stack_size(stack, target_stack.len())?;
+        Self::stack_size(pos, stack, target_stack.len())?;
 
         for (i, t) in (0..).zip(target_stack.iter().rev()) {
             let s = stack[stack.len() - 1 - i].clone();
             if !t.can_become(&s) {
-                todo!("{}: {}", t, s);
+                return Err(TypeError::CannotConvertTypeTo(
+                    pos.clone(),
+                    t.clone(),
+                    s.clone(),
+                ));
             }
         }
 
@@ -80,11 +100,12 @@ impl TypeChecker {
     }
 
     pub(crate) fn stack_operation(
+        pos: &PositionInfo,
         stack: &mut Vec<Type>,
         inputs: &[TaggedType],
         outputs: &[TaggedType],
     ) -> Result<(), TypeError> {
-        Self::stack_size(stack, inputs.len())?;
+        Self::stack_size(pos, stack, inputs.len())?;
 
         let mut types = Vec::new();
 
@@ -102,13 +123,15 @@ impl TypeChecker {
             .cloned()
             .collect();
 
-        if !types
-            .iter()
-            .zip(matches.iter())
-            .all(|(a, b)| a.can_become(&b))
-        {
-            return Err(todo!("Convert {:?} -> {:?}", types, matches));
-        };
+        for (a, b) in types.iter().zip(matches.iter()) {
+            if !a.can_become(&b) {
+                return Err(TypeError::CannotConvertTypeTo(
+                    pos.clone(),
+                    a.clone(),
+                    b.clone(),
+                ));
+            }
+        }
 
         for o in outputs.iter() {
             match o {
@@ -120,14 +143,26 @@ impl TypeChecker {
         Ok(())
     }
 
-    pub(crate) fn compare_stacks(stack1: &Vec<Type>, stack2: &Vec<Type>) -> Result<(), TypeError> {
+    pub(crate) fn compare_stacks(
+        pos: &PositionInfo,
+        stack1: &Vec<Type>,
+        stack2: &Vec<Type>,
+    ) -> Result<(), TypeError> {
         if stack1.len() != stack2.len() {
-            todo!()
+            return Err(TypeError::InvalidStackSize(
+                pos.clone(),
+                stack1.len(),
+                stack2.len(),
+            ));
         }
 
         for (a, b) in stack1.iter().zip(stack2.iter()) {
             if !b.can_become(a) {
-                todo!()
+                return Err(TypeError::CannotConvertTypeTo(
+                    pos.clone(),
+                    b.clone(),
+                    a.clone(),
+                ));
             }
         }
 
@@ -153,10 +188,14 @@ impl TypeChecker {
             .map(|t| Type::from_basic_type(&t))
             .collect();
 
-        match Self::stack_shape(&input_stack, &outputs) {
+        match Self::stack_shape(&self.previous_position, &input_stack, &outputs) {
             Ok(_) => (),
             Err(_) => {
-                todo!();
+                return Err(TypeError::FunctionOutputInvalid(
+                    self.previous_position.clone(),
+                    input_stack,
+                    outputs,
+                ));
             }
         }
 
@@ -203,7 +242,7 @@ impl TypeChecker {
         match node {
             ReducedAstNode::Builtin(p, b) => Ok(Some(TypedAstNode::Builtin(
                 p.clone(),
-                self.type_check_builtin(&b.clone(), stack)?,
+                self.type_check_builtin(p, &b.clone(), stack)?,
             ))),
             ReducedAstNode::Literal(literal) => {
                 if self.functions.contains_key(&literal.literal) {
@@ -224,7 +263,10 @@ impl TypeChecker {
                         r#type: lookup.get(&literal.literal).unwrap().clone().0,
                     })))
                 } else {
-                    todo!();
+                    return Err(TypeError::UnknownLiteral(
+                        literal.position.clone(),
+                        literal.literal.clone(),
+                    ));
                 }
             }
             ReducedAstNode::RecordElementIdentifier(literal) => {

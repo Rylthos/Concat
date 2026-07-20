@@ -12,14 +12,19 @@ impl TypeChecker {
         literal: &Literal,
         stack: &mut Vec<Type>,
     ) -> Result<Option<TypedAstNode>, TypeError> {
-        Self::stack_size(&stack, 2)?;
+        Self::stack_size(&literal.position, &stack, 2)?;
 
         let write_value = stack.pop().unwrap();
 
         let stack_value = stack.pop().unwrap();
         let record_name = match stack_value {
             Type::RecordIden(ref s) => s.clone(),
-            _ => todo!("Expected Iden got {stack_value}"),
+            _ => {
+                return Err(TypeError::ExpectedRecordIdenGot(
+                    literal.position.clone(),
+                    stack_value,
+                ));
+            }
         };
 
         if let Some(record) = self.records.get(&record_name) {
@@ -31,13 +36,21 @@ impl TypeChecker {
                 .collect();
 
             if entries.len() == 0 {
-                todo!()
+                return Err(TypeError::InvalidRecordIdentifier(
+                    literal.position.clone(),
+                    record_name.clone(),
+                    literal.literal.clone(),
+                ));
             }
 
             let ((_, stack_type), index) = entries[0];
 
             if !stack_type.can_become(&write_value) {
-                todo!()
+                return Err(TypeError::CannotConvertTypeTo(
+                    literal.position.clone(),
+                    stack_type.clone(),
+                    write_value,
+                ));
             }
 
             stack.push(stack_value.clone());
@@ -46,7 +59,10 @@ impl TypeChecker {
                 TypedBuiltin::NthWrite(index),
             )))
         } else {
-            todo!()
+            return Err(TypeError::UnknownRecord(
+                literal.position.clone(),
+                record_name.clone(),
+            ));
         }
     }
 }

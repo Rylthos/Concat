@@ -22,11 +22,16 @@ impl TypeChecker {
         let mut stack_copy = stack.clone();
         let condition =
             self.type_check_region(while_node.condition.clone(), &mut stack_copy, lookup)?;
-        Self::stack_operation(&mut stack_copy, &[TaggedType::Type(Type::Bool)], &[]);
+        Self::stack_operation(
+            &self.previous_position,
+            &mut stack_copy,
+            &[TaggedType::Type(Type::Bool)],
+            &[],
+        )?;
 
         let region = self.type_check_region(while_node.region.clone(), &mut stack_copy, lookup)?;
 
-        Self::compare_stacks(stack, &stack_copy)?;
+        Self::compare_stacks(&self.previous_position, stack, &stack_copy)?;
 
         Ok(Some(TypedAstNode::While(TypedWhileNode {
             position: while_node.position.clone(),

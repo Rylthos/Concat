@@ -18,7 +18,7 @@ impl TypeChecker {
         stack: &mut Vec<Type>,
         lookup: &HashMap<String, (Type, usize, usize)>,
     ) -> Result<Option<TypedAstNode>, TypeError> {
-        Self::stack_size(stack, assign_node.labels.len())?;
+        Self::stack_size(&assign_node.position, stack, assign_node.labels.len())?;
         let stack_copy: Vec<Type> = stack[(stack.len() - assign_node.labels.len())..(stack.len())]
             .iter()
             .cloned()

@@ -26,28 +26,33 @@ impl TypeChecker {
         for (c, r) in if_node.if_region.clone() {
             let mut stack_copy = stack_cond.clone();
             let condition = self.type_check_region(c, &mut stack_copy, lookup)?;
-            Self::stack_operation(&mut stack_copy, &[TaggedType::Type(Type::Bool)], &[]);
+            Self::stack_operation(
+                &self.previous_position,
+                &mut stack_copy,
+                &[TaggedType::Type(Type::Bool)],
+                &[],
+            )?;
 
             let mut stack_copy2 = stack_copy.clone();
 
             let region = self.type_check_region(r, &mut stack_copy2, lookup)?;
-            stacks.push((stack_copy, stack_copy2));
+            stacks.push((self.previous_position.clone(), stack_copy, stack_copy2));
             if_region.push((condition, region));
         }
 
         if stacks.len() > 1 {
             for i in stacks.windows(2) {
-                let (c1, r1) = &i[0];
-                let (c2, r2) = &i[1];
+                let (p1, c1, r1) = &i[0];
+                let (_, c2, r2) = &i[1];
 
-                Self::compare_stacks(c1, c2)?;
-                Self::compare_stacks(r1, r2)?;
+                Self::compare_stacks(p1, c1, c2)?;
+                Self::compare_stacks(p1, r1, r2)?;
             }
         }
 
-        let &mut (ref mut stack1, ref stack2) = stacks.get_mut(0).unwrap();
+        let &mut (ref p, ref mut stack1, ref stack2) = stacks.get_mut(0).unwrap();
         let else_region = self.type_check_region(if_node.else_region.clone(), stack1, lookup)?;
-        Self::compare_stacks(&stack1, &stack2)?;
+        Self::compare_stacks(&p, &stack1, &stack2)?;
 
         *stack = stack2.to_vec();
 
