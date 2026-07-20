@@ -2,10 +2,8 @@ use std::io::{self, Write};
 
 use crate::{
     builtins::types::Type,
-    config::config::Config,
     ir::{
         heap_value::HeapValue,
-        ir::IRData,
         stack_values::{PointerValue, StackValue},
     },
     vm::instructions::Instruction,
@@ -17,17 +15,14 @@ pub struct VMData {
 }
 
 pub struct VM {
-    config: Config,
-
     instructions: Vec<Instruction>,
 
     heap: Vec<HeapValue>,
 }
 
 impl VM {
-    pub fn init(config: Config, vm_data: VMData) -> VM {
+    pub fn init(vm_data: VMData) -> VM {
         VM {
-            config,
             instructions: vm_data.instructions,
             heap: vm_data.initial_heap.clone(),
         }

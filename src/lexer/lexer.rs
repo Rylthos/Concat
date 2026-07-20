@@ -515,7 +515,7 @@ impl Lexer {
                             't' => return Ok('\t'),
                             'x' => {
                                 if let Some((col3, char3)) = characters.next()
-                                    && let Some((col4, char4)) = characters.next()
+                                    && let Some((_, char4)) = characters.next()
                                 {
                                     if char3.is_digit(16) && char4.is_digit(16) {
                                         let value = char3.to_digit(16).unwrap() * 16

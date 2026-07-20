@@ -1,4 +1,4 @@
-use crate::{builtins::types::Type, ir::stack_values::StackValue};
+use crate::ir::stack_values::StackValue;
 
 use std::fmt;
 

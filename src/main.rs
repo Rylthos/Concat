@@ -6,7 +6,6 @@ use concat::ir::ir::IR;
 use concat::lexer::lexer::Lexer;
 use concat::parser::parser::Parser as ConcatParser;
 use concat::reducer::reducer::Reducer;
-use concat::type_checker;
 use concat::type_checker::type_checker::TypeChecker;
 use concat::vm::vm::VM;
 
@@ -67,6 +66,6 @@ fn main() {
         }
     };
 
-    let mut vm = VM::init(config.clone(), instructions);
+    let mut vm = VM::init(instructions);
     vm.interpret();
 }

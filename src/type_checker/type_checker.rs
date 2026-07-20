@@ -1,19 +1,11 @@
 use crate::{
     ast::{
-        raw_node::{AstNode, FuncDeclNode, Literal, RecordDeclNode},
         reduced_node::{ReducedAstNode, ReducedFuncDeclNode, ReducedRegion},
         typed_node::{
-            TypedAssignNode, TypedAstNode, TypedFuncDeclNode, TypedIfNode, TypedRecordDeclNode,
-            TypedRegion, TypedVariableNode, TypedWhileNode,
+            TypedAstNode, TypedFuncDeclNode, TypedRecordDeclNode, TypedRegion, TypedVariableNode,
         },
     },
-    builtins::{
-        basic_types::BasicType,
-        builtins::Builtin,
-        reduced_builtins::ReducedBuiltin,
-        typed_builtins::TypedBuiltin,
-        types::{PtrType, Type, UnionType},
-    },
+    builtins::types::Type,
     config::config::Config,
     error::type_error::TypeError,
 };
@@ -54,6 +46,11 @@ impl TypeChecker {
     pub fn type_check(&mut self) -> Result<TypedData, TypeError> {
         let parsed_region =
             self.type_check_region(self.reduced_tree.clone(), &mut Vec::new(), &HashMap::new())?;
+
+        if self.config.type_print {
+            self.print(&parsed_region);
+        }
+
         Ok(TypedData {
             main_region: parsed_region,
             functions: self.functions.clone(),

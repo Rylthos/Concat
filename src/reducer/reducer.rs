@@ -27,7 +27,12 @@ impl Reducer {
     }
 
     pub fn reduce(&mut self) -> Result<ReducedRegion, ReducerError> {
-        self.reduce_region(&self.raw_tree.clone())
+        let reduced_region = self.reduce_region(&self.raw_tree.clone())?;
+        if self.config.reduce_print {
+            self.print(&reduced_region);
+        }
+
+        Ok(reduced_region)
     }
 
     pub fn reduce_region(&mut self, region: &Region) -> Result<ReducedRegion, ReducerError> {

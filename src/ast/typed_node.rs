@@ -1,4 +1,4 @@
-use super::raw_node::{Literal, RecordDeclNode};
+use super::raw_node::Literal;
 use crate::builtins::typed_builtins::TypedBuiltin;
 use crate::builtins::types::Type;
 use crate::lexer::tokens::PositionInfo;
