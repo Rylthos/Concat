@@ -15,7 +15,7 @@ impl Parser {
         for i in identifiers.region {
             match i {
                 AstNode::Literal(l) => labels.push(l.literal),
-                _ => todo!(),
+                _ => return Err(ParserError::ExpectedIdentifier(pos)),
             }
         }
 

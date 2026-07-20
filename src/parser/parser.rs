@@ -300,10 +300,7 @@ impl Parser {
                 }
             }
 
-            _ => {
-                todo!();
-                Err(ParserError::UnexpectedToken(token))
-            }
+            _ => Err(ParserError::UnexpectedToken(token)),
         }
     }
 }
