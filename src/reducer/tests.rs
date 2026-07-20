@@ -43,13 +43,6 @@ mod tests {
         ReducedAstNode::Builtin(create_position(line, column), builtin)
     }
 
-    fn create_literal(line: usize, column: usize, name: &str) -> Literal {
-        Literal {
-            position: create_position(line, column),
-            literal: name.to_string(),
-        }
-    }
-
     #[test]
     fn reduce_tree_normal() {
         let input = vec![
