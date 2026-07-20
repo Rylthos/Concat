@@ -25,7 +25,7 @@ pub struct TypeChecker {
     reduced_tree: ReducedRegion,
 
     functions: HashMap<String, TypedFuncDeclNode>,
-    records: HashMap<String, TypedRecordDeclNode>,
+    pub(crate) records: HashMap<String, TypedRecordDeclNode>,
 }
 
 pub struct TypedData {
@@ -35,7 +35,7 @@ pub struct TypedData {
     pub records: HashMap<String, TypedRecordDeclNode>,
 }
 
-enum TaggedType {
+pub(crate) enum TaggedType {
     Type(Type),
     Ref(usize),
 }
@@ -61,7 +61,7 @@ impl TypeChecker {
         })
     }
 
-    fn stack_size(stack: &Vec<Type>, len: usize) -> Result<(), TypeError> {
+    pub(crate) fn stack_size(stack: &Vec<Type>, len: usize) -> Result<(), TypeError> {
         if stack.len() < len {
             todo!()
         }
@@ -82,7 +82,7 @@ impl TypeChecker {
         Ok(())
     }
 
-    fn stack_operation(
+    pub(crate) fn stack_operation(
         stack: &mut Vec<Type>,
         inputs: &[TaggedType],
         outputs: &[TaggedType],
@@ -123,7 +123,7 @@ impl TypeChecker {
         Ok(())
     }
 
-    fn compare_stacks(stack1: &Vec<Type>, stack2: &Vec<Type>) -> Result<(), TypeError> {
+    pub(crate) fn compare_stacks(stack1: &Vec<Type>, stack2: &Vec<Type>) -> Result<(), TypeError> {
         if stack1.len() != stack2.len() {
             todo!()
         }
@@ -180,7 +180,7 @@ impl TypeChecker {
         })
     }
 
-    fn type_check_region(
+    pub(crate) fn type_check_region(
         &mut self,
         region: ReducedRegion,
         stack: &mut Vec<Type>,
@@ -206,7 +206,7 @@ impl TypeChecker {
         match node {
             ReducedAstNode::Builtin(p, b) => Ok(Some(TypedAstNode::Builtin(
                 p.clone(),
-                self.type_check_builtin(b.clone(), stack)?,
+                self.type_check_builtin(&b.clone(), stack)?,
             ))),
             ReducedAstNode::Literal(literal) => {
                 if self.functions.contains_key(&literal.literal) {
@@ -231,165 +231,16 @@ impl TypeChecker {
                 }
             }
             ReducedAstNode::RecordElementIdentifier(literal) => {
-                Self::stack_size(&stack, 1)?;
-
-                let stack_value = stack.pop().unwrap();
-                let record_name = match stack_value {
-                    Type::RecordIden(ref s) => s.clone(),
-                    _ => todo!("Expected Record Iden got {stack_value}"),
-                };
-
-                if let Some(record) = self.records.get(&record_name) {
-                    let entries: Vec<_> = record
-                        .entries
-                        .iter()
-                        .zip(0..)
-                        .filter(|((name, _), _)| *name == literal.literal)
-                        .collect();
-
-                    if entries.len() == 0 {
-                        todo!()
-                    }
-
-                    let ((_, stack_type), index) = entries[0];
-
-                    stack.push(stack_type.clone());
-                    Ok(Some(TypedAstNode::Builtin(
-                        literal.position.clone(),
-                        TypedBuiltin::Nth(index),
-                    )))
-                } else {
-                    todo!()
-                }
+                self.type_check_record_identifier(literal, stack)
             }
             ReducedAstNode::WriteRecordElementIdentifier(literal) => {
-                Self::stack_size(&stack, 2)?;
-
-                let write_value = stack.pop().unwrap();
-
-                let stack_value = stack.pop().unwrap();
-                let record_name = match stack_value {
-                    Type::RecordIden(ref s) => s.clone(),
-                    _ => todo!("Expected Iden got {stack_value}"),
-                };
-
-                if let Some(record) = self.records.get(&record_name) {
-                    let entries: Vec<_> = record
-                        .entries
-                        .iter()
-                        .zip(0..)
-                        .filter(|((name, _), _)| *name == literal.literal)
-                        .collect();
-
-                    if entries.len() == 0 {
-                        todo!()
-                    }
-
-                    let ((_, stack_type), index) = entries[0];
-
-                    if !stack_type.can_become(&write_value) {
-                        todo!()
-                    }
-
-                    stack.push(stack_value.clone());
-                    Ok(Some(TypedAstNode::Builtin(
-                        literal.position.clone(),
-                        TypedBuiltin::NthWrite(index),
-                    )))
-                } else {
-                    todo!()
-                }
+                self.type_check_write_record_identifier(literal, stack)
             }
             ReducedAstNode::Assign(assign_node) => {
-                Self::stack_size(stack, assign_node.labels.len())?;
-                let stack_copy: Vec<Type> = stack
-                    [(stack.len() - assign_node.labels.len())..(stack.len())]
-                    .iter()
-                    .cloned()
-                    .collect();
-
-                let mut variable_lookup = lookup.clone();
-
-                for (_, (_, d, _)) in variable_lookup.iter_mut() {
-                    *d += 1
-                }
-
-                for ((i, v), t) in (0..).zip(assign_node.labels.iter()).zip(stack_copy.iter()) {
-                    variable_lookup.insert(v.clone(), (t.clone(), 0, i));
-                }
-
-                let mut new_stack = Vec::new();
-                let region = self.type_check_region(
-                    assign_node.region.clone(),
-                    &mut new_stack,
-                    &variable_lookup,
-                )?;
-
-                *stack = new_stack;
-
-                Ok(Some(TypedAstNode::Assign(TypedAssignNode {
-                    position: assign_node.position.clone(),
-                    labels: assign_node.labels.clone(),
-                    region,
-                })))
+                self.type_check_assign(assign_node, stack, lookup)
             }
-            ReducedAstNode::If(if_node) => {
-                let mut if_region = Vec::new();
-                let mut stacks = Vec::new();
-                let stack_cond = stack.clone();
-
-                for (c, r) in if_node.if_region.clone() {
-                    let mut stack_copy = stack_cond.clone();
-                    let condition = self.type_check_region(c, &mut stack_copy, lookup)?;
-                    Self::stack_operation(&mut stack_copy, &[TaggedType::Type(Type::Bool)], &[]);
-
-                    let mut stack_copy2 = stack_copy.clone();
-
-                    let region = self.type_check_region(r, &mut stack_copy2, lookup)?;
-                    stacks.push((stack_copy, stack_copy2));
-                    if_region.push((condition, region));
-                }
-
-                if stacks.len() > 1 {
-                    for i in stacks.windows(2) {
-                        let (c1, r1) = &i[0];
-                        let (c2, r2) = &i[1];
-
-                        Self::compare_stacks(c1, c2)?;
-                        Self::compare_stacks(r1, r2)?;
-                    }
-                }
-
-                let &mut (ref mut stack1, ref stack2) = stacks.get_mut(0).unwrap();
-                let else_region =
-                    self.type_check_region(if_node.else_region.clone(), stack1, lookup)?;
-                Self::compare_stacks(&stack1, &stack2)?;
-
-                *stack = stack2.to_vec();
-
-                Ok(Some(TypedAstNode::If(TypedIfNode {
-                    position: if_node.position.clone(),
-                    if_region,
-                    else_region,
-                })))
-            }
-            ReducedAstNode::While(while_node) => {
-                let mut stack_copy = stack.clone();
-                let condition =
-                    self.type_check_region(while_node.condition.clone(), &mut stack_copy, lookup)?;
-                Self::stack_operation(&mut stack_copy, &[TaggedType::Type(Type::Bool)], &[]);
-
-                let region =
-                    self.type_check_region(while_node.region.clone(), &mut stack_copy, lookup)?;
-
-                Self::compare_stacks(stack, &stack_copy)?;
-
-                Ok(Some(TypedAstNode::While(TypedWhileNode {
-                    position: while_node.position.clone(),
-                    condition,
-                    region,
-                })))
-            }
+            ReducedAstNode::If(if_node) => self.type_check_if(if_node, stack, lookup),
+            ReducedAstNode::While(while_node) => self.type_check_while(while_node, stack, lookup),
             ReducedAstNode::FuncDecl(func_decl) => {
                 let func = self.type_check_function(func_decl)?;
                 self.functions.insert(func_decl.name.clone(), func);
@@ -410,319 +261,6 @@ impl TypeChecker {
                 );
                 Ok(None)
             }
-        }
-    }
-
-    fn type_check_builtin(
-        &self,
-        builtin: ReducedBuiltin,
-        stack: &mut Vec<Type>,
-    ) -> Result<TypedBuiltin, TypeError> {
-        match builtin {
-            ReducedBuiltin::Add => {
-                Self::stack_size(stack, 2);
-                let v1 = stack.pop().unwrap();
-                let v2 = stack.pop().unwrap();
-
-                if let Type::I32 = v1 {
-                } else {
-                    todo!();
-                }
-
-                if let Type::Ptr(p) = v2 {
-                    stack.push(Type::Ptr(p))
-                } else if let Type::I32 = v2 {
-                    stack.push(Type::I32)
-                } else {
-                    todo!();
-                }
-
-                Ok(TypedBuiltin::Add)
-            }
-            ReducedBuiltin::Divide => {
-                Self::stack_operation(
-                    stack,
-                    &[TaggedType::Type(Type::I32), TaggedType::Type(Type::I32)],
-                    &[TaggedType::Type(Type::I32)],
-                )?;
-
-                Ok(TypedBuiltin::Divide)
-            }
-            ReducedBuiltin::Modulo => {
-                Self::stack_operation(
-                    stack,
-                    &[TaggedType::Type(Type::I32), TaggedType::Type(Type::I32)],
-                    &[TaggedType::Type(Type::I32)],
-                )?;
-
-                Ok(TypedBuiltin::Modulo)
-            }
-            ReducedBuiltin::Multiply => {
-                Self::stack_operation(
-                    stack,
-                    &[TaggedType::Type(Type::I32), TaggedType::Type(Type::I32)],
-                    &[TaggedType::Type(Type::I32)],
-                )?;
-
-                Ok(TypedBuiltin::Multiply)
-            }
-            ReducedBuiltin::Subtract => {
-                Self::stack_operation(
-                    stack,
-                    &[TaggedType::Type(Type::I32), TaggedType::Type(Type::I32)],
-                    &[TaggedType::Type(Type::I32)],
-                )?;
-
-                Ok(TypedBuiltin::Subtract)
-            }
-
-            ReducedBuiltin::Drop => {
-                Self::stack_size(stack, 1)?;
-                stack.pop();
-
-                Ok(TypedBuiltin::Drop)
-            }
-            ReducedBuiltin::Duplicate => {
-                Self::stack_operation(
-                    stack,
-                    &[TaggedType::Ref(0)],
-                    &[TaggedType::Ref(0), TaggedType::Ref(0)],
-                )?;
-
-                Ok(TypedBuiltin::Duplicate)
-            }
-            ReducedBuiltin::Over => {
-                Self::stack_operation(
-                    stack,
-                    &[TaggedType::Ref(0), TaggedType::Ref(1)],
-                    &[TaggedType::Ref(0), TaggedType::Ref(1), TaggedType::Ref(0)],
-                )?;
-
-                Ok(TypedBuiltin::Over)
-            }
-            ReducedBuiltin::Swap => {
-                Self::stack_operation(
-                    stack,
-                    &[TaggedType::Ref(0), TaggedType::Ref(1)],
-                    &[TaggedType::Ref(1), TaggedType::Ref(0)],
-                )?;
-
-                Ok(TypedBuiltin::Swap)
-            }
-            ReducedBuiltin::Rotate3 => {
-                Self::stack_operation(
-                    stack,
-                    &[TaggedType::Ref(0), TaggedType::Ref(1), TaggedType::Ref(2)],
-                    &[TaggedType::Ref(2), TaggedType::Ref(0), TaggedType::Ref(1)],
-                )?;
-
-                Ok(TypedBuiltin::Rotate3)
-            }
-            ReducedBuiltin::Print => {
-                Self::stack_size(stack, 1)?;
-                stack.pop();
-
-                Ok(TypedBuiltin::Print)
-            }
-
-            ReducedBuiltin::Less => {
-                Self::stack_operation(
-                    stack,
-                    &[TaggedType::Type(Type::I32), TaggedType::Type(Type::I32)],
-                    &[TaggedType::Type(Type::Bool)],
-                )?;
-                Ok(TypedBuiltin::Less)
-            }
-            ReducedBuiltin::Greater => {
-                Self::stack_operation(
-                    stack,
-                    &[TaggedType::Type(Type::I32), TaggedType::Type(Type::I32)],
-                    &[TaggedType::Type(Type::Bool)],
-                )?;
-                Ok(TypedBuiltin::Greater)
-            }
-            ReducedBuiltin::LessEqual => {
-                Self::stack_operation(
-                    stack,
-                    &[TaggedType::Type(Type::I32), TaggedType::Type(Type::I32)],
-                    &[TaggedType::Type(Type::Bool)],
-                )?;
-                Ok(TypedBuiltin::LessEqual)
-            }
-            ReducedBuiltin::GreaterEqual => {
-                Self::stack_operation(
-                    stack,
-                    &[TaggedType::Type(Type::I32), TaggedType::Type(Type::I32)],
-                    &[TaggedType::Type(Type::Bool)],
-                )?;
-                Ok(TypedBuiltin::GreaterEqual)
-            }
-            ReducedBuiltin::Equal => {
-                Self::stack_operation(
-                    stack,
-                    &[TaggedType::Ref(0), TaggedType::Ref(0)],
-                    &[TaggedType::Type(Type::Bool)],
-                )?;
-                Ok(TypedBuiltin::Equal)
-            }
-            ReducedBuiltin::NotEqual => {
-                Self::stack_operation(
-                    stack,
-                    &[TaggedType::Ref(0), TaggedType::Ref(0)],
-                    &[TaggedType::Type(Type::Bool)],
-                )?;
-                Ok(TypedBuiltin::NotEqual)
-            }
-            ReducedBuiltin::And => {
-                Self::stack_operation(
-                    stack,
-                    &[TaggedType::Type(Type::Bool), TaggedType::Type(Type::Bool)],
-                    &[TaggedType::Type(Type::Bool)],
-                )?;
-                Ok(TypedBuiltin::And)
-            }
-            ReducedBuiltin::Or => {
-                Self::stack_operation(
-                    stack,
-                    &[TaggedType::Type(Type::Bool), TaggedType::Type(Type::Bool)],
-                    &[TaggedType::Type(Type::Bool)],
-                )?;
-                Ok(TypedBuiltin::Or)
-            }
-
-            ReducedBuiltin::Assign => {
-                Self::stack_size(stack, 2)?;
-                let write_value = stack.pop().unwrap();
-                let stack_value = stack.pop().unwrap();
-                let stack_type = match stack_value {
-                    Type::Var(t) => *t,
-                    Type::Ptr(p) => p.r#type,
-                    _ => {
-                        return Err(todo!());
-                    }
-                };
-
-                if !write_value.can_become(&stack_type) {
-                    todo!("{} -/> {}", write_value, stack_type.clone());
-                    // return Err();
-                }
-
-                Ok(TypedBuiltin::Assign)
-            }
-            ReducedBuiltin::Read => {
-                Self::stack_size(stack, 1);
-                let stack_value = stack.pop().unwrap();
-                let stack_type = match stack_value {
-                    Type::Var(t) => *t,
-                    Type::Ptr(p) => p.r#type,
-                    _ => todo!(),
-                };
-                stack.push(stack_type);
-                Ok(TypedBuiltin::Read)
-            }
-            ReducedBuiltin::Input => {
-                stack.push(Type::Ptr(Box::new(PtrType {
-                    is_const: true,
-                    r#type: Type::Char,
-                })));
-                Ok(TypedBuiltin::Input)
-            }
-            ReducedBuiltin::Mem => {
-                Self::stack_size(stack, 2)?;
-
-                Self::stack_operation(stack, &[TaggedType::Type(Type::I32)], &[]);
-
-                let t = match stack.pop().unwrap() {
-                    Type::Type(a) => a,
-                    _ => todo!("Expected Type"),
-                };
-                stack.push(Type::Ptr(Box::new(PtrType {
-                    is_const: false,
-                    r#type: *t,
-                })));
-                Ok(TypedBuiltin::Mem)
-            }
-
-            ReducedBuiltin::Nth(n) => {
-                Self::stack_size(stack, 1)?;
-
-                if let Type::Union(v) = stack.pop().unwrap() {
-                    if n >= v.types.len() {
-                        return Err(todo!());
-                    }
-                    stack.push(v.types[n].clone());
-                }
-
-                Ok(TypedBuiltin::Nth(n))
-            }
-            ReducedBuiltin::NthWrite(n) => {
-                Self::stack_size(stack, 2)?;
-
-                let write = stack.pop().unwrap();
-
-                if let Type::Union(v) = stack.pop().unwrap() {
-                    if n >= v.types.len() {
-                        return Err(todo!());
-                    }
-
-                    if !write.can_become(&v.types[n]) {
-                        return Err(todo!());
-                    }
-
-                    stack.push(Type::Union(v));
-                }
-
-                Ok(TypedBuiltin::NthWrite(n))
-            }
-            ReducedBuiltin::Union(n) => {
-                Self::stack_size(stack, n)?;
-
-                let mut types: Vec<Type> = Vec::new();
-                for _ in 0..n {
-                    types.push(stack.pop().unwrap());
-                }
-                types = types.iter().rev().cloned().collect();
-
-                stack.push(Type::Union(Box::new(UnionType { types: types })));
-                Ok(TypedBuiltin::Union(n))
-            }
-
-            ReducedBuiltin::Record(name) => {
-                stack.push(Type::RecordIden(name.clone()));
-                Ok(TypedBuiltin::Record(name))
-            }
-            ReducedBuiltin::RecordType(name) => {
-                stack.push(Type::Type(Box::new(Type::RecordIden(name.clone()))));
-                Ok(TypedBuiltin::Type(Type::RecordIden(name)))
-            }
-
-            ReducedBuiltin::BasicType(t) => {
-                stack.push(Type::Type(Box::new(Type::from_basic_type(&t))));
-                Ok(TypedBuiltin::Type(Type::from_basic_type(&t)))
-            }
-
-            ReducedBuiltin::StringValue(s) => {
-                stack.push(Type::Ptr(Box::new(PtrType {
-                    is_const: true,
-                    r#type: Type::Char,
-                })));
-                Ok(TypedBuiltin::StringValue(s))
-            }
-            ReducedBuiltin::I32Value(i) => {
-                stack.push(Type::I32);
-                Ok(TypedBuiltin::I32Value(i))
-            }
-            ReducedBuiltin::BoolValue(b) => {
-                stack.push(Type::Bool);
-                Ok(TypedBuiltin::BoolValue(b))
-            }
-            ReducedBuiltin::CharValue(c) => {
-                stack.push(Type::Char);
-                Ok(TypedBuiltin::CharValue(c))
-            }
-
-            ReducedBuiltin::DebugPrintStack => Ok(TypedBuiltin::DebugPrintStack),
-            ReducedBuiltin::DebugHeapStack => Ok(TypedBuiltin::DebugHeapStack),
         }
     }
 }
