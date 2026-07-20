@@ -1,3 +1,4 @@
+pub mod codegen_error;
 pub mod ir_error;
 pub mod lexer_error;
 pub mod parser_error;
