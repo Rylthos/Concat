@@ -42,7 +42,7 @@ impl Lexer {
             Err(err) => return Err(err),
         };
 
-        if self.config.token_print {
+        if self.config.lexer_print {
             println!("=== TOKENS ===");
             for token in self.tokens.iter() {
                 println!("{}", token);

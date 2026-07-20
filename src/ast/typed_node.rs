@@ -69,3 +69,10 @@ pub struct TypedVariableNode {
     pub offset: usize,
     pub r#type: Type,
 }
+
+#[derive(Debug, Clone)]
+pub struct TypedRecordDeclNode {
+    pub position: PositionInfo,
+    pub name: String,
+    pub entries: Vec<(String, Type)>,
+}

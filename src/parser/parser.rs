@@ -27,7 +27,13 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Result<Region, ParserError> {
-        self.parse_until(&[])
+        let region = self.parse_until(&[])?;
+
+        if self.config.parser_print {
+            println!("{:?}", region);
+        }
+
+        Ok(region)
     }
 
     pub(crate) fn peek(&self) -> Token {
@@ -89,9 +95,11 @@ impl Parser {
             TokenType::Assignment => self.parse_assign(),
             TokenType::Record => self.parse_record(),
 
-            TokenType::I32 | TokenType::Bool | TokenType::Char | TokenType::LeftSqBracket => {
-                Ok(self.parse_type()?)
-            }
+            TokenType::I32
+            | TokenType::Bool
+            | TokenType::Char
+            | TokenType::Void
+            | TokenType::LeftSqBracket => Ok(self.parse_type()?),
 
             _ => self.parse_leaf(),
         }
@@ -99,7 +107,7 @@ impl Parser {
 
     pub(crate) fn valid_type_list(&self, region: Region) -> Result<Vec<BasicType>, ParserError> {
         let mut types = Vec::new();
-        println!("{:?}", region);
+
         for (i, r) in (0..).zip(region.region.iter()) {
             match r {
                 AstNode::Builtin(p, b) => match b {
@@ -111,6 +119,7 @@ impl Parser {
                         }
                         _ => types.push(t.clone()),
                     },
+                    Builtin::RecordType(t) => types.push(BasicType::RecordIden(t.clone())),
                     _ => return Err(ParserError::ExpectedTypeGotBuiltin(p.clone(), b.clone())),
                 },
                 _ => panic!(),
@@ -291,7 +300,10 @@ impl Parser {
                 }
             }
 
-            _ => Err(ParserError::UnexpectedToken(token)),
+            _ => {
+                todo!();
+                Err(ParserError::UnexpectedToken(token))
+            }
         }
     }
 }

@@ -3,8 +3,8 @@ use crate::{
         raw_node::{AstNode, FuncDeclNode, Literal, RecordDeclNode},
         reduced_node::{ReducedAstNode, ReducedFuncDeclNode, ReducedRegion},
         typed_node::{
-            TypedAssignNode, TypedAstNode, TypedFuncDeclNode, TypedIfNode, TypedRegion,
-            TypedVariableNode, TypedWhileNode,
+            TypedAssignNode, TypedAstNode, TypedFuncDeclNode, TypedIfNode, TypedRecordDeclNode,
+            TypedRegion, TypedVariableNode, TypedWhileNode,
         },
     },
     builtins::{
@@ -25,13 +25,14 @@ pub struct TypeChecker {
     reduced_tree: ReducedRegion,
 
     functions: HashMap<String, TypedFuncDeclNode>,
-    records: HashMap<String, RecordDeclNode>,
+    records: HashMap<String, TypedRecordDeclNode>,
 }
 
 pub struct TypedData {
     pub main_region: TypedRegion,
 
     pub functions: HashMap<String, TypedFuncDeclNode>,
+    pub records: HashMap<String, TypedRecordDeclNode>,
 }
 
 enum TaggedType {
@@ -56,6 +57,7 @@ impl TypeChecker {
         Ok(TypedData {
             main_region: parsed_region,
             functions: self.functions.clone(),
+            records: self.records.clone(),
         })
     }
 
@@ -73,7 +75,7 @@ impl TypeChecker {
         for (i, t) in (0..).zip(target_stack.iter().rev()) {
             let s = stack[stack.len() - 1 - i].clone();
             if !t.can_become(&s) {
-                todo!();
+                todo!("{}: {}", t, s);
             }
         }
 
@@ -92,6 +94,7 @@ impl TypeChecker {
         for _ in 0..(inputs.len()) {
             types.push(stack.pop().unwrap());
         }
+        types = types.iter().rev().cloned().collect();
 
         let matches: Vec<Type> = inputs
             .iter()
@@ -107,7 +110,7 @@ impl TypeChecker {
             .zip(matches.iter())
             .all(|(a, b)| a.can_become(&b))
         {
-            return Err(todo!());
+            return Err(todo!("Convert {:?} -> {:?}", types, matches));
         };
 
         for o in outputs.iter() {
@@ -156,7 +159,7 @@ impl TypeChecker {
         match Self::stack_shape(&input_stack, &outputs) {
             Ok(_) => (),
             Err(_) => {
-                todo!()
+                todo!();
             }
         }
 
@@ -181,7 +184,7 @@ impl TypeChecker {
         &mut self,
         region: ReducedRegion,
         stack: &mut Vec<Type>,
-        lookup: &HashMap<String, Type>,
+        lookup: &HashMap<String, (Type, usize, usize)>,
     ) -> Result<TypedRegion, TypeError> {
         let mut nodes = Vec::new();
 
@@ -198,7 +201,7 @@ impl TypeChecker {
         &mut self,
         node: &ReducedAstNode,
         stack: &mut Vec<Type>,
-        lookup: &HashMap<String, Type>,
+        lookup: &HashMap<String, (Type, usize, usize)>,
     ) -> Result<Option<TypedAstNode>, TypeError> {
         match node {
             ReducedAstNode::Builtin(p, b) => Ok(Some(TypedAstNode::Builtin(
@@ -207,14 +210,21 @@ impl TypeChecker {
             ))),
             ReducedAstNode::Literal(literal) => {
                 if self.functions.contains_key(&literal.literal) {
+                    let function = self.functions.get(&literal.literal).unwrap();
+                    for _ in 0..function.inputs.len() {
+                        stack.pop();
+                    }
+                    stack.append(&mut function.outputs.clone());
                     Ok(Some(TypedAstNode::FunctionCall(literal.clone())))
                 } else if lookup.contains_key(&literal.literal) {
+                    let variable = lookup.get(&literal.literal).unwrap();
+                    stack.push(Type::Var(Box::new(variable.0.clone())));
                     Ok(Some(TypedAstNode::Variable(TypedVariableNode {
                         position: literal.position.clone(),
                         name: literal.literal.clone(),
-                        depth: 0,
-                        offset: 0,
-                        r#type: lookup.get(&literal.literal).unwrap().clone(),
+                        depth: variable.1,
+                        offset: variable.2,
+                        r#type: lookup.get(&literal.literal).unwrap().clone().0,
                     })))
                 } else {
                     todo!();
@@ -223,13 +233,10 @@ impl TypeChecker {
             ReducedAstNode::RecordElementIdentifier(literal) => {
                 Self::stack_size(&stack, 1)?;
 
-                let record_name = if let stack_value = stack.pop().unwrap() {
-                    match stack_value {
-                        Type::RecordIden(s) => s,
-                        _ => todo!(),
-                    }
-                } else {
-                    todo!()
+                let stack_value = stack.pop().unwrap();
+                let record_name = match stack_value {
+                    Type::RecordIden(ref s) => s.clone(),
+                    _ => todo!("Expected Record Iden got {stack_value}"),
                 };
 
                 if let Some(record) = self.records.get(&record_name) {
@@ -246,7 +253,7 @@ impl TypeChecker {
 
                     let ((_, stack_type), index) = entries[0];
 
-                    stack.push(Type::from_basic_type(&stack_type));
+                    stack.push(stack_type.clone());
                     Ok(Some(TypedAstNode::Builtin(
                         literal.position.clone(),
                         TypedBuiltin::Nth(index),
@@ -258,16 +265,13 @@ impl TypeChecker {
             ReducedAstNode::WriteRecordElementIdentifier(literal) => {
                 Self::stack_size(&stack, 2)?;
 
-                let record_name = if let stack_value = stack.pop().unwrap() {
-                    match stack_value {
-                        Type::RecordIden(s) => s,
-                        _ => todo!(),
-                    }
-                } else {
-                    todo!()
-                };
-
                 let write_value = stack.pop().unwrap();
+
+                let stack_value = stack.pop().unwrap();
+                let record_name = match stack_value {
+                    Type::RecordIden(ref s) => s.clone(),
+                    _ => todo!("Expected Iden got {stack_value}"),
+                };
 
                 if let Some(record) = self.records.get(&record_name) {
                     let entries: Vec<_> = record
@@ -283,11 +287,11 @@ impl TypeChecker {
 
                     let ((_, stack_type), index) = entries[0];
 
-                    if !Type::from_basic_type(&stack_type).can_become(&write_value) {
+                    if !stack_type.can_become(&write_value) {
                         todo!()
                     }
 
-                    stack.push(Type::from_basic_type(&stack_type));
+                    stack.push(stack_value.clone());
                     Ok(Some(TypedAstNode::Builtin(
                         literal.position.clone(),
                         TypedBuiltin::NthWrite(index),
@@ -306,8 +310,12 @@ impl TypeChecker {
 
                 let mut variable_lookup = lookup.clone();
 
-                for (v, t) in assign_node.labels.iter().zip(stack_copy.iter()) {
-                    variable_lookup.insert(v.clone(), t.clone());
+                for (_, (_, d, _)) in variable_lookup.iter_mut() {
+                    *d += 1
+                }
+
+                for ((i, v), t) in (0..).zip(assign_node.labels.iter()).zip(stack_copy.iter()) {
+                    variable_lookup.insert(v.clone(), (t.clone(), 0, i));
                 }
 
                 let mut new_stack = Vec::new();
@@ -316,6 +324,8 @@ impl TypeChecker {
                     &mut new_stack,
                     &variable_lookup,
                 )?;
+
+                *stack = new_stack;
 
                 Ok(Some(TypedAstNode::Assign(TypedAssignNode {
                     position: assign_node.position.clone(),
@@ -366,9 +376,8 @@ impl TypeChecker {
             ReducedAstNode::While(while_node) => {
                 let mut stack_copy = stack.clone();
                 let condition =
-                    self.type_check_region(while_node.region.clone(), &mut stack_copy, lookup)?;
-                Self::stack_operation(stack, &[TaggedType::Type(Type::Bool)], &[]);
-                stack_copy.pop();
+                    self.type_check_region(while_node.condition.clone(), &mut stack_copy, lookup)?;
+                Self::stack_operation(&mut stack_copy, &[TaggedType::Type(Type::Bool)], &[]);
 
                 let region =
                     self.type_check_region(while_node.region.clone(), &mut stack_copy, lookup)?;
@@ -387,8 +396,18 @@ impl TypeChecker {
                 Ok(None)
             }
             ReducedAstNode::RecordDecl(record_decl) => {
-                self.records
-                    .insert(record_decl.name.clone(), record_decl.clone());
+                self.records.insert(
+                    record_decl.name.clone(),
+                    TypedRecordDeclNode {
+                        position: record_decl.position.clone(),
+                        name: record_decl.name.clone(),
+                        entries: record_decl
+                            .entries
+                            .iter()
+                            .map(|(n, t)| (n.clone(), Type::from_basic_type(&t)))
+                            .collect(),
+                    },
+                );
                 Ok(None)
             }
         }
@@ -401,11 +420,22 @@ impl TypeChecker {
     ) -> Result<TypedBuiltin, TypeError> {
         match builtin {
             ReducedBuiltin::Add => {
-                Self::stack_operation(
-                    stack,
-                    &[TaggedType::Type(Type::I32), TaggedType::Type(Type::I32)],
-                    &[TaggedType::Type(Type::I32)],
-                )?;
+                Self::stack_size(stack, 2);
+                let v1 = stack.pop().unwrap();
+                let v2 = stack.pop().unwrap();
+
+                if let Type::I32 = v1 {
+                } else {
+                    todo!();
+                }
+
+                if let Type::Ptr(p) = v2 {
+                    stack.push(Type::Ptr(p))
+                } else if let Type::I32 = v2 {
+                    stack.push(Type::I32)
+                } else {
+                    todo!();
+                }
 
                 Ok(TypedBuiltin::Add)
             }
@@ -459,7 +489,7 @@ impl TypeChecker {
                     &[TaggedType::Ref(0), TaggedType::Ref(0)],
                 )?;
 
-                Ok(TypedBuiltin::Drop)
+                Ok(TypedBuiltin::Duplicate)
             }
             ReducedBuiltin::Over => {
                 Self::stack_operation(
@@ -571,8 +601,10 @@ impl TypeChecker {
                         return Err(todo!());
                     }
                 };
+
                 if !write_value.can_become(&stack_type) {
-                    return Err(todo!());
+                    todo!("{} -/> {}", write_value, stack_type.clone());
+                    // return Err();
                 }
 
                 Ok(TypedBuiltin::Assign)
@@ -600,10 +632,13 @@ impl TypeChecker {
 
                 Self::stack_operation(stack, &[TaggedType::Type(Type::I32)], &[]);
 
-                let t = stack.pop().unwrap();
+                let t = match stack.pop().unwrap() {
+                    Type::Type(a) => a,
+                    _ => todo!("Expected Type"),
+                };
                 stack.push(Type::Ptr(Box::new(PtrType {
                     is_const: false,
-                    r#type: t,
+                    r#type: *t,
                 })));
                 Ok(TypedBuiltin::Mem)
             }

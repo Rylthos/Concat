@@ -1,11 +1,14 @@
 use clap::Parser;
+use concat::codegen::codegen::CodeGen;
 use concat::config::config::Config;
 
+use concat::ir::ir::IR;
 use concat::lexer::lexer::Lexer;
 use concat::parser::parser::Parser as ConcatParser;
 use concat::reducer::reducer::Reducer;
 use concat::type_checker;
 use concat::type_checker::type_checker::TypeChecker;
+use concat::vm::vm::VM;
 
 fn main() {
     let config = Config::parse();
@@ -28,8 +31,6 @@ fn main() {
         }
     };
 
-    println!("AST: {:?}\n", ast);
-
     let mut reducer = Reducer::init(config.clone(), ast);
     let reduced_ast = match reducer.reduce() {
         Ok(t) => t,
@@ -39,10 +40,8 @@ fn main() {
         }
     };
 
-    println!("Reduced: {:?}\n", reduced_ast);
-
     let mut type_checker = TypeChecker::init(config.clone(), reduced_ast);
-    let typed_tree = match type_checker.type_check() {
+    let typed_data = match type_checker.type_check() {
         Ok(t) => t,
         Err(e) => {
             e.print();
@@ -50,8 +49,24 @@ fn main() {
         }
     };
 
-    println!("Typed: {:?}\n", typed_tree.main_region);
+    let mut ir = IR::init(config.clone(), typed_data);
+    let ir_instructions = match ir.generate_ir_instructions() {
+        Ok(instr) => instr,
+        Err(e) => {
+            e.print();
+            return;
+        }
+    };
 
-    // interpret(&parser.instructions, &parser.default_heap)
-    //
+    let mut codegen = CodeGen::init(config.clone(), ir_instructions);
+    let instructions = match codegen.generate_vm() {
+        Ok(instr) => instr,
+        Err(e) => {
+            e.print();
+            return;
+        }
+    };
+
+    let mut vm = VM::init(config.clone(), instructions);
+    vm.interpret();
 }

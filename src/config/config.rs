@@ -8,11 +8,14 @@ pub struct Config {
     #[arg(short, long = "expr", default_value_t = false)]
     pub expr_print: bool,
 
-    #[arg(long = "tree", default_value_t = false)]
-    pub tree_print: bool,
+    #[arg(long = "lexer", default_value_t = false)]
+    pub lexer_print: bool,
 
-    #[arg(long = "token", default_value_t = false)]
-    pub token_print: bool,
+    #[arg(long = "parser", default_value_t = false)]
+    pub parser_print: bool,
+
+    #[arg(long = "ir", default_value_t = false)]
+    pub ir_print: bool,
 }
 
 impl Config {
@@ -20,8 +23,9 @@ impl Config {
         Config {
             path: "".into(),
             expr_print: false,
-            tree_print: false,
-            token_print: false,
+            parser_print: false,
+            lexer_print: false,
+            ir_print: false,
         }
     }
 }

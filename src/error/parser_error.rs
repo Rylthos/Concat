@@ -23,7 +23,7 @@ impl ParserError {
             }
             ParserError::UnexpectedToken(token) => eprintln!(
                 "[PARSER] [{}] Unexpected token {}",
-                token.position_info, token
+                token.position_info, token.token_type
             ),
 
             ParserError::ExpectedTypeGotToken(pos, token) => {

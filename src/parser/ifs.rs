@@ -32,6 +32,8 @@ impl Parser {
                     self.consume(TokenType::RightBrace)?;
                     break;
                 }
+            } else {
+                break;
             }
         }
 

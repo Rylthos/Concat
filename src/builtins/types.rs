@@ -1,5 +1,7 @@
 use crate::builtins::basic_types::BasicType;
 
+use std::fmt;
+
 #[derive(Debug, Clone)]
 pub enum Type {
     I32,
@@ -59,7 +61,47 @@ impl Type {
             (Type::Ptr(p1), Type::Ptr(p2)) => {
                 p1.r#type.can_become(&p2.r#type) && (p2.is_const || (!p2.is_const && !p1.is_const))
             }
+            (Type::Var(v1), Type::Var(v2)) => v1.can_become(v2),
             _ => false,
         }
+    }
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Type::I32 => write!(f, "I32"),
+            Type::Bool => write!(f, "BOOL"),
+            Type::Char => write!(f, "CHAR"),
+            Type::Type(t) => write!(f, "TYPE({t})"),
+            Type::Ptr(ptr) => write!(f, "PTR({ptr})"),
+            Type::Union(union) => write!(f, "UNION({union})"),
+            Type::RecordIden(name) => write!(f, "RECORD({name})"),
+            Type::Var(t) => write!(f, "VAR({t})"),
+        }
+    }
+}
+
+impl fmt::Display for PtrType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}{}",
+            if self.is_const { "const " } else { "" },
+            self.r#type
+        )
+    }
+}
+
+impl fmt::Display for UnionType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "[")?;
+        for (i, t) in (0..).zip(self.types.iter()) {
+            write!(f, "{}", t)?;
+            if i < self.types.len() - 1 {
+                write!(f, " ")?;
+            }
+        }
+        write!(f, "]")
     }
 }
