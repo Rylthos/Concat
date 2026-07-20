@@ -252,6 +252,7 @@ impl Parser {
             TokenType::Input => Ok(AstNode::Builtin(pos, Builtin::Input)),
 
             TokenType::Mem => Ok(AstNode::Builtin(pos, Builtin::Mem)),
+            TokenType::Syscall => Ok(AstNode::Builtin(pos, Builtin::Syscall)),
 
             TokenType::Nth => {
                 if self.compare_next(TokenType::Exclamation) {

@@ -1,0 +1,7 @@
+1 SYS_write define
+
+14
+"Hello, World!\n"
+1
+SYS_write
+4 syscall

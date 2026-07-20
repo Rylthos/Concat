@@ -33,6 +33,8 @@ pub enum Instruction {
 
     Mem,
 
+    Syscall(usize),
+
     Nth(usize),
     NthWrite(usize),
     Union(usize),

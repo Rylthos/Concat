@@ -8,4 +8,5 @@ mod includes;
 mod input;
 mod loops;
 mod records;
+mod syscall;
 mod variables;

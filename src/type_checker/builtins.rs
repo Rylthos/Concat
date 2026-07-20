@@ -262,6 +262,15 @@ impl TypeChecker {
                 })));
                 Ok(TypedBuiltin::Mem)
             }
+            ReducedBuiltin::Syscall(n) => {
+                Self::stack_size(position, stack, *n)?;
+
+                for _ in 0..*n {
+                    stack.pop().unwrap();
+                }
+
+                Ok(TypedBuiltin::Syscall(*n))
+            }
 
             ReducedBuiltin::Nth(n) => {
                 Self::stack_size(position, stack, 1)?;

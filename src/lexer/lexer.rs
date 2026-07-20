@@ -131,6 +131,8 @@ impl Lexer {
             //
             ("mem".to_string(), TokenType::Mem),
             //
+            ("syscall".to_string(), TokenType::Syscall),
+            //
             ("define".to_string(), TokenType::Define),
             //
             ("__PRINT_STACK__".to_string(), TokenType::DebugPrintStack),

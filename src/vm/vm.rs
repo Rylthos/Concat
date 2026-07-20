@@ -414,6 +414,13 @@ impl VM {
                         offset: 0,
                     }));
                 }
+                Instruction::Syscall(n) => {
+                    let mut arguments = Vec::new();
+                    for _ in 0..*n {
+                        arguments.push(stack.pop().unwrap());
+                    }
+                    todo!();
+                }
                 Instruction::FrameCreate(args) => {
                     let mut values = Vec::new();
                     for _ in 0..*args {

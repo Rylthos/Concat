@@ -35,6 +35,8 @@ pub enum IRInstruction {
 
     Mem,
 
+    Syscall(usize),
+
     Nth(usize),
     NthWrite(usize),
     Union(usize),
@@ -92,6 +94,7 @@ impl fmt::Display for IRInstruction {
             IRInstruction::Read => write!(f, "{padding}!"),
             IRInstruction::Input => write!(f, "i{padding}nput"),
             IRInstruction::Mem => write!(f, "{padding}mem"),
+            IRInstruction::Syscall(n) => write!(f, "{padding}syscall({n})"),
             IRInstruction::Nth(n) => write!(f, "{padding}nth({n})"),
             IRInstruction::NthWrite(n) => write!(f, "{padding}nth!({n})"),
             IRInstruction::Union(n) => write!(f, "{padding}union({n})"),

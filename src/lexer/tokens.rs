@@ -64,6 +64,8 @@ pub enum TokenType {
 
     Mem,
 
+    Syscall,
+
     Define,
 
     I32,
@@ -196,6 +198,8 @@ impl fmt::Display for TokenType {
             TokenType::Input => write!(f, "input"),
 
             TokenType::Mem => write!(f, "mem"),
+
+            TokenType::Syscall => write!(f, "syscall"),
 
             TokenType::Define => write!(f, "define"),
 

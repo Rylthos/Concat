@@ -32,6 +32,8 @@ pub enum Builtin {
 
     Mem,
 
+    Syscall,
+
     RawNth,
     RawNthWrite,
     RawUnion,
@@ -84,6 +86,8 @@ impl fmt::Display for Builtin {
             Builtin::Input => write!(f, "input"),
 
             Builtin::Mem => write!(f, "mem"),
+
+            Builtin::Syscall => write!(f, "syscall"),
 
             Builtin::RawNth => write!(f, "nth"),
             Builtin::RawNthWrite => write!(f, "nth!"),
