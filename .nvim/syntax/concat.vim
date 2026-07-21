@@ -1,5 +1,5 @@
 syn match  concatLineComment "\/\/.*"
-syn match  concatNumber      /\<\d\+\(\.\d*\)\?\>/
+syn match  concatNumber      /\<\d\+\(\.\d*\)\?[oxb]\?\>/
 syn region concatString      start=/"/ skip=/\\"/ end=/"/
 syn region concatChar        start=/'/ skip=/\\'/ end=/'/
 
@@ -7,7 +7,7 @@ syn keyword concatConditional if else
 syn keyword concatLoop while
 syn keyword concatType char bool i32 void const
 syn keyword concatBoolean true false
-syn keyword concatKeyword rot3 dup drop over swap print cast func assign include record union nth define
+syn keyword concatKeyword rot3 dup drop over swap print cast func assign include record union nth define syscall
 
 hi def link concatLineComment Comment
 hi def link concatLoop        Repeat

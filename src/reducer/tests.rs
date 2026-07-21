@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::ast::raw_node::{Literal, Region};
+    use crate::ast::raw_node::Region;
     use crate::ast::reduced_node::*;
     use crate::builtins::basic_types::{BasicType, BasicUnionType};
     use crate::builtins::reduced_builtins::ReducedBuiltin;

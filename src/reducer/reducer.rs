@@ -124,7 +124,25 @@ impl Reducer {
         current_region: &mut Vec<ReducedAstNode>,
     ) -> Result<Option<ReducedBuiltin>, ReducerError> {
         match builtin {
-            Builtin::RawNth | Builtin::RawNthWrite | Builtin::RawUnion | Builtin::Syscall => {
+            Builtin::Syscall => {
+                if let Some(ReducedAstNode::Builtin(_, ReducedBuiltin::I32Value(i))) =
+                    current_region.pop()
+                {
+                    if i < 0 || i > 6 {
+                        return Err(ReducerError::SyscallOutOfRange(pos.clone(), i));
+                    }
+                    if let Some(ReducedAstNode::Builtin(_, ReducedBuiltin::I32Value(syscall))) =
+                        current_region.pop()
+                    {
+                        Ok(Some(ReducedBuiltin::Syscall(i as usize, syscall)))
+                    } else {
+                        Err(ReducerError::ExpectedIntConstant(pos.clone()))
+                    }
+                } else {
+                    Err(ReducerError::ExpectedIntConstant(pos.clone()))
+                }
+            }
+            Builtin::RawNth | Builtin::RawNthWrite | Builtin::RawUnion => {
                 if let Some(ReducedAstNode::Builtin(_, ReducedBuiltin::I32Value(i))) =
                     current_region.pop()
                 {
@@ -132,7 +150,6 @@ impl Reducer {
                         Builtin::RawNth => Ok(Some(ReducedBuiltin::Nth(i as usize))),
                         Builtin::RawNthWrite => Ok(Some(ReducedBuiltin::NthWrite(i as usize))),
                         Builtin::RawUnion => Ok(Some(ReducedBuiltin::Union(i as usize))),
-                        Builtin::Syscall => Ok(Some(ReducedBuiltin::Syscall(i as usize))),
                         _ => unreachable!(),
                     }
                 } else {

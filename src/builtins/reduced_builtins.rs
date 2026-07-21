@@ -32,7 +32,7 @@ pub enum ReducedBuiltin {
 
     Mem,
 
-    Syscall(usize),
+    Syscall(usize, i32),
 
     Nth(usize),
     NthWrite(usize),
@@ -85,7 +85,7 @@ impl fmt::Display for ReducedBuiltin {
 
             ReducedBuiltin::Mem => write!(f, "mem"),
 
-            ReducedBuiltin::Syscall(n) => write!(f, "syscall({n})"),
+            ReducedBuiltin::Syscall(n, sysno) => write!(f, "syscall({sysno}, {n})"),
 
             ReducedBuiltin::Nth(n) => write!(f, "nth({n})"),
             ReducedBuiltin::NthWrite(n) => write!(f, "nth!({n})"),

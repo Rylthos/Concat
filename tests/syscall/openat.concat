@@ -1,0 +1,29 @@
+2 O_RDWR define
+-100 AT_FDCWD define
+
+0 SYS_read define
+3 SYS_close define
+257 SYS_openat define
+
+644o
+O_RDWR
+"tests/syscall/temp.txt"
+AT_FDCWD
+SYS_openat
+4 syscall
+
+assign fd {
+  char 1000 mem assign buffer {
+    1000
+    buffer@
+    fd@
+    SYS_read
+    3 syscall
+
+    buffer@ print
+  }
+
+  fd@
+  SYS_close
+  1 syscall
+}

@@ -67,5 +67,11 @@ fn main() {
     };
 
     let mut vm = VM::init(instructions);
-    vm.interpret();
+    match vm.interpret() {
+        Ok(instr) => instr,
+        Err(e) => {
+            e.print();
+            return;
+        }
+    };
 }

@@ -1,6 +1,6 @@
 use crate::ir::stack_values::StackValue;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Instruction {
     Push(StackValue),
 
@@ -33,7 +33,7 @@ pub enum Instruction {
 
     Mem,
 
-    Syscall(usize),
+    Syscall(usize, i32),
 
     Nth(usize),
     NthWrite(usize),

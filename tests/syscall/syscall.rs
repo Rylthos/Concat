@@ -9,3 +9,13 @@ fn syscall_write() {
         .success()
         .stdout("Hello, World!\n");
 }
+
+#[test]
+fn syscall_file() {
+    Command::cargo_bin("concat")
+        .unwrap()
+        .arg("tests/syscall/openat.concat")
+        .assert()
+        .success()
+        .stdout("Hello, File!\n");
+}

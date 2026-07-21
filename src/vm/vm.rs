@@ -1,7 +1,10 @@
 use std::io::{self, Write};
 
+use syscalls::{Sysno, syscall0, syscall1, syscall2, syscall3, syscall4, syscall5, syscall6};
+
 use crate::{
     builtins::types::Type,
+    error::runtime_error::RuntimeError,
     ir::{
         heap_value::HeapValue,
         stack_values::{PointerValue, StackValue},
@@ -30,7 +33,7 @@ impl VM {
 }
 
 impl VM {
-    pub fn interpret(&mut self) {
+    pub fn interpret(&mut self) -> Result<(), RuntimeError> {
         let mut stack: Vec<StackValue> = Vec::new();
         // let mut heap: Vec<HeapValue> = default_heap.to_vec();
 
@@ -414,12 +417,66 @@ impl VM {
                         offset: 0,
                     }));
                 }
-                Instruction::Syscall(n) => {
+                Instruction::Syscall(n, sysno) => {
                     let mut arguments = Vec::new();
                     for _ in 0..*n {
                         arguments.push(stack.pop().unwrap());
                     }
-                    todo!();
+
+                    let sysno = Sysno::from(*sysno);
+
+                    let result = unsafe {
+                        match n {
+                            0 => syscall0(sysno),
+                            1 => syscall1(
+                                sysno,
+                                self.stack_value_to_usize(&instruction, &arguments[0])?,
+                            ),
+                            2 => syscall2(
+                                sysno,
+                                self.stack_value_to_usize(&instruction, &arguments[0])?,
+                                self.stack_value_to_usize(&instruction, &arguments[1])?,
+                            ),
+                            3 => syscall3(
+                                sysno,
+                                self.stack_value_to_usize(&instruction, &arguments[0])?,
+                                self.stack_value_to_usize(&instruction, &arguments[1])?,
+                                self.stack_value_to_usize(&instruction, &arguments[2])?,
+                            ),
+                            4 => syscall4(
+                                sysno,
+                                self.stack_value_to_usize(&instruction, &arguments[0])?,
+                                self.stack_value_to_usize(&instruction, &arguments[1])?,
+                                self.stack_value_to_usize(&instruction, &arguments[2])?,
+                                self.stack_value_to_usize(&instruction, &arguments[3])?,
+                            ),
+                            5 => syscall5(
+                                sysno,
+                                self.stack_value_to_usize(&instruction, &arguments[0])?,
+                                self.stack_value_to_usize(&instruction, &arguments[1])?,
+                                self.stack_value_to_usize(&instruction, &arguments[2])?,
+                                self.stack_value_to_usize(&instruction, &arguments[3])?,
+                                self.stack_value_to_usize(&instruction, &arguments[4])?,
+                            ),
+                            6 => syscall6(
+                                sysno,
+                                self.stack_value_to_usize(&instruction, &arguments[0])?,
+                                self.stack_value_to_usize(&instruction, &arguments[1])?,
+                                self.stack_value_to_usize(&instruction, &arguments[2])?,
+                                self.stack_value_to_usize(&instruction, &arguments[3])?,
+                                self.stack_value_to_usize(&instruction, &arguments[4])?,
+                                self.stack_value_to_usize(&instruction, &arguments[5])?,
+                            ),
+                            _ => panic!(),
+                        }
+                    };
+
+                    let v = match result {
+                        Ok(o) => o,
+                        Err(e) => return Err(RuntimeError::SyscallError(instruction.clone(), e)),
+                    };
+
+                    stack.push(StackValue::I32(v as i32));
                 }
                 Instruction::FrameCreate(args) => {
                     let mut values = Vec::new();
@@ -464,6 +521,8 @@ impl VM {
             }
             index += 1;
         }
+
+        Ok(())
     }
 
     fn load_value(heap_element: &HeapValue, offset: usize) -> StackValue {
@@ -510,6 +569,25 @@ impl VM {
                 heap_element.data[offset] = *value as u8;
             }
             _ => unreachable!("{}", heap_element.r#type),
+        }
+    }
+
+    fn stack_value_to_usize(
+        &self,
+        instr: &Instruction,
+        value: &StackValue,
+    ) -> Result<usize, RuntimeError> {
+        match value {
+            StackValue::I32(i) => Ok(*i as usize),
+            StackValue::Bool(b) => Ok(*b as usize),
+            StackValue::Char(c) => Ok(*c as usize),
+
+            StackValue::Ptr(p) => Ok(self.heap[p.allocation].data.as_ptr() as usize),
+
+            _ => Err(RuntimeError::SyscallInvalidType(
+                instr.clone(),
+                value.clone(),
+            )),
         }
     }
 }

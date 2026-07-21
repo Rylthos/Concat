@@ -4,6 +4,7 @@ use crate::lexer::tokens::PositionInfo;
 pub enum ReducerError {
     ExpectedIntConstant(PositionInfo),
     InvalidDefine(PositionInfo),
+    SyscallOutOfRange(PositionInfo, i32),
 }
 
 impl ReducerError {
@@ -14,6 +15,11 @@ impl ReducerError {
             }
             Self::InvalidDefine(pos) => {
                 eprintln!("[REDUCER] [{pos}] Invalid define")
+            }
+            Self::SyscallOutOfRange(pos, n) => {
+                eprintln!(
+                    "[REDUCER] [{pos}] Syscall argument out of range. {n} should the range of 0..=6"
+                )
             }
         }
     }

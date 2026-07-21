@@ -32,7 +32,7 @@ pub enum TypedBuiltin {
 
     Mem,
 
-    Syscall(usize),
+    Syscall(usize, i32),
 
     Record(String),
 
@@ -84,7 +84,7 @@ impl fmt::Display for TypedBuiltin {
 
             TypedBuiltin::Mem => write!(f, "mem"),
 
-            TypedBuiltin::Syscall(n) => write!(f, "syscall({n})"),
+            TypedBuiltin::Syscall(n, sysno) => write!(f, "syscall({sysno}, {n})"),
 
             TypedBuiltin::Record(name) => write!(f, "record({name})"),
 

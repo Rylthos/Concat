@@ -54,7 +54,7 @@ impl CodeGen {
             IRInstruction::Input => Instruction::Input,
 
             IRInstruction::Mem => Instruction::Mem,
-            IRInstruction::Syscall(n) => Instruction::Syscall(*n),
+            IRInstruction::Syscall(n, sysno) => Instruction::Syscall(*n, *sysno),
 
             IRInstruction::Nth(n) => Instruction::Nth(*n),
             IRInstruction::NthWrite(n) => Instruction::NthWrite(*n),

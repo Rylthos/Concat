@@ -156,7 +156,7 @@ impl IR {
             TypedBuiltin::Input => IRInstruction::Input,
 
             TypedBuiltin::Mem => IRInstruction::Mem,
-            TypedBuiltin::Syscall(n) => IRInstruction::Syscall(*n),
+            TypedBuiltin::Syscall(n, sysno) => IRInstruction::Syscall(*n, *sysno),
 
             TypedBuiltin::Record(name) => IRInstruction::Push(self.convert_record(name)),
 
