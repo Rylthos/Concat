@@ -8,6 +8,8 @@ use crate::input::read_file_path;
 use std::collections::HashSet;
 use std::path::{Component, PathBuf};
 
+use std::iter::Peekable;
+
 use tokens::{Token, TokenType};
 
 pub struct Lexer {
@@ -27,6 +29,56 @@ impl Lexer {
             processed_files: HashSet::new(),
             tokens: Vec::new(),
         }
+    }
+
+    fn parse_digit<I>(&self, chars: &mut Peekable<I>, is_negative: bool) -> (TokenType, String)
+    where
+        I: Iterator<Item = (usize, char)>,
+    {
+        let mut s = String::new();
+        if is_negative {
+            s.push('-');
+        }
+
+        let mut radix = 10;
+
+        let (_, c) = chars.peek().unwrap().clone();
+        s.push(c);
+
+        chars.next();
+
+        while let Some(&(_, c2)) = chars.peek() {
+            match c2 {
+                '0'..='9' => {
+                    s.push(c2);
+                    chars.next();
+                }
+                _ => {
+                    break;
+                }
+            }
+        }
+
+        if let Some(&(_, c2)) = chars.peek() {
+            match c2 {
+                'o' => {
+                    radix = 8;
+                    chars.next();
+                }
+                'x' => {
+                    radix = 16;
+                    chars.next();
+                }
+                'b' => {
+                    radix = 2;
+                    chars.next();
+                }
+                _ => (),
+            }
+        }
+
+        let value = i32::from_str_radix(&s, radix).unwrap();
+        (TokenType::I32Value(value), s)
     }
 
     pub fn lex_input(&mut self) -> Result<(), LexerError> {
@@ -291,6 +343,17 @@ impl Lexer {
                 '-' => {
                     chars.next();
                     if let Some(&(_, c2)) = chars.peek()
+                        && c2.is_digit(10)
+                    {
+                        let (token, s) = self.parse_digit(&mut chars, true);
+                        tokens.push(Token::new(
+                            token,
+                            line_number,
+                            column_number,
+                            &self.get_filename(&file),
+                            &s,
+                        ));
+                    } else if let Some(&(_, c2)) = chars.peek()
                         && c2 == '>'
                     {
                         tokens.push(Token::new(
@@ -373,24 +436,9 @@ impl Lexer {
                     ))
                 }
                 '0'..='9' => {
-                    let mut s = String::new();
-                    s.push(c);
-
-                    chars.next();
-                    while let Some(&(_, c2)) = chars.peek() {
-                        match c2 {
-                            '0'..='9' => {
-                                s.push(c2);
-                                chars.next();
-                            }
-                            _ => {
-                                break;
-                            }
-                        }
-                    }
-
+                    let (token_type, s) = self.parse_digit(&mut chars, false);
                     tokens.push(Token::new(
-                        TokenType::I32Value(s.parse::<i32>().unwrap()),
+                        token_type,
                         line_number,
                         column_number,
                         &self.get_filename(&file),
