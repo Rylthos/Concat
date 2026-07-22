@@ -19,3 +19,13 @@ fn syscall_file() {
         .success()
         .stdout("Hello, File!\n");
 }
+
+#[test]
+fn syscall_stat() {
+    Command::cargo_bin("concat")
+        .unwrap()
+        .arg("tests/syscall/stat.concat")
+        .assert()
+        .success()
+        .stdout("13\n");
+}

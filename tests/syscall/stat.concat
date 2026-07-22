@@ -1,0 +1,23 @@
+2 O_RDWR define
+-100 AT_FDCWD define
+
+0 SYS_read define
+3 SYS_close define
+5 SYS_fstat define
+257 SYS_openat define
+
+644o
+O_RDWR
+"tests/syscall/temp.txt"
+AT_FDCWD
+SYS_openat
+4 syscall
+
+assign fd {
+  i32 144 4 / mem assign stat {
+    stat@ fd@ SYS_fstat 2 syscall
+
+    stat@ 12 + @ print '\n' print
+    // stat@ 13 + @ print '\n' print
+  }
+}
