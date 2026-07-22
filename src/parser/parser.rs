@@ -246,6 +246,9 @@ impl Parser {
             TokenType::And => Ok(AstNode::Builtin(pos, Builtin::And)),
             TokenType::Or => Ok(AstNode::Builtin(pos, Builtin::Or)),
 
+            TokenType::BitwiseAnd => Ok(AstNode::Builtin(pos, Builtin::BitwiseAnd)),
+            TokenType::BitwiseOr => Ok(AstNode::Builtin(pos, Builtin::BitwiseOr)),
+
             TokenType::Assign => Ok(AstNode::Builtin(pos, Builtin::Assign)),
             TokenType::Read => Ok(AstNode::Builtin(pos, Builtin::Read)),
 

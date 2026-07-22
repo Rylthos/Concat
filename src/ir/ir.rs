@@ -150,6 +150,9 @@ impl IR {
             TypedBuiltin::And => IRInstruction::And,
             TypedBuiltin::Or => IRInstruction::Or,
 
+            TypedBuiltin::BitwiseAnd => IRInstruction::BitwiseAnd,
+            TypedBuiltin::BitwiseOr => IRInstruction::BitwiseOr,
+
             TypedBuiltin::Assign => IRInstruction::Assign,
             TypedBuiltin::Read => IRInstruction::Read,
 

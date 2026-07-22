@@ -123,7 +123,9 @@ impl VM {
                 | Instruction::Equal
                 | Instruction::NotEqual
                 | Instruction::And
-                | Instruction::Or => {
+                | Instruction::Or
+                | Instruction::BitwiseAnd
+                | Instruction::BitwiseOr => {
                     let v2 = stack.pop().unwrap();
                     let v1 = stack.pop().unwrap();
 
@@ -137,6 +139,8 @@ impl VM {
                             Instruction::GreaterEqual => StackValue::Bool(v1 >= v2),
                             Instruction::Equal => StackValue::Bool(v1 == v2),
                             Instruction::NotEqual => StackValue::Bool(v1 != v2),
+                            Instruction::BitwiseAnd => StackValue::I32(v1 & v2),
+                            Instruction::BitwiseOr => StackValue::I32(v1 | v2),
                             _ => unreachable!("Unhandled"),
                         };
                         stack.push(output);

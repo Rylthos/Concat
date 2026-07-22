@@ -48,6 +48,9 @@ impl CodeGen {
             IRInstruction::And => Instruction::And,
             IRInstruction::Or => Instruction::Or,
 
+            IRInstruction::BitwiseAnd => Instruction::BitwiseAnd,
+            IRInstruction::BitwiseOr => Instruction::BitwiseOr,
+
             IRInstruction::Assign => Instruction::Assign,
             IRInstruction::Read => Instruction::Read,
 

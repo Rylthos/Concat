@@ -37,6 +37,9 @@ pub enum TokenType {
     And,
     Or,
 
+    BitwiseAnd,
+    BitwiseOr,
+
     // Loop
     If,
     Else,
@@ -178,6 +181,9 @@ impl fmt::Display for TokenType {
             TokenType::NotEqual => write!(f, "!="),
             TokenType::And => write!(f, "&&"),
             TokenType::Or => write!(f, "||"),
+
+            TokenType::BitwiseAnd => write!(f, "&"),
+            TokenType::BitwiseOr => write!(f, "|"),
 
             TokenType::If => write!(f, "if"),
             TokenType::Else => write!(f, "else"),

@@ -206,6 +206,25 @@ impl TypeChecker {
                 Ok(TypedBuiltin::Or)
             }
 
+            ReducedBuiltin::BitwiseAnd => {
+                Self::stack_operation(
+                    position,
+                    stack,
+                    &[TaggedType::Type(Type::I32), TaggedType::Type(Type::I32)],
+                    &[TaggedType::Type(Type::I32)],
+                )?;
+                Ok(TypedBuiltin::BitwiseAnd)
+            }
+            ReducedBuiltin::BitwiseOr => {
+                Self::stack_operation(
+                    position,
+                    stack,
+                    &[TaggedType::Type(Type::I32), TaggedType::Type(Type::I32)],
+                    &[TaggedType::Type(Type::I32)],
+                )?;
+                Ok(TypedBuiltin::BitwiseOr)
+            }
+
             ReducedBuiltin::Assign => {
                 Self::stack_size(position, stack, 2)?;
                 let write_value = stack.pop().unwrap();

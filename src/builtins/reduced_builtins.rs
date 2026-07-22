@@ -25,6 +25,9 @@ pub enum ReducedBuiltin {
     And,
     Or,
 
+    BitwiseAnd,
+    BitwiseOr,
+
     Assign,
     Read,
 
@@ -77,6 +80,9 @@ impl fmt::Display for ReducedBuiltin {
             ReducedBuiltin::NotEqual => write!(f, "!="),
             ReducedBuiltin::And => write!(f, "&&"),
             ReducedBuiltin::Or => write!(f, "||"),
+
+            ReducedBuiltin::BitwiseAnd => write!(f, "&"),
+            ReducedBuiltin::BitwiseOr => write!(f, "|"),
 
             ReducedBuiltin::Assign => write!(f, "="),
             ReducedBuiltin::Read => write!(f, "@"),

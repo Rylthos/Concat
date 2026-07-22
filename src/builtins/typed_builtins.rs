@@ -25,6 +25,9 @@ pub enum TypedBuiltin {
     And,
     Or,
 
+    BitwiseAnd,
+    BitwiseOr,
+
     Assign,
     Read,
 
@@ -76,6 +79,9 @@ impl fmt::Display for TypedBuiltin {
             TypedBuiltin::NotEqual => write!(f, "!="),
             TypedBuiltin::And => write!(f, "&&"),
             TypedBuiltin::Or => write!(f, "||"),
+
+            TypedBuiltin::BitwiseAnd => write!(f, "&"),
+            TypedBuiltin::BitwiseOr => write!(f, "|"),
 
             TypedBuiltin::Assign => write!(f, "="),
             TypedBuiltin::Read => write!(f, "@"),

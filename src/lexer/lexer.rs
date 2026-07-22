@@ -239,14 +239,14 @@ impl Lexer {
                             ));
                             chars.next();
                         } else {
-                            return Err(LexerError::InvalidToken(
-                                PositionInfo {
-                                    line: line_number,
-                                    column: column_number,
-                                    file: self.get_filename(&file),
-                                },
-                                format!("&{:?}", c2),
+                            tokens.push(Token::new(
+                                TokenType::BitwiseAnd,
+                                line_number,
+                                column_number,
+                                &self.get_filename(&file),
+                                "&",
                             ));
+                            chars.next();
                         }
                     } else {
                         return Err(LexerError::ExpectedCharacter(PositionInfo {
@@ -269,14 +269,14 @@ impl Lexer {
                             ));
                             chars.next();
                         } else {
-                            return Err(LexerError::InvalidToken(
-                                PositionInfo {
-                                    line: line_number,
-                                    column: column_number,
-                                    file: self.get_filename(&file),
-                                },
-                                format!("|{:?}", c2),
+                            tokens.push(Token::new(
+                                TokenType::BitwiseOr,
+                                line_number,
+                                column_number,
+                                &self.get_filename(&file),
+                                "|",
                             ));
+                            chars.next();
                         }
                     } else {
                         return Err(LexerError::ExpectedCharacter(PositionInfo {

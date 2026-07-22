@@ -193,6 +193,10 @@ impl Reducer {
             Builtin::NotEqual => ReducedBuiltin::NotEqual,
             Builtin::And => ReducedBuiltin::And,
             Builtin::Or => ReducedBuiltin::Or,
+
+            Builtin::BitwiseAnd => ReducedBuiltin::BitwiseAnd,
+            Builtin::BitwiseOr => ReducedBuiltin::BitwiseOr,
+
             Builtin::Assign => ReducedBuiltin::Assign,
             Builtin::Read => ReducedBuiltin::Read,
 

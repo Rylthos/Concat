@@ -26,6 +26,9 @@ pub enum Instruction {
     And,
     Or,
 
+    BitwiseAnd,
+    BitwiseOr,
+
     Assign,
     Read,
 

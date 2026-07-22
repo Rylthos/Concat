@@ -28,6 +28,9 @@ pub enum IRInstruction {
     And,
     Or,
 
+    BitwiseAnd,
+    BitwiseOr,
+
     Assign,
     Read,
 
@@ -90,6 +93,8 @@ impl fmt::Display for IRInstruction {
             IRInstruction::NotEqual => write!(f, "{padding}!="),
             IRInstruction::And => write!(f, "{padding}&&"),
             IRInstruction::Or => write!(f, "{padding}||"),
+            IRInstruction::BitwiseAnd => write!(f, "{padding}&"),
+            IRInstruction::BitwiseOr => write!(f, "{padding}|"),
             IRInstruction::Assign => write!(f, "{padding}@"),
             IRInstruction::Read => write!(f, "{padding}!"),
             IRInstruction::Input => write!(f, "i{padding}nput"),
