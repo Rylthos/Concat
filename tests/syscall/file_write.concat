@@ -1,0 +1,35 @@
+"../../std/file_io.concat" include
+"../../std/strings.concat" include
+
+func remove_newline char* -> void {
+  assign str {
+    str@
+    str@ str_len 1 -
+    +
+
+    dup if @ '\n' == {
+      '\0' =
+    } else {
+      drop
+    }
+  }
+}
+
+"File path: " print
+input assign file_path {
+  file_path@ remove_newline
+
+  AT_FDCWD file_path@ O_RDWR O_TRUNC O_CREAT | | 644o sys_openat
+}
+
+assign fd {
+  "String: " print input
+  dup str_len 1 -
+  assign str len {
+    fd@ str@ len@ sys_write
+
+    "Wrote: " print str@ print
+  }
+
+  fd@ sys_close
+}

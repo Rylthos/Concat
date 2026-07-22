@@ -1,0 +1,17 @@
+func str_len char*const -> i32 {
+  0 assign str length {
+    true while dup {
+      str@ length@ + @
+
+      if '\0' == {
+        drop
+        false
+      } else {
+        length length @ 1 + =
+      }
+    }
+    drop
+
+    length @
+  }
+}

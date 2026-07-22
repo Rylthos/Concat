@@ -1,0 +1,11 @@
+"syscalls.concat" include
+
+func file_size i32 -> i32 {
+  assign fd {
+    i32 36 mem assign stat {
+      fd@ stat@ sys_fstat
+
+      stat@ 12 + @
+    }
+  }
+}

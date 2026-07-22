@@ -1,0 +1,15 @@
+// "../../std/syscalls.concat" include
+"../../std/file_io.concat" include
+
+AT_FDCWD "tests/syscall/temp.txt" O_RDWR 644o sys_openat
+assign fd {
+  fd@ file_size 1 + assign size {
+    char size@ mem assign buffer {
+      fd@ buffer@ size@ sys_read
+
+      buffer@ print
+    }
+
+    fd@ sys_close
+  }
+}
