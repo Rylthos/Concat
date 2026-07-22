@@ -1,3 +1,4 @@
+"../../std/syscalls.concat" include
 "../../std/file_io.concat" include
 "../../std/strings.concat" include
 

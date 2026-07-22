@@ -8,7 +8,7 @@ pub enum TokenType {
     LeftSqBracket,
     RightSqBracket,
 
-    Include,
+    Include(String),
 
     Asterisk,
     Exclamation,
@@ -160,7 +160,7 @@ impl fmt::Display for TokenType {
             TokenType::LeftSqBracket => write!(f, "["),
             TokenType::RightSqBracket => write!(f, "]"),
 
-            TokenType::Include => write!(f, "Include"),
+            TokenType::Include(s) => write!(f, "Include({s})"),
             TokenType::Asterisk => write!(f, "*"),
             TokenType::Exclamation => write!(f, "!"),
             TokenType::Add => write!(f, "+"),

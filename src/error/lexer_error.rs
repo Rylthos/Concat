@@ -1,6 +1,6 @@
 use crate::lexer::tokens::{PositionInfo, Token};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum LexerError {
     InvalidToken(PositionInfo, String),
     ExpectedCharacter(PositionInfo),

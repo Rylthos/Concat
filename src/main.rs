@@ -13,15 +13,15 @@ fn main() {
     let config = Config::parse();
 
     let mut lexer = Lexer::init(config.clone(), config.path.clone());
-    match lexer.lex_input() {
-        Ok(_) => (),
+    let tokens = match lexer.lex_input() {
+        Ok(t) => t,
         Err(e) => {
             e.print();
             return;
         }
-    }
+    };
 
-    let mut parser = ConcatParser::init(config.clone(), lexer.tokens);
+    let mut parser = ConcatParser::init(config.clone(), tokens);
     let ast = match parser.parse() {
         Ok(t) => t,
         Err(e) => {
