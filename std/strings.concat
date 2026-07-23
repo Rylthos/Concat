@@ -15,3 +15,82 @@ func str_len char*const -> i32 {
     length @
   }
 }
+
+func str_concat char*const char*const -> char* {
+  assign str1 str2 {
+    str1@ str_len str2@ str_len
+    assign str1_len str2_len {
+      char
+      str1_len@ str2_len@ + 1 +
+      mem
+
+      0
+      assign new_string index {
+        0 while dup str1_len@ < {
+          str1@ over + @
+          new_string@ index@ + swap =
+          index index @ 1 + =
+          1 +
+        }
+        drop
+
+        0 while dup str2_len @ < {
+          str2@ over + @
+          new_string@ index@ + swap =
+          index index @ 1 + =
+          1 +
+        }
+        drop
+
+        new_string @ index @ + '\0' =
+
+        new_string @
+      }
+    }
+  }
+}
+
+func str_to_i32 char*const -> i32 {
+  dup str_len true 0
+  assign str length run value {
+    0 while dup length@ < run@ && {
+      str@ over + @
+
+      value value@ 10 * =
+
+      if dup '0' == {
+        0
+      } else if dup '1' == {
+        1
+      } else if dup '2' == {
+        2
+      } else if dup '3' == {
+        3
+      } else if dup '4' == {
+        4
+      } else if dup '5' == {
+        5
+      } else if dup '6' == {
+        6
+      } else if dup '7' == {
+        7
+      } else if dup '8' == {
+        8
+      } else if dup '9' == {
+        9
+      } else {
+        value value@ 10 / =
+        run false =
+        0
+      }
+      value@ + value swap =
+
+      drop
+
+      1+
+    }
+
+    value@
+  }
+  swap drop
+}
