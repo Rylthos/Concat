@@ -8,6 +8,7 @@ use crate::input::read_file_path;
 use std::collections::HashSet;
 use std::path::{Component, PathBuf};
 
+use std::env;
 use std::iter::Peekable;
 
 use tokens::{Token, TokenType};
@@ -34,11 +35,14 @@ impl Lexer {
         self.main_file = match self.main_file.canonicalize() {
             Ok(f) => f,
             Err(_) => {
-                return Err(LexerError::InvalidFile(self.get_filename(&self.main_file)));
+                return Err(LexerError::InvalidFile(
+                    self.main_file.clone(),
+                    self.get_filename(&self.main_file),
+                ));
             }
         };
 
-        let tokens = self.scan_file(&self.main_file.clone())?;
+        let tokens = self.scan_file(&self.main_file.clone(), "".to_string())?;
 
         if self.config.lexer_print {
             println!("=== TOKENS ===");
@@ -101,17 +105,50 @@ impl Lexer {
         (TokenType::I32Value(value), s)
     }
 
-    pub(crate) fn scan_file(&mut self, file: &PathBuf) -> Result<Vec<Token>, LexerError> {
-        let file = match file.canonicalize() {
-            Ok(f) => f,
-            Err(_) => {
-                return Err(LexerError::InvalidFile(self.get_filename(file)));
-            }
-        };
+    fn calculate_file(
+        &self,
+        base_path: &PathBuf,
+        file_name: &String,
+    ) -> Result<PathBuf, LexerError> {
+        let mut calculated_path = base_path.clone();
+        calculated_path.pop();
+        calculated_path.push(file_name);
 
-        if !file.is_file() {
-            return Err(LexerError::InvalidFile(self.get_filename(&file)));
+        if *base_path == self.main_file && file_name == "" {
+            return Ok(self.main_file.clone());
         }
+
+        if file_name.starts_with("std:") {
+            match env::var("CONCAT_STD_DIR") {
+                Ok(o) => {
+                    let mut path = PathBuf::from(o);
+                    path.push(file_name.strip_prefix("std:").unwrap());
+                    if path.is_file() {
+                        return Ok(path.canonicalize().unwrap());
+                    } else {
+                        return Err(LexerError::InvalidStdFile(file_name.to_string()));
+                    }
+                }
+                Err(_) => return Err(LexerError::InvalidStdFile(file_name.to_string())),
+            }
+        }
+
+        if calculated_path.is_file() {
+            Ok(calculated_path.canonicalize().unwrap())
+        } else {
+            Err(LexerError::InvalidFile(
+                base_path.clone(),
+                file_name.to_string(),
+            ))
+        }
+    }
+
+    pub(crate) fn scan_file(
+        &mut self,
+        base_path: &PathBuf,
+        file_name: String,
+    ) -> Result<Vec<Token>, LexerError> {
+        let file = self.calculate_file(base_path, &file_name)?;
 
         let input = read_file_path(&file);
         let mut tokens = self.scan_string(&file, &input)?;

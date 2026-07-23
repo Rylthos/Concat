@@ -27,6 +27,10 @@
 
         buildInputs = with pkgs; [
         ];
+
+        shellHook = ''
+          export CONCAT_STD_DIR="$PWD/std";
+        '';
       };
     };
 }

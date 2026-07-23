@@ -1,12 +1,15 @@
 use crate::lexer::tokens::{PositionInfo, Token};
 
+use std::path::PathBuf;
+
 #[derive(Debug, Clone)]
 pub enum LexerError {
     InvalidToken(PositionInfo, String),
     ExpectedCharacter(PositionInfo),
     ExpectedCharacterGot(PositionInfo, char, char),
     InvalidCharacter(PositionInfo, char),
-    InvalidFile(String),
+    InvalidFile(PathBuf, String),
+    InvalidStdFile(String),
     ExpectedFilePath(PositionInfo),
     InvalidInclude(PositionInfo, Token),
     CircularInclude(String),
@@ -30,8 +33,17 @@ impl LexerError {
             LexerError::InvalidCharacter(pos, c) => {
                 eprintln!("[LEXER] [{}] Invalid character {}", pos, c);
             }
-            LexerError::InvalidFile(file) => {
-                eprintln!("[LEXER] Invalid file \"{}\"", file);
+            LexerError::InvalidFile(base, file) => {
+                let mut path = base.clone();
+                path.pop();
+                eprintln!(
+                    "[LEXER] Invalid file \"{}/{}\"",
+                    path.to_str().unwrap(),
+                    file
+                );
+            }
+            LexerError::InvalidStdFile(file) => {
+                eprintln!("[LEXER] Invalid std file \"{}\"", file);
             }
             LexerError::ExpectedFilePath(pos) => {
                 eprintln!("[LEXER] [{}] Expected file path", pos);

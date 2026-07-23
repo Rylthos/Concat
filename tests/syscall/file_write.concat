@@ -1,6 +1,6 @@
-"../../std/syscalls.concat" include
-"../../std/file_io.concat" include
-"../../std/strings.concat" include
+"std:syscalls.concat" include
+"std:file_io.concat" include
+"std:strings.concat" include
 
 func remove_newline char* -> void {
   assign str {
