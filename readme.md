@@ -8,6 +8,11 @@ Stack based programming language
 
 ## Language Features
 - Basic arithmetic and control flow
+- Functions
+- Variables
+- Simple Defines
+- Unions
+- Linux syscalls
 
 ## Examples
 - fibonacci
@@ -23,6 +28,11 @@ Arithmetic operations
 + - * / %
 ```
 
+Binary operations
+```text
+& |
+```
+
 Stack Operations
 ```text
 rot3 dup drop over swap cast print nth
@@ -35,30 +45,26 @@ Boolean Operations
 
 Conditionals
 ```text
-if else
+if <cond> {} else if <cond> {} else {}
 ```
 
 Loops
 ```text
-while
+while <cond> { }
 ```
 
 Functions
-```
-func <name> <types>... -> <types>... {
-
-}
+```text
+func <name> <types>... -> <types>... { }
 ```
 
 Variables
-```
-<type>... assign <name>... {
-
-}
+```text
+<type>... assign <name>... { }
 ```
 
 Records and Unions
-```
+```text
 record <name> {
     <type> <name>
     ...
@@ -66,4 +72,20 @@ record <name> {
 
 <value...> <n> union
 [<type>...]
+```
+
+Defines
+```text
+<value> <name> define
+```
+
+Includes
+```text
+"<path>" include
+"std:<path>" include
+```
+
+Syscalls
+```text
+<args...> <num_args> <syscall> syscall
 ```
