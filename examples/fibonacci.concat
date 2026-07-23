@@ -1,27 +1,16 @@
-int: iterations
-int: n1
-int: n2
+19 assign iterations {
+  0 1 assign n1 n2 {
 
-iterations 10 =
-n1 0 =
-n2 0 =
+    "0: " print n1@ print '\n' print
+    "1: " print n2@ print '\n' print
 
-fun printInt(int): void {
-  string cast print "\n" print
-}
-
-n1 ! printInt
-n2 ! printInt
-
-0
-while dup iterations ! < {
-  n1 ! n2 ! +
-  dup
-
-  n1 n2 ! =
-
-  n2 swap =
-  printInt
-
-  1 +
+    0 while dup iterations@ < {
+      n1@ n2@ +
+      dup
+      n1 n2@ =
+      n2 swap =
+      over 2 + print ": " print print '\n' print
+      1 +
+    }
+  }
 }
